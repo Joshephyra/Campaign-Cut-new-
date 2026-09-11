@@ -1,0 +1,26 @@
+{
+  "name": "@campaigncut/server",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Fastify API and Remotion render worker.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "render:m0": "tsx src/render-m0.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@campaigncut/composition": "0.0.1",
+    "@remotion/bundler": "4.0.523",
+    "@remotion/renderer": "4.0.523",
+    "fastify": "5.12.4",
+    "remotion": "4.0.523"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.4",
+    "tsx": "4.23.13",
+    "vitest": "5.0.0"
+  }
+}
