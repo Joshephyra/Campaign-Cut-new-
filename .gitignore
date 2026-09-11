@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Uploads, proxies, thumbnails, renders
+/media/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Editor and OS noise
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
