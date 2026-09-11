@@ -8,7 +8,7 @@ Status key: `TODO` · `IN PROGRESS` · `DONE`
 
 ---
 
-## M0 · Scaffold · TODO
+## M0 · Scaffold · DONE
 
 Get a running skeleton with the module boundary that matters.
 

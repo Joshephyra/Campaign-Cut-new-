@@ -4,7 +4,7 @@ Running log of where the build is. Newest entry first.
 
 ---
 
-## 2026-09-11 · M0 Scaffold · DONE pending Josh's own browser check
+## 2026-09-11 · M0 Scaffold · DONE (verified by Josh in browser and MP4)
 
 **What exists now**
 
