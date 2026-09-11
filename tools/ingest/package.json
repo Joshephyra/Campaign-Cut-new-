@@ -1,0 +1,13 @@
+{
+  "name": "@campaigncut/ingest",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The After Effects (Bodymovin) to template CLI. Built in M4.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.4"
+  }
+}

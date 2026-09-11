@@ -1,0 +1,29 @@
+{
+  "name": "campaigncut",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Browser-based video editor for political and advocacy ads. Proof of concept.",
+  "workspaces": [
+    "app",
+    "server",
+    "composition",
+    "tools/ingest"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n app,server -c cyan,green \"npm run dev -w app\" \"npm run dev -w server\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "render:m0": "npm run render:m0 -w server"
+  },
+  "devDependencies": {
+    "concurrently": "10.0.5",
+    "typescript": "5.9.3",
+    "vitest": "5.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
