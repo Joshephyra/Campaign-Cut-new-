@@ -3,6 +3,51 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## Where things stand after the 2026-09-11 build session
+
+Milestones M0 to M15 are built. Every one has red-then-green tests, a browser or rendered-frame check by Claude, and is pushed to GitHub (github.com/Joshephyra/Campaign-Cut-new-, branch main). Test count: 244 across 48 files, plus one skipped check that waits for a visible-tab performance run.
+
+**Acceptance tests, honestly**
+
+- AT-1 Ingest: one command turns a Bodymovin export into an editable template with no bespoke code. Done and exercised on the hand-made stand-in. Not yet run on a real After Effects export.
+- AT-2 Fidelity: the pipeline is in place (Lottie on screen, fonts loaded before the first frame, images and footage resolved for both runners). Germain's call needs a real template plus its `reference.mp4`. Not possible without one.
+- AT-3 Editing: text, colour, logo, disclaimer and footage all change live and persist. Done.
+- AT-4 Playback: the measurement harness exists (`/projects/<id>?perf=8`); one reading of 23.4 fps came from a throttled in-app pane. Needs one reading from Josh's own browser tab.
+- AT-5 Export parity: Export button, queue, download, and the parity script all work; parity passes on the stand-in. Done on the stand-in, to be repeated on the real template with a human watching.
+
+**What only Josh (or Germain) can do next**
+
+1. Open `http://localhost:5173/projects/1?perf=8` in a normal browser tab and report the "measured … fps" line (M12).
+2. Run `tools/ae-preflight/preflight.jsx` once inside After Effects and confirm the report (M15).
+3. Build the representative template in After Effects, tag it, export with Bodymovin, add `fonts/` and `reference.mp4`, and hand the folder over. Then: `npm run ingest -- <folder> --ad-type "Contrast" --name "..."`, open it, export it, and compare with the reference side by side. That is the fidelity question this whole build exists to answer.
+
+**Known limits worth knowing**
+
+- One Bodymovin export is one element. Multi-element templates (open, lower third, end card as separate comps) are a data-model step that is not on the milestone list; the timeline and transitions already handle several elements when the rows exist.
+- The chroma key is a colour-matrix key, not matting. ML matting was not evaluated.
+- `docs/DESIGN.md` never existed in the pack; the interface follows the SPEC section 4 summary.
+- The lottie-web canvas renderer stalls the Player and was rejected; SVG stays.
+
+---
+
+## 2026-09-11 · M15 After Effects pre-flight script · IN PROGRESS: written and unit-tested; needs one manual run inside After Effects
+
+**What exists now**
+
+- `tools/ae-preflight/preflight.jsx`: ES3 ExtendScript. Run it from After Effects via File > Scripts > Run Script File with the template comp selected. It walks the comp and writes `preflight-<comp name>.txt` next to the project file (Desktop if unsaved), then shows a summary alert. It exports nothing and changes nothing.
+- The report lists: comp name, size, frame rate, duration and frame count; every `cc.*` tag with its resolved role (and for text, whether it is box text with a derivable character limit); fonts referenced by every text layer; NOTES for untagged text layers; PROBLEMS naming the layer for unknown roles, wrong layer types, missing fills, duplicates, cameras and lights, 3D layers, non-NORMAL blend modes, time remap, motion blur, adjustment layers and every effect; a VERDICT line (READY TO EXPORT or FIX BEFORE EXPORTING).
+- The report logic is separated from After Effects globals behind a small adapter object, so `tools/ingest/src/preflight.test.ts` runs it in Node against a fake comp (8 tests, including an ES3-safety check on the source: no const/let/arrows/JSON/array methods, no render or save calls). The role table mirrors `tools/ingest/src/roles.ts`; keep both in sync.
+- `docs/AE-AUTHORING.md` updated: the report file name, and the misspelled-tag rule made unambiguous.
+- 244 tests across 48 files. Typecheck clean.
+
+**What Josh needs to do (the milestone's test is manual)**
+
+Open any comp in After Effects, then File > Scripts > Run Script File and pick `tools/ae-preflight/preflight.jsx`. Confirm the alert appears and the text file next to the project lists the layers as expected. If After Effects raises an error, paste the whole message.
+
+**Next:** nothing on the milestone list. Remaining human items are collected at the end of this file's newest entry.
+
+---
+
 ## 2026-09-11 · M14 Background removal (spike) · DONE (Josh delegated sign-off): chroma key ships; ML matting not attempted
 
 **What exists now**

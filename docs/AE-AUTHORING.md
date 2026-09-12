@@ -80,7 +80,7 @@ cc.<role>.<n>      a repeated slot         cc.stat.1, cc.stat.2, cc.stat.3
 ### Rules that will bite you
 
 - **Tags are case-sensitive.** `cc.Headline` will not match. It will be treated as an unknown tag and the ingest will reject the template and tell you which layer.
-- **A misspelled tag is silently locked.** That is why ingest prints every tag it found. Read that list. If a layer you meant to be editable is not in it, the tag is wrong.
+- **A misspelled tag is silently locked, unless it still starts with `cc.`.** A layer named `cc.headlnie` is rejected by name (unknown role). A layer named `c.headline` or `headline` is just an untagged layer and stays locked without a word. That is why ingest prints every tag it found. Read that list. If a layer you meant to be editable is not in it, the tag is wrong.
 - **Color tags need a real fill or stroke.** Tagging a null or a text layer as `cc.accent` fails validation.
 - **Size your text boxes for the longest plausible copy.** The app enforces a character limit derived from your box. If the box is tight, the user gets a tight limit. Campaign names are long.
 - **Every font you use must be handed over with the template.** The app fails ingest on a font it does not have, because missing fonts silently reflow text and break the design in ways nobody notices until it is on air.
@@ -99,7 +99,7 @@ Run the pre-flight script:
 
 **After Effects:** File > Scripts > Run Script File, then pick `tools/ae-preflight/preflight.jsx`
 
-It writes a text report next to your project file. It will tell you:
+It writes a text report named `preflight-<comp name>.txt` next to your project file (on the Desktop if the project is unsaved) and shows a summary. It will tell you:
 
 - Every `cc.` tag it found and what role it resolved to
 - Text layers that look editable but are not tagged
@@ -132,7 +132,7 @@ Give the developer, or the ingest command, a folder containing:
   images/            any referenced images
   fonts/             every font file the comp uses
   reference.mp4      an After Effects render of the comp at full quality
-  preflight.txt      the pre-flight report
+  preflight-<comp>.txt   the pre-flight report
 ```
 
 `reference.mp4` matters. It is what the app's output gets compared against when Germain makes the fidelity call. Without it there is nothing to judge against.
