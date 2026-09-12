@@ -1,22 +1,24 @@
 import {
   applyLottieValues,
   compositionConfig,
+  compositionDurationFor,
   isMediaValue,
-  lottieDurationInFrames,
   Main,
   mediaFillRect,
   mediaSourceFor,
   resolveLottieAssets,
   withBaseUrl,
+  type ElementProps,
   type LottieAnimationData,
   type MainProps,
   type ParamValues,
 } from '@campaigncut/composition';
-import { Player } from '@remotion/player';
+import { Player, type PlayerRef } from '@remotion/player';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { API, api, type MediaAsset, type ProjectDetail } from '../api';
+import { API, api, type MediaAsset, type ProjectDetail, type ProjectElement } from '../api';
 import { Inspector } from '../components/Inspector';
 import { MediaPanel } from '../components/MediaPanel';
+import { Timeline, type ElementPatch } from '../components/Timeline';
 
 const BACKGROUND = '#000000';
 /** Keep typing smooth: the composition re-applies values this long after the last keystroke. */
@@ -36,6 +38,7 @@ export function Editor({ projectId, onBack }: Props) {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [values, setValues] = useState<ParamValues>({});
+  const [elements, setElements] = useState<ProjectElement[]>([]);
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [assets, setAssets] = useState<MediaAsset[]>([]);
 
@@ -49,6 +52,7 @@ export function Editor({ projectId, onBack }: Props) {
         const initial: ParamValues = {};
         for (const v of detail.values) initial[v.key] = v.value;
         setValues(initial);
+        setElements(detail.elements.map((e) => ({ ...e, enabled: e.enabled ?? true })));
         setLoaded({ detail, lottie });
       })
       .catch((e: Error) => {
@@ -97,6 +101,27 @@ export function Editor({ projectId, onBack }: Props) {
     return () => clearTimeout(timer);
   }, [values, loaded, projectId]);
 
+  // Persist element moves and toggles, debounced per element.
+  const pendingPatches = useRef(new Map<number, ElementPatch>());
+  const patchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onElementChange = (id: number, patch: ElementPatch) => {
+    setElements((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+    pendingPatches.current.set(id, { ...pendingPatches.current.get(id), ...patch });
+    setSaveState('dirty');
+    if (patchTimer.current) clearTimeout(patchTimer.current);
+    patchTimer.current = setTimeout(async () => {
+      const batch = Array.from(pendingPatches.current.entries());
+      pendingPatches.current.clear();
+      setSaveState('saving');
+      try {
+        for (const [elementId, p] of batch) await api.saveElement(projectId, elementId, p);
+        setSaveState('saved');
+      } catch {
+        setSaveState('error');
+      }
+    }, SAVE_DEBOUNCE_MS);
+  };
+
   /** The Footage panel's "use this clip" hands the asset to the first cc.mediaFill param. */
   const selectFootage = (asset: MediaAsset) => {
     const mediaParam = loaded?.detail.schema.find((p) => p.kind === 'media');
@@ -130,7 +155,7 @@ export function Editor({ projectId, onBack }: Props) {
       {!loaded && !error && <p className="font-mono text-xs text-muted p-8">Loading…</p>}
       {loaded && (
         <div className="flex flex-1 min-h-0">
-          <Monitor loaded={loaded} values={values} assets={assets} />
+          <Monitor loaded={loaded} values={values} elements={elements} assets={assets} onElementChange={onElementChange} />
           <aside className="w-80 border-l border-hairline shrink-0 overflow-y-auto">
             <div className="p-6 border-b border-hairline">
               <h2 className="text-xs uppercase tracking-widest text-muted mb-4">Inspector</h2>
@@ -174,7 +199,19 @@ function useDebounced<T>(value: T, delay: number): T {
  * PROXY footage and /api-relative URLs. See server/src/renderProject.ts for
  * the export runner doing the same with originals.
  */
-function Monitor({ loaded, values, assets }: { loaded: Loaded; values: ParamValues; assets: MediaAsset[] }) {
+function Monitor({
+  loaded,
+  values,
+  elements,
+  assets,
+  onElementChange,
+}: {
+  loaded: Loaded;
+  values: ParamValues;
+  elements: ProjectElement[];
+  assets: MediaAsset[];
+  onElementChange: (id: number, patch: ElementPatch) => void;
+}) {
   const { detail, lottie: source } = loaded;
   const schema = detail.schema;
   const slug = detail.template.slug;
@@ -194,13 +231,35 @@ function Monitor({ loaded, values, assets }: { loaded: Loaded; values: ParamValu
     return { src: api.fileUrl(mediaSourceFor(asset, 'preview')), rect, fit: v.fit };
   }, [schema, renderedValues, assets, source]);
 
-  const inputProps = useMemo<MainProps>(() => ({ background: BACKGROUND, lottie, media }), [lottie, media]);
-  const durationInFrames = lottieDurationInFrames(lottie, compositionConfig.fps);
+  // One Bodymovin export is one element today, so every element shares the template's Lottie.
+  const elementProps = useMemo<ElementProps[]>(
+    () => elements.map((e) => ({ id: String(e.id), lottie, startFrame: e.startFrame, endFrame: e.endFrame, zIndex: e.zIndex, enabled: e.enabled })),
+    [elements, lottie],
+  );
+
+  const inputProps = useMemo<MainProps>(() => ({ background: BACKGROUND, media, elements: elementProps }), [media, elementProps]);
+  const durationInFrames = compositionDurationFor(elementProps);
+
+  // Playhead: follow the Player, and drive it when the timeline is scrubbed.
+  const playerRef = useRef<PlayerRef>(null);
+  const [frame, setFrame] = useState(0);
+  useEffect(() => {
+    const player = playerRef.current;
+    if (!player) return;
+    const onFrame = (e: { detail: { frame: number } }) => setFrame(e.detail.frame);
+    player.addEventListener('frameupdate', onFrame);
+    return () => player.removeEventListener('frameupdate', onFrame);
+  }, [loaded]);
+  const seek = (f: number) => {
+    playerRef.current?.seekTo(f);
+    setFrame(f);
+  };
 
   return (
     // Program monitor. Nothing ever overlays this.
-    <section className="flex-1 p-8 min-w-0">
+    <section className="flex-1 p-8 min-w-0 overflow-y-auto">
       <Player
+        ref={playerRef}
         component={Main}
         inputProps={inputProps}
         durationInFrames={durationInFrames}
@@ -215,6 +274,14 @@ function Monitor({ loaded, values, assets }: { loaded: Loaded; values: ParamValu
         {compositionConfig.width}×{compositionConfig.height} · {compositionConfig.fps} fps · {durationInFrames} frames
         {media ? ' · footage: proxy' : ''}
       </p>
+      <Timeline
+        elements={elements}
+        fps={compositionConfig.fps}
+        durationInFrames={durationInFrames}
+        frame={frame}
+        onSeek={seek}
+        onChange={onElementChange}
+      />
     </section>
   );
 }

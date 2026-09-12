@@ -1,11 +1,13 @@
+import type { ElementProps } from './elements';
+
 /**
  * The single composition's fixed parameters. There is exactly one
  * composition in this product (CLAUDE.md: one composition, two runners).
  * Both the browser Player and the server renderer read these values from
  * here so they can never disagree.
  *
- * Duration is NOT fixed here: it is derived from the Lottie being shown.
- * See lottieDuration.ts.
+ * Duration is NOT fixed here: it is derived from the elements being shown.
+ * See elements.ts.
  */
 export const compositionConfig = {
   id: 'main',
@@ -49,13 +51,13 @@ export type MainMedia = {
 export type MainProps = {
   /** Solid background colour as a #rrggbb hex string. */
   background: string;
-  /** The Lottie to composite over the background. */
-  lottie: LottieAnimationData;
   /** User footage shown through the cc.mediaFill slot, or null. */
   media: MainMedia | null;
+  /** The timeline: every element with its Lottie and in/out points. */
+  elements: ElementProps[];
 };
 
-/** A valid, empty Lottie so the composition always has something to show. */
+/** A valid, empty Lottie for tests and placeholders. */
 export const EMPTY_LOTTIE: LottieAnimationData = {
   v: '5.12.2',
   fr: compositionConfig.fps,
@@ -71,6 +73,6 @@ export const EMPTY_LOTTIE: LottieAnimationData = {
 
 export const defaultProps: MainProps = {
   background: '#0F4C5C',
-  lottie: EMPTY_LOTTIE,
   media: null,
+  elements: [],
 };

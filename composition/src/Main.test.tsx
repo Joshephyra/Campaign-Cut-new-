@@ -11,6 +11,8 @@ vi.mock('remotion', async (importOriginal) => {
     OffthreadVideo: (props: { src: string; style?: React.CSSProperties }) => (
       <video data-testid="video" src={props.src} style={props.style} />
     ),
+    // Sequence needs a registered composition; timing is covered by elements.render.test.ts.
+    Sequence: (props: { children?: React.ReactNode }) => <>{props.children}</>,
   };
 });
 
@@ -22,17 +24,17 @@ const rect = { x: 0.5, y: 0, w: 0.5, h: 1 };
 // Main may know which runner it is in.
 describe('Main with footage', () => {
   it('renders the proxy when handed proxy props', () => {
-    render(<Main background="#000" lottie={EMPTY_LOTTIE} media={{ src: '/media/proxies/1.mp4', rect, fit: 'cover' }} />);
+    render(<Main background="#000" elements={[{ id: 'e', lottie: EMPTY_LOTTIE, startFrame: 0, endFrame: 1, zIndex: 0, enabled: true }]} media={{ src: '/media/proxies/1.mp4', rect, fit: 'cover' }} />);
     expect(screen.getByTestId('video').getAttribute('src')).toBe('/media/proxies/1.mp4');
   });
 
   it('renders the original when handed original props', () => {
-    render(<Main background="#000" lottie={EMPTY_LOTTIE} media={{ src: 'http://127.0.0.1:3001/media/originals/1.mp4', rect, fit: 'cover' }} />);
+    render(<Main background="#000" elements={[{ id: 'e', lottie: EMPTY_LOTTIE, startFrame: 0, endFrame: 1, zIndex: 0, enabled: true }]} media={{ src: 'http://127.0.0.1:3001/media/originals/1.mp4', rect, fit: 'cover' }} />);
     expect(screen.getByTestId('video').getAttribute('src')).toBe('http://127.0.0.1:3001/media/originals/1.mp4');
   });
 
   it('places the footage in the slot rectangle as fractions of the frame, under the Lottie', () => {
-    render(<Main background="#000" lottie={EMPTY_LOTTIE} media={{ src: 'x.mp4', rect, fit: 'contain' }} />);
+    render(<Main background="#000" elements={[{ id: 'e', lottie: EMPTY_LOTTIE, startFrame: 0, endFrame: 1, zIndex: 0, enabled: true }]} media={{ src: 'x.mp4', rect, fit: 'contain' }} />);
     const slot = screen.getByTestId('media-slot');
     expect(slot.style.left).toBe('50%');
     expect(slot.style.top).toBe('0%');
@@ -46,7 +48,7 @@ describe('Main with footage', () => {
   });
 
   it('renders no video when there is no footage', () => {
-    render(<Main background="#000" lottie={EMPTY_LOTTIE} media={null} />);
+    render(<Main background="#000" elements={[{ id: 'e', lottie: EMPTY_LOTTIE, startFrame: 0, endFrame: 1, zIndex: 0, enabled: true }]} media={null} />);
     expect(screen.queryByTestId('video')).toBeNull();
   });
 });

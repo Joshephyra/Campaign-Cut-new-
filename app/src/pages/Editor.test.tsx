@@ -20,7 +20,7 @@ const detail = {
   project: { id: 7, name: 'Demo project', templateId: 1, templateSlug: 'demo', templateName: 'Demo' },
   template: { id: 1, slug: 'demo', name: 'Demo', durationFrames: 60, fps: 30, width: 1920, height: 1080, thumbUrl: '' },
   schema: [{ key: 'headline', role: 'headline', kind: 'text', label: 'Headline', default: 'AUTHORED', path: '/layers/0' }],
-  elements: [{ id: 3, slug: 'demo', zIndex: 0, startFrame: 0, endFrame: 60 }],
+  elements: [{ id: 3, slug: 'demo', zIndex: 0, startFrame: 0, endFrame: 60, enabled: true }],
   values: [{ elementId: 3, key: 'headline', value: 'SAVED EARLIER' }],
 };
 
@@ -37,9 +37,9 @@ function mockApi() {
 /** The Player is stubbed in test-setup to expose its inputProps as JSON. */
 const playerHeadline = () => {
   const props = JSON.parse(screen.getByTestId('player').getAttribute('data-props')!) as {
-    lottie: { layers: { t: { d: { k: { s: { t: string } }[] } } }[] };
+    elements: { lottie: { layers: { t: { d: { k: { s: { t: string } }[] } } }[] } }[];
   };
-  return props.lottie.layers[0]!.t.d.k[0]!.s.t;
+  return props.elements[0]!.lottie.layers[0]!.t.d.k[0]!.s.t;
 };
 
 describe('Editor', () => {

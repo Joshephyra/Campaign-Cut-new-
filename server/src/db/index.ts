@@ -44,6 +44,18 @@ export type ProjectRow = {
 
 export type ProjectDetail = ProjectRow & { values: ProjectValue[] };
 
+/** An element as it stands in one project: template defaults with the project's own in/out and toggle applied. */
+export type ProjectElement = {
+  id: number;
+  slug: string;
+  zIndex: number;
+  startFrame: number;
+  endFrame: number;
+  enabled: boolean;
+};
+
+export type ProjectElementPatch = Partial<Pick<ProjectElement, 'startFrame' | 'endFrame' | 'enabled'>>;
+
 export type MediaAssetInput = {
   originalName: string;
   /** Paths relative to the media directory. */
@@ -72,6 +84,10 @@ export type Db = Database.Database & {
   listProjects(): ProjectRow[];
   /** Upsert the given values (others untouched) and bump updated_at. */
   setProjectValues(projectId: number, values: ProjectValue[]): void;
+  /** The project's timeline: template elements with this project's overrides, in z order. */
+  getProjectElements(projectId: number): ProjectElement[];
+  /** Move or toggle one element in one project. The template is untouched. */
+  setProjectElement(projectId: number, elementId: number, patch: ProjectElementPatch): void;
 };
 
 const MIGRATIONS = `
@@ -121,6 +137,15 @@ CREATE TABLE IF NOT EXISTS project_value (
   PRIMARY KEY (project_id, element_id, param_key)
 );
 
+CREATE TABLE IF NOT EXISTS project_element (
+  project_id   INTEGER NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+  element_id   INTEGER NOT NULL REFERENCES template_element(id),
+  start_frame  INTEGER,
+  end_frame    INTEGER,
+  enabled      INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (project_id, element_id)
+);
+
 CREATE TABLE IF NOT EXISTS media_asset (
   id             INTEGER PRIMARY KEY,
   original_name  TEXT    NOT NULL,
@@ -159,10 +184,50 @@ export function openDb(file: string): Db {
     getProject: (id: number) => getProject(db, id),
     listProjects: () => listProjects(db),
     setProjectValues: (projectId: number, values: ProjectValue[]) => setProjectValues(db, projectId, values),
+    getProjectElements: (projectId: number) => getProjectElements(db, projectId),
+    setProjectElement: (projectId: number, elementId: number, patch: ProjectElementPatch) =>
+      setProjectElement(db, projectId, elementId, patch),
     insertMediaAsset: (a: MediaAssetInput) => insertMediaAsset(db, a),
     getMediaAsset: (id: number) => getMediaAsset(db, id),
     listMediaAssets: () => listMediaAssets(db),
   });
+}
+
+// ---- project timeline --------------------------------------------------
+
+function getProjectElements(db: Database.Database, projectId: number): ProjectElement[] {
+  const rows = db
+    .prepare(
+      `SELECT e.id, e.slug, e.z_index AS zIndex,
+              COALESCE(pe.start_frame, e.start_frame) AS startFrame,
+              COALESCE(pe.end_frame, e.end_frame) AS endFrame,
+              COALESCE(pe.enabled, 1) AS enabledInt
+       FROM project p
+       JOIN template_element e ON e.template_id = p.template_id
+       LEFT JOIN project_element pe ON pe.project_id = p.id AND pe.element_id = e.id
+       WHERE p.id = ?
+       ORDER BY e.z_index, e.id`,
+    )
+    .all(projectId) as (Omit<ProjectElement, 'enabled'> & { enabledInt: number })[];
+  return rows.map(({ enabledInt, ...r }) => ({ ...r, enabled: enabledInt === 1 }));
+}
+
+function setProjectElement(db: Database.Database, projectId: number, elementId: number, patch: ProjectElementPatch): void {
+  db.prepare(
+    `INSERT INTO project_element (project_id, element_id, start_frame, end_frame, enabled)
+     VALUES (@projectId, @elementId, @startFrame, @endFrame, COALESCE(@enabled, 1))
+     ON CONFLICT(project_id, element_id) DO UPDATE SET
+       start_frame = COALESCE(excluded.start_frame, project_element.start_frame),
+       end_frame = COALESCE(excluded.end_frame, project_element.end_frame),
+       enabled = COALESCE(@enabled, project_element.enabled)`,
+  ).run({
+    projectId,
+    elementId,
+    startFrame: patch.startFrame ?? null,
+    endFrame: patch.endFrame ?? null,
+    enabled: patch.enabled === undefined ? null : patch.enabled ? 1 : 0,
+  });
+  db.prepare(`UPDATE project SET updated_at = datetime('now') WHERE id = ?`).run(projectId);
 }
 
 // ---- media -------------------------------------------------------------

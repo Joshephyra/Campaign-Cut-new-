@@ -1,5 +1,6 @@
-import { AbsoluteFill, OffthreadVideo } from 'remotion';
+import { AbsoluteFill, OffthreadVideo, Sequence } from 'remotion';
 import type { MainProps } from './config';
+import { visibleElementsInOrder } from './elements';
 import { LottieLayer } from './LottieLayer';
 
 /**
@@ -9,10 +10,10 @@ import { LottieLayer } from './LottieLayer';
  * Nothing in here may branch on which runner is calling it.
  *
  * Layer order, bottom to top: background colour, footage in the
- * cc.mediaFill slot, the Lottie (whose slot layer has been made
- * transparent by applyLottieValues so the footage shows through).
+ * cc.mediaFill slot, then each enabled element in z order, each inside a
+ * Sequence so its Lottie starts at its in point and ends at its out point.
  */
-export function Main({ background, lottie, media }: MainProps) {
+export function Main({ background, media, elements }: MainProps) {
   return (
     <AbsoluteFill style={{ backgroundColor: background }}>
       {media && (
@@ -31,7 +32,17 @@ export function Main({ background, lottie, media }: MainProps) {
           <OffthreadVideo src={media.src} style={{ width: '100%', height: '100%', objectFit: media.fit }} />
         </div>
       )}
-      <LottieLayer animationData={lottie} />
+      {visibleElementsInOrder(elements).map((element) => (
+        <Sequence
+          key={element.id}
+          name={element.id}
+          from={element.startFrame}
+          durationInFrames={element.endFrame - element.startFrame}
+          layout="none"
+        >
+          <LottieLayer animationData={element.lottie} />
+        </Sequence>
+      ))}
     </AbsoluteFill>
   );
 }

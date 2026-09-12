@@ -16,6 +16,7 @@ const schema = JSON.parse(fs.readFileSync(path.join(standinDir, 'schema.json'), 
 type AnyRecord = Record<string, unknown>;
 const textOf = (lottie: LottieAnimationData, layerIndex: number) =>
   ((((lottie.layers[layerIndex] as AnyRecord).t as AnyRecord).d as AnyRecord).k as AnyRecord[])[0]!.s as AnyRecord;
+const pathOf = (key: string) => schema.find((p) => p.key === key)!.path;
 const colourOf = (lottie: LottieAnimationData, pointer: string) =>
   ((resolvePointer(lottie, pointer) as AnyRecord).c as AnyRecord).k as number[];
 
@@ -52,7 +53,7 @@ describe('applyLottieValues', () => {
   it('ignores an invalid colour string and keeps the authored colour', () => {
     const source = loadStandin();
     const result = applyLottieValues(source, { accent: '#12' }, schema);
-    expect(colourOf(result, '/layers/2/shapes/0/it/1')).toEqual([0.94, 0.35, 0.16, 1]);
+    expect(colourOf(result, pathOf('accent'))).toEqual([0.94, 0.35, 0.16, 1]);
   });
 
   // T5
@@ -72,12 +73,12 @@ describe('applyLottieValues', () => {
   it('writes fill colours as normalised RGBA at .c.k', () => {
     const source = loadStandin();
     const result = applyLottieValues(source, { accent: '#2B54E6', surface: '#FFFFFF' }, schema);
-    const [r, g, b, a] = colourOf(result, '/layers/2/shapes/0/it/1');
+    const [r, g, b, a] = colourOf(result, pathOf('accent'));
     expect(r).toBeCloseTo(0x2b / 255, 6);
     expect(g).toBeCloseTo(0x54 / 255, 6);
     expect(b).toBeCloseTo(0xe6 / 255, 6);
     expect(a).toBe(1);
-    expect(colourOf(result, '/layers/4/shapes/0/it/1')).toEqual([1, 1, 1, 1]);
+    expect(colourOf(result, pathOf('surface'))).toEqual([1, 1, 1, 1]);
   });
 
   it('writes stroke colours the same way', () => {

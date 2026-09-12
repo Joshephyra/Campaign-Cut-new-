@@ -1,3 +1,4 @@
+import { compositionConfig, lottieDurationInFrames } from '@campaigncut/composition';
 import { openDb } from '@campaigncut/server/db';
 import { paths } from '@campaigncut/server/paths';
 import { renderThumbnail } from '@campaigncut/server/render';
@@ -45,7 +46,15 @@ try {
     fontsDir: paths.fonts,
     db,
     renderThumbnail: ({ lottie, outputPath, frame }) =>
-      renderThumbnail({ outputPath, inputProps: { background: '#000000', lottie, media: null }, frame }).then(() => undefined),
+      renderThumbnail({
+        outputPath,
+        inputProps: {
+          background: '#000000',
+          media: null,
+          elements: [{ id: 'thumb', lottie, startFrame: 0, endFrame: lottieDurationInFrames(lottie, compositionConfig.fps), zIndex: 0, enabled: true }],
+        },
+        frame,
+      }).then(() => undefined),
     log: (line) => console.log(`  ${line}`),
   });
 

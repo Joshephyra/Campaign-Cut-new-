@@ -182,7 +182,7 @@ The most important pure function in the codebase. See `SPEC.md` section 2.
 
 ---
 
-## M9 · Timeline · IN PROGRESS
+## M9 · Timeline · DONE
 
 **Build**
 - Element stack in z order with in and out points
@@ -198,7 +198,7 @@ The most important pure function in the codebase. See `SPEC.md` section 2.
 
 ---
 
-## M10 · Transitions · TODO
+## M10 · Transitions · IN PROGRESS
 
 **Build**
 - `@remotion/transitions` with `TransitionSeries` between elements

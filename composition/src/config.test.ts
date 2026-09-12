@@ -16,10 +16,9 @@ describe('compositionConfig', () => {
     expect(compositionConfig.fps).toBeGreaterThan(0);
   });
 
-  it('ships default props with a background colour and a valid empty Lottie', () => {
+  it('ships default props with a background colour and no elements', () => {
     expect(defaultProps.background).toMatch(/^#[0-9a-fA-F]{6}$/);
-    expect(defaultProps.lottie.w).toBe(1920);
-    expect(defaultProps.lottie.h).toBe(1080);
-    expect(defaultProps.lottie.layers).toEqual([]);
+    expect(defaultProps.elements).toEqual([]);
+    expect(defaultProps.media).toBeNull();
   });
 });

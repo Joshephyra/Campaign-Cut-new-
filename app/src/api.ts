@@ -19,11 +19,13 @@ export type LibraryGroup = { adType: string; sort: number; templates: TemplateSu
 
 export type ProjectValue = { elementId: number; key: string; value: unknown };
 
+export type ProjectElement = { id: number; slug: string; zIndex: number; startFrame: number; endFrame: number; enabled: boolean };
+
 export type ProjectDetail = {
   project: { id: number; name: string; templateId: number; templateSlug: string; templateName: string };
   template: TemplateSummary;
   schema: TemplateParam[];
-  elements: { id: number; slug: string; zIndex: number; startFrame: number; endFrame: number }[];
+  elements: ProjectElement[];
   values: ProjectValue[];
 };
 
@@ -62,6 +64,13 @@ export const api = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ values }),
     }).then((r) => json<{ ok: boolean }>(r)),
+
+  saveElement: (projectId: number, elementId: number, patch: Partial<Pick<ProjectElement, 'startFrame' | 'endFrame' | 'enabled'>>) =>
+    fetch(`${API}/projects/${projectId}/elements/${elementId}`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(patch),
+    }).then((r) => json<ProjectElement>(r)),
 
   media: () => fetch(`${API}/media`).then((r) => json<MediaAsset[]>(r)),
 

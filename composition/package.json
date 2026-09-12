@@ -25,9 +25,11 @@
     "@remotion/bundler": "4.0.523",
     "@remotion/renderer": "4.0.523",
     "@testing-library/react": "16.3.3",
+    "@types/pngjs": "6.0.5",
     "@types/react": "18.3.31",
     "@types/react-dom": "18.3.7",
     "jsdom": "30.0.1",
+    "pngjs": "7.0.0",
     "vitest": "5.0.0"
   }
 }

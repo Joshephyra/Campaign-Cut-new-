@@ -34,7 +34,7 @@ describe('Remotion root', () => {
     const comp = await selectComposition({
       serveUrl,
       id: compositionConfig.id,
-      inputProps: { background: '#0F4C5C', lottie },
+      inputProps: { background: '#0F4C5C', media: null, elements: [{ id: 'standin', lottie, startFrame: 0, endFrame: lottieDurationInFrames(lottie, compositionConfig.fps), zIndex: 0, enabled: true }] },
     });
 
     expect(comp.durationInFrames).toBe(lottieDurationInFrames(lottie, compositionConfig.fps));
@@ -47,7 +47,7 @@ describe('Remotion root', () => {
     const comp = await selectComposition({
       serveUrl,
       id: compositionConfig.id,
-      inputProps: { background: '#000000', lottie: tiny },
+      inputProps: { background: '#000000', media: null, elements: [{ id: 'tiny', lottie: tiny, startFrame: 0, endFrame: 90, zIndex: 0, enabled: true }] },
     });
     expect(comp.durationInFrames).toBe(90);
   });

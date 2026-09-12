@@ -122,10 +122,35 @@ export function buildApp(options: AppOptions = {}) {
       project: rest,
       template: templateJson(t),
       schema: readJson<TemplateParam[]>(path.join(dir, 'schema.json')) ?? [],
-      elements: db.listTemplateElements(t.id),
+      elements: db.getProjectElements(project.id),
       values,
     };
   });
+
+  /** Move an element in time or toggle it, for this project only. */
+  app.put<{ Params: { id: string; elementId: string }; Body: { startFrame?: number; endFrame?: number; enabled?: boolean } }>(
+    '/projects/:id/elements/:elementId',
+    async (req, reply) => {
+      const id = Number(req.params.id);
+      const elementId = Number(req.params.elementId);
+      const body = req.body ?? {};
+      const patch: { startFrame?: number; endFrame?: number; enabled?: boolean } = {};
+      if (body.startFrame !== undefined) patch.startFrame = Math.max(0, Math.round(Number(body.startFrame)));
+      if (body.endFrame !== undefined) patch.endFrame = Math.max(0, Math.round(Number(body.endFrame)));
+      if (body.enabled !== undefined) patch.enabled = Boolean(body.enabled);
+      if ([patch.startFrame, patch.endFrame].some((v) => v !== undefined && !Number.isFinite(v))) {
+        return reply.code(400).send({ error: 'startFrame and endFrame must be numbers' });
+      }
+      if (!db.getProject(id)) return reply.code(404).send({ error: `No project ${id}` });
+      const current = db.getProjectElements(id).find((e) => e.id === elementId);
+      if (!current) return reply.code(404).send({ error: `No element ${elementId} in project ${id}` });
+      const start = patch.startFrame ?? current.startFrame;
+      const end = patch.endFrame ?? current.endFrame;
+      if (end <= start) return reply.code(400).send({ error: `endFrame (${end}) must be after startFrame (${start})` });
+      db.setProjectElement(id, elementId, patch);
+      return db.getProjectElements(id).find((e) => e.id === elementId);
+    },
+  );
 
   /** Save edited values. Only the given keys change; the rest are untouched. */
   app.put<{ Params: { id: string }; Body: { values?: { elementId: number; key: string; value: unknown }[] } }>(

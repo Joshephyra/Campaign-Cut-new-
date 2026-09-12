@@ -12,3 +12,5 @@ export { Main } from './Main';
 export { RemotionRoot } from './Root';
 export type { ParamKind, ParamValues, TemplateParam } from './schema';
 export { formatTimecode } from './timecode';
+export { compositionDurationFor, visibleElementsInOrder } from './elements';
+export type { ElementProps } from './elements';

@@ -3,6 +3,30 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-11 · M9 Timeline · DONE (Josh delegated sign-off)
+
+**What exists now**
+
+- Composition: `MainProps.elements` replaces the single `lottie` prop. Each enabled element renders in a Remotion `<Sequence>` at its in/out points, bottom to top by z. `compositionDurationFor` (latest enabled out point) drives both the Player and `calculateMetadata`. `elements.render.test.ts` proves the two MILESTONES tests at the pixel level with real `renderStill`: moving an in point changes when the element appears; toggling it off removes it.
+- DB: `project_element` (per-project start/end/enabled overrides; template defaults untouched). `getProjectElements` merges defaults with overrides; `setProjectElement` patches. This table is an addition to SPEC 3, needed because elements are moved per project.
+- Server: `GET /projects/:id` returns the merged elements; `PUT /projects/:id/elements/:elementId { startFrame?, endFrame?, enabled? }` validates (out after in, 404s) and returns the element. `buildProjectProps` carries the overrides into the export runner.
+- App: `Timeline` under the monitor. Ruler with second ticks; click or drag to scrub (drives the Player via `seekTo`, playhead follows `frameupdate`). One row per element, top of the stack first: toggle checkbox, name, a draggable bar with in/out timecodes in Plex Mono; dragging keeps the length and clamps at frame 0. Changes save through the PUT, debounced.
+- 172 tests across 33 files. Typecheck clean.
+
+**Verified by eye**
+
+- Clicked the ruler at the midpoint: playhead read `00:02:15` and the monitor jumped to that frame. Dragged the bar right: element now `00:01:01 – 00:06:01`, footer shows 181 frames, header shows Saved, a `PUT /projects/1/elements/1` returned 200.
+- Server render of the moved project: 181 frames; frame 15 shows only background and footage (element not yet in), frame 60 shows the panel and headline.
+
+**Notes**
+
+- One Bodymovin export is still one element, so every element shares the template's Lottie. Multi-element ingest is the next step for this data model, not in the milestone list.
+- Synthetic `PointerEvent` dispatch from a script does not reach React's handlers in this Chromium; real mouse input does. Timeline unit tests use Testing Library's `fireEvent` which does.
+
+**Next:** M10, transitions.
+
+---
+
 ## 2026-09-11 · M8 Footage and image params · DONE (Josh delegated sign-off). AT-3 complete.
 
 **What exists now**

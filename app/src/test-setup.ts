@@ -1,4 +1,4 @@
-import { createElement } from 'react';
+import { createElement, forwardRef } from 'react';
 import { vi } from 'vitest';
 
 // lottie-web touches a canvas at import time, which jsdom does not provide.
@@ -10,6 +10,7 @@ vi.mock('@remotion/lottie', () => ({
 // The Player is stubbed to expose the inputProps it was handed, so tests can
 // assert that typing reaches the composition without rendering video.
 vi.mock('@remotion/player', () => ({
-  Player: (props: { inputProps: unknown }) =>
-    createElement('div', { 'data-testid': 'player', 'data-props': JSON.stringify(props.inputProps) }),
+  Player: forwardRef<HTMLDivElement, { inputProps: unknown }>(function PlayerStub(props, ref) {
+    return createElement('div', { ref, 'data-testid': 'player', 'data-props': JSON.stringify(props.inputProps) });
+  }),
 }));

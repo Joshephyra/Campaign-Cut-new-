@@ -1,4 +1,4 @@
-import { applyLottieValues, type LottieAnimationData, type ParamValues, type TemplateParam } from '@campaigncut/composition';
+import { applyLottieValues, compositionConfig, lottieDurationInFrames, type LottieAnimationData, type ParamValues, type TemplateParam } from '@campaigncut/composition';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -38,7 +38,11 @@ let lastShown = -1;
 
 const finalPath = await renderComposition({
   outputPath,
-  inputProps: { background: '#0F4C5C', lottie, media: null },
+  inputProps: {
+    background: '#0F4C5C',
+    media: null,
+    elements: [{ id: 'standin', lottie, startFrame: 0, endFrame: lottieDurationInFrames(lottie, compositionConfig.fps), zIndex: 0, enabled: true }],
+  },
   onProgress: (p) => {
     const pct = Math.floor(p * 100);
     if (pct !== lastShown && pct % 10 === 0) {

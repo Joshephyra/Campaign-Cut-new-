@@ -59,12 +59,14 @@ describe('buildProjectProps (server-side runner)', () => {
       rect: { x: 0.5, y: 0, w: 0.5, h: 1 },
       fit: 'contain',
     });
-    const asset = (props.lottie.assets as { p: string }[])[0]!;
+    const lottie = props.elements[0]!.lottie;
+    const asset = (lottie.assets as { p: string }[])[0]!;
     expect(asset.p).toBe('http://127.0.0.1:3001/media/images/new-logo.png');
-    const text = (props.lottie.layers[0] as { t: { d: { k: { s: { t: string } }[] } } }).t.d.k[0]!.s.t;
+    const text = (lottie.layers[0] as { t: { d: { k: { s: { t: string } }[] } } }).t.d.k[0]!.s.t;
     expect(text).toBe('VOTE');
     // the slot layer is transparent so the footage shows through
-    expect((props.lottie.layers[2] as { ks: { o: { k: number } } }).ks.o.k).toBe(0);
+    expect((lottie.layers[2] as { ks: { o: { k: number } } }).ks.o.k).toBe(0);
+    expect(props.elements[0]).toMatchObject({ startFrame: 0, endFrame: 30, enabled: true });
   });
 
   it('has no media when the project has no footage assigned', () => {

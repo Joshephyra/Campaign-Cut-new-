@@ -1,12 +1,12 @@
 import { Composition } from 'remotion';
 import { compositionConfig, defaultProps, type MainProps } from './config';
-import { lottieDurationInFrames } from './lottieDuration';
+import { compositionDurationFor } from './elements';
 import { Main } from './Main';
 
 /**
  * Registers the single composition with Remotion for the server renderer.
- * Duration comes from the Lottie handed in as props, so the animation
- * plays at authored speed and ends when it ends.
+ * Duration comes from the elements handed in as props, so the timeline
+ * ends when its last enabled element ends.
  */
 export function RemotionRoot() {
   return (
@@ -16,10 +16,10 @@ export function RemotionRoot() {
       width={compositionConfig.width}
       height={compositionConfig.height}
       fps={compositionConfig.fps}
-      durationInFrames={lottieDurationInFrames(defaultProps.lottie, compositionConfig.fps)}
+      durationInFrames={compositionDurationFor(defaultProps.elements)}
       defaultProps={defaultProps}
       calculateMetadata={({ props }: { props: MainProps }) => ({
-        durationInFrames: lottieDurationInFrames(props.lottie, compositionConfig.fps),
+        durationInFrames: compositionDurationFor(props.elements),
       })}
     />
   );

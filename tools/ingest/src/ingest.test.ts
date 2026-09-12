@@ -69,12 +69,12 @@ describe('ingestTemplate', () => {
       expect(fs.existsSync(path.join(dir, f)), f).toBe(true);
     }
     const schema = JSON.parse(fs.readFileSync(path.join(dir, 'schema.json'), 'utf8')) as AnyRecord[];
-    expect(schema.map((p) => p.key).sort()).toEqual(['accent', 'disclaimer', 'headline', 'surface']);
+    expect(schema.map((p) => p.key).sort()).toEqual(['accent', 'disclaimer', 'headline', 'logo', 'mediaFill', 'surface']);
 
     const rows = db.listTemplates();
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ slug: 'standin', name: 'Stand-in', adType: 'Contrast', fps: 30, width: 1920, height: 1080, durationFrames: 150 });
-    expect(result.report).toHaveLength(4);
+    expect(result.report).toHaveLength(6);
   });
 
   // T5

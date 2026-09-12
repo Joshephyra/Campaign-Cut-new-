@@ -54,5 +54,16 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase }: B
   const values = withBaseUrl(raw, schema, serverBase);
   const lottie = applyLottieValues(resolvedSource, values, schema);
 
-  return { background: '#000000', lottie, media };
+  // One Bodymovin export is one element today, so every element shares the
+  // template's Lottie. Per-element Lotties arrive with multi-element ingest.
+  const elements = db.getProjectElements(projectId).map((e) => ({
+    id: String(e.id),
+    lottie,
+    startFrame: e.startFrame,
+    endFrame: e.endFrame,
+    zIndex: e.zIndex,
+    enabled: e.enabled,
+  }));
+
+  return { background: '#000000', media, elements };
 }
