@@ -3,7 +3,7 @@
 Running log of where the build is. Newest entry first.
 
 ---
-## 2026-09-11 · M3 Tag reader and schema generator · built and verified by Claude, awaiting Josh's own check
+## 2026-09-11 · M3 Tag reader and schema generator · DONE (Josh delegated sign-off)
 
 **What exists now**
 

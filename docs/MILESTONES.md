@@ -69,7 +69,7 @@ The most important pure function in the codebase. See `SPEC.md` section 2.
 
 ---
 
-## M3 · Tag reader and schema generator · IN PROGRESS
+## M3 · Tag reader and schema generator · DONE
 
 **Build**
 - Walk a Lottie JSON, find every layer whose name starts with `cc.`
@@ -90,7 +90,7 @@ The most important pure function in the codebase. See `SPEC.md` section 2.
 
 ---
 
-## M4 · Ingest CLI · TODO
+## M4 · Ingest CLI · IN PROGRESS
 
 **Build**
 - `npm run ingest -- <path-to-bodymovin-export> --ad-type "Contrast" --name "..."`
