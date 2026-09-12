@@ -46,7 +46,7 @@ Get a running skeleton with the module boundary that matters.
 
 ---
 
-## M2 · The mutation layer · IN PROGRESS
+## M2 · The mutation layer · DONE
 
 The most important pure function in the codebase. See `SPEC.md` section 2.
 
@@ -69,7 +69,7 @@ The most important pure function in the codebase. See `SPEC.md` section 2.
 
 ---
 
-## M3 · Tag reader and schema generator · TODO
+## M3 · Tag reader and schema generator · IN PROGRESS
 
 **Build**
 - Walk a Lottie JSON, find every layer whose name starts with `cc.`

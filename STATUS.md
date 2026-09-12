@@ -3,7 +3,7 @@
 Running log of where the build is. Newest entry first.
 
 ---
-## 2026-09-11 · M2 The mutation layer · built and verified by Claude, awaiting Josh's own check
+## 2026-09-11 · M2 The mutation layer · DONE (verified by Josh)
 
 **What exists now**
 
