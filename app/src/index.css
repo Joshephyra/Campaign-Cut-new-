@@ -1,1 +1,57 @@
 @import "tailwindcss";
+
+/* Interface fonts. Template fonts are loaded separately (M13). */
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 400;
+  src: url("/fonts/IBMPlexSans-Regular.ttf") format("truetype");
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 700;
+  src: url("/fonts/IBMPlexSans-Bold.ttf") format("truetype");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  src: url("/fonts/IBMPlexMono-Regular.ttf") format("truetype");
+}
+
+/*
+ * The Console (SPEC.md section 4, DESIGN.md):
+ *   hairlines, not cards; no drop shadows; zero border radius;
+ *   cobalt only on active states; Plex Sans for interface, Plex Mono for facts.
+ */
+@theme {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+
+  --color-ink: #0b0b0c;
+  --color-panel: #141518;
+  --color-hairline: #26282c;
+  --color-fg: #e6e6e6;
+  --color-muted: #8b8f98;
+  --color-cobalt: #2b54e6;
+  --color-danger: #e0564b;
+
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+}
+
+html,
+body {
+  background: var(--color-ink);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+}
+
+* {
+  border-radius: 0;
+  box-shadow: none;
+}

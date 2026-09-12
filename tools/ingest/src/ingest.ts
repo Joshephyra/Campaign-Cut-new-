@@ -142,8 +142,9 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
   await renderThumbnail({ lottie, outputPath: thumbPath, frame: Math.floor(meta.durationInFrames / 2) });
   log(`Wrote thumb.png`);
 
-  // 7. Register. Same slug updates rather than duplicates.
-  db.upsertTemplate({
+  // 7. Register. Same slug updates rather than duplicates. A Bodymovin
+  //    export is one comp, so it becomes one element spanning the template.
+  const { id: templateId } = db.upsertTemplate({
     slug,
     name,
     adType,
@@ -153,6 +154,7 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
     height: meta.height,
     thumbPath: path.relative(path.dirname(templatesDir), thumbPath).split(path.sep).join('/'),
   });
+  db.upsertTemplateElement({ templateId, slug, zIndex: 0, startFrame: 0, endFrame: meta.durationInFrames });
   log(`Registered "${name}" (${slug}) under ad type "${adType}"`);
 
   return { slug, dir, params: generated.params, fonts: generated.fonts, report: generated.report, meta };

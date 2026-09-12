@@ -18,9 +18,41 @@ export type TemplateInput = {
 
 export type TemplateRow = TemplateInput & { id: number; adTypeSort: number };
 
+export type TemplateElementInput = {
+  templateId: number;
+  slug: string;
+  zIndex: number;
+  startFrame: number;
+  endFrame: number;
+};
+
+export type TemplateElementRow = TemplateElementInput & { id: number };
+
+export type ProjectValue = { elementId: number; key: string; value: unknown };
+
+export type ProjectInput = { templateId: number; name: string; values: ProjectValue[] };
+
+export type ProjectRow = {
+  id: number;
+  templateId: number;
+  templateSlug: string;
+  templateName: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ProjectDetail = ProjectRow & { values: ProjectValue[] };
+
 export type Db = Database.Database & {
   upsertTemplate(t: TemplateInput): { id: number };
   listTemplates(): TemplateRow[];
+  getTemplateBySlug(slug: string): TemplateRow | undefined;
+  upsertTemplateElement(e: TemplateElementInput): { id: number };
+  listTemplateElements(templateId: number): TemplateElementRow[];
+  createProject(p: ProjectInput): { id: number };
+  getProject(id: number): ProjectDetail | undefined;
+  listProjects(): ProjectRow[];
 };
 
 const MIGRATIONS = `
@@ -43,6 +75,32 @@ CREATE TABLE IF NOT EXISTS template (
   created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
   updated_at      TEXT    NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS template_element (
+  id           INTEGER PRIMARY KEY,
+  template_id  INTEGER NOT NULL REFERENCES template(id) ON DELETE CASCADE,
+  slug         TEXT    NOT NULL,
+  z_index      INTEGER NOT NULL DEFAULT 0,
+  start_frame  INTEGER NOT NULL DEFAULT 0,
+  end_frame    INTEGER NOT NULL,
+  UNIQUE (template_id, slug)
+);
+
+CREATE TABLE IF NOT EXISTS project (
+  id           INTEGER PRIMARY KEY,
+  template_id  INTEGER NOT NULL REFERENCES template(id),
+  name         TEXT    NOT NULL,
+  created_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+  updated_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS project_value (
+  project_id  INTEGER NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+  element_id  INTEGER NOT NULL REFERENCES template_element(id),
+  param_key   TEXT    NOT NULL,
+  value_json  TEXT    NOT NULL,
+  PRIMARY KEY (project_id, element_id, param_key)
+);
 `;
 
 /**
@@ -62,8 +120,16 @@ export function openDb(file: string): Db {
   return Object.assign(db, {
     upsertTemplate: (t: TemplateInput) => upsertTemplate(db, t),
     listTemplates: () => listTemplates(db),
+    getTemplateBySlug: (slug: string) => getTemplateBySlug(db, slug),
+    upsertTemplateElement: (e: TemplateElementInput) => upsertTemplateElement(db, e),
+    listTemplateElements: (templateId: number) => listTemplateElements(db, templateId),
+    createProject: (p: ProjectInput) => createProject(db, p),
+    getProject: (id: number) => getProject(db, id),
+    listProjects: () => listProjects(db),
   });
 }
+
+// ---- ad types and templates -------------------------------------------
 
 function ensureAdType(db: Database.Database, name: string): number {
   const existing = db.prepare(`SELECT id FROM ad_type WHERE name = ?`).get(name) as { id: number } | undefined;
@@ -75,7 +141,7 @@ function ensureAdType(db: Database.Database, name: string): number {
 
 function upsertTemplate(db: Database.Database, t: TemplateInput): { id: number } {
   const adTypeId = ensureAdType(db, t.adType);
-  const row = db
+  return db
     .prepare(
       `INSERT INTO template (slug, name, ad_type_id, duration_frames, fps, width, height, thumb_path)
        VALUES (@slug, @name, @adTypeId, @durationFrames, @fps, @width, @height, @thumbPath)
@@ -91,17 +157,77 @@ function upsertTemplate(db: Database.Database, t: TemplateInput): { id: number }
        RETURNING id`,
     )
     .get({ ...t, adTypeId }) as { id: number };
-  return row;
 }
 
+const TEMPLATE_SELECT = `
+  SELECT t.id, t.slug, t.name, a.name AS adType, a.sort AS adTypeSort,
+         t.duration_frames AS durationFrames, t.fps, t.width, t.height, t.thumb_path AS thumbPath
+  FROM template t JOIN ad_type a ON a.id = t.ad_type_id`;
+
 function listTemplates(db: Database.Database): TemplateRow[] {
-  const rows = db
+  return db.prepare(`${TEMPLATE_SELECT} ORDER BY a.sort, t.name`).all() as TemplateRow[];
+}
+
+function getTemplateBySlug(db: Database.Database, slug: string): TemplateRow | undefined {
+  return db.prepare(`${TEMPLATE_SELECT} WHERE t.slug = ?`).get(slug) as TemplateRow | undefined;
+}
+
+// ---- elements ----------------------------------------------------------
+
+function upsertTemplateElement(db: Database.Database, e: TemplateElementInput): { id: number } {
+  return db
     .prepare(
-      `SELECT t.id, t.slug, t.name, a.name AS adType, a.sort AS adTypeSort,
-              t.duration_frames AS durationFrames, t.fps, t.width, t.height, t.thumb_path AS thumbPath
-       FROM template t JOIN ad_type a ON a.id = t.ad_type_id
-       ORDER BY a.sort, t.name`,
+      `INSERT INTO template_element (template_id, slug, z_index, start_frame, end_frame)
+       VALUES (@templateId, @slug, @zIndex, @startFrame, @endFrame)
+       ON CONFLICT(template_id, slug) DO UPDATE SET
+         z_index = excluded.z_index,
+         start_frame = excluded.start_frame,
+         end_frame = excluded.end_frame
+       RETURNING id`,
     )
-    .all() as TemplateRow[];
-  return rows;
+    .get(e) as { id: number };
+}
+
+function listTemplateElements(db: Database.Database, templateId: number): TemplateElementRow[] {
+  return db
+    .prepare(
+      `SELECT id, template_id AS templateId, slug, z_index AS zIndex, start_frame AS startFrame, end_frame AS endFrame
+       FROM template_element WHERE template_id = ? ORDER BY z_index, id`,
+    )
+    .all(templateId) as TemplateElementRow[];
+}
+
+// ---- projects ----------------------------------------------------------
+
+function createProject(db: Database.Database, p: ProjectInput): { id: number } {
+  const insertProject = db.prepare(`INSERT INTO project (template_id, name) VALUES (?, ?)`);
+  const insertValue = db.prepare(
+    `INSERT INTO project_value (project_id, element_id, param_key, value_json) VALUES (?, ?, ?, ?)`,
+  );
+  const run = db.transaction((): { id: number } => {
+    const id = Number(insertProject.run(p.templateId, p.name).lastInsertRowid);
+    for (const v of p.values) insertValue.run(id, v.elementId, v.key, JSON.stringify(v.value ?? null));
+    return { id };
+  });
+  return run();
+}
+
+const PROJECT_SELECT = `
+  SELECT p.id, p.template_id AS templateId, t.slug AS templateSlug, t.name AS templateName,
+         p.name, p.created_at AS createdAt, p.updated_at AS updatedAt
+  FROM project p JOIN template t ON t.id = p.template_id`;
+
+function getProject(db: Database.Database, id: number): ProjectDetail | undefined {
+  const row = db.prepare(`${PROJECT_SELECT} WHERE p.id = ?`).get(id) as ProjectRow | undefined;
+  if (!row) return undefined;
+  const values = (
+    db
+      .prepare(`SELECT element_id AS elementId, param_key AS key, value_json AS json FROM project_value WHERE project_id = ? ORDER BY element_id, param_key`)
+      .all(id) as { elementId: number; key: string; json: string }[]
+  ).map((v) => ({ elementId: v.elementId, key: v.key, value: JSON.parse(v.json) as unknown }));
+  return { ...row, values };
+}
+
+function listProjects(db: Database.Database): ProjectRow[] {
+  return db.prepare(`${PROJECT_SELECT} ORDER BY p.id DESC`).all() as ProjectRow[];
 }

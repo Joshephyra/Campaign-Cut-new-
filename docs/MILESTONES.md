@@ -111,7 +111,7 @@ The most important pure function in the codebase. See `SPEC.md` section 2.
 
 ---
 
-## M5 · Library UI · IN PROGRESS
+## M5 · Library UI · DONE
 
 **Build**
 - Ad type > ad example browse, per `SPEC.md` section 3
@@ -127,7 +127,7 @@ The most important pure function in the codebase. See `SPEC.md` section 2.
 
 ---
 
-## M6 · Schema-driven inspector · TODO
+## M6 · Schema-driven inspector · IN PROGRESS
 
 **Build**
 - Inspector renders controls **generated from the schema**. No per-template code.

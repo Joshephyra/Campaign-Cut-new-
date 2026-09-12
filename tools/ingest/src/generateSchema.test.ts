@@ -276,6 +276,6 @@ describe('generateSchema: the stand-in template', () => {
     expect(out.errors).toEqual([]);
     const byKey = (a: TemplateParam, b: TemplateParam) => a.key.localeCompare(b.key);
     expect([...out.params].sort(byKey)).toEqual([...expected].sort(byKey));
-    expect(out.fonts).toEqual(['Arial']);
+    expect(out.fonts).toEqual(["IBM Plex Sans"]);
   });
 });

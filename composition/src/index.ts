@@ -9,3 +9,4 @@ export { LottieLayer } from './LottieLayer';
 export { Main } from './Main';
 export { RemotionRoot } from './Root';
 export type { ParamKind, ParamValues, TemplateParam } from './schema';
+export { formatTimecode } from './timecode';

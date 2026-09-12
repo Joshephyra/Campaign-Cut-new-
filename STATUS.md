@@ -3,6 +3,30 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-11 · M5 Library UI · DONE (Josh delegated sign-off)
+
+**What exists now**
+
+- Server: `GET /templates` (grouped by ad type in sort order, templates by name, with `thumbUrl`), `GET /templates/:slug` (meta, schema, elements), static `/templates/<slug>/*` for template.json, thumb.png and images, `GET /projects`, `POST /projects { templateSlug, name? }` (copies every schema default into `project_value`, returns 201 with the id), `GET /projects/:id` (project, template, schema, elements, values). `buildApp({ db, templatesDir })` is injectable for tests.
+- DB: `template_element`, `project`, `project_value` tables (SPEC 3) with `upsertTemplateElement`, `listTemplateElements`, `getTemplateBySlug`, `createProject`, `getProject`, `listProjects`. Ingest now registers one element per template spanning its duration.
+- App: two screens with a tiny history-API router. `Library` shows ad type > ad example with thumbnail, timecode, dimensions, fps; clicking creates a project and opens `/projects/:id`. `Editor` loads the project, applies its saved values through `applyLottieValues`, shows the Player and, in an inspector column, the M2 harness (M6 replaces it). The Console styling: IBM Plex Sans/Mono via @font-face, hairlines, zero radius, no shadows, cobalt only for focus/active.
+- `formatTimecode` moved into the composition package (shared by library and, later, the timeline).
+- 102 tests across 17 files. Typecheck clean.
+
+**Verified by eye**
+
+- Library at `/`: "Contrast" group, the stand-in card with a loaded thumbnail and `00:05:00 · 1920×1080 · 30 fps`, Plex Sans applied.
+- Clicking the card creates a project and lands on `/projects/<id>` with the Player rendering and the inspector pre-filled from the saved values.
+
+**Notes**
+
+- App tests stub `@remotion/lottie` in `src/test-setup.ts` because lottie-web touches a canvas at import time under jsdom.
+- DESIGN.md is still missing; styling follows the SPEC section 4 summary.
+
+**Next:** M6, schema-driven inspector.
+
+---
+
 ## 2026-09-11 · M4 Ingest CLI · DONE (Josh delegated sign-off). This is AT-1.
 
 **What exists now**
