@@ -3,6 +3,32 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-11 · M4 Ingest CLI · DONE (Josh delegated sign-off). This is AT-1.
+
+**What exists now**
+
+- `npm run ingest -- <handover-folder-or-json> --ad-type "Contrast" --name "..." [--slug ...]`. Validates first (tags via M3, meta fields non-zero, every referenced font has a file), writes nothing on failure, prints every problem naming the layer or font. On success: copies the Lottie and `images/` into `templates/<slug>/`, writes `schema.json` and `meta.json`, renders `thumb.png` from the middle frame through the one composition (`renderStill`), and upserts the `template` row in SQLite.
+- `server/src/db/index.ts`: `openDb()` creates `ad_type` and `template` tables (SPEC 3), seeds the five ad types, `upsertTemplate` by slug, `listTemplates`. DB file at `media/campaigncut.db` (gitignored), override with `CAMPAIGNCUT_DB`. The server package now exports `./db`, `./render`, `./paths` for the ingest tool.
+- `tools/ingest/src/fonts.ts`: font file lookup by family name. Fonts handed over in the export's `fonts/` folder are copied into `app/public/fonts`.
+- `app/public/fonts/`: IBM Plex Sans Regular and Bold, IBM Plex Mono Regular (OFL, from IBM's repo). The stand-in now references IBM Plex Sans instead of Arial so it passes its own font check. Browser `@font-face` loading is still M13, so text currently falls back to the system sans in both preview and export.
+- `tools/ingest/fixtures/standin/data.json` is the hand-made "designer handover"; `templates/standin/` is now generated output from ingesting it.
+- 86 tests across 13 files. Typecheck clean.
+
+**Verified by eye**
+
+- Real ingest of the stand-in: prints the four tags, fonts, params; `templates/standin/` has template.json, schema.json, meta.json, thumb.png; DB row present with correct fields. thumb.png inspected: headline, bar, panel at the mid frame.
+- A copy referencing Arial: rejected with the font named, exit 1, no folder created, no DB row.
+- App reloads on the regenerated template with all four fields and the Player rendering.
+
+**Decisions**
+
+- Font check lives in M4 (SPEC 1.4 and the M4 test list both require it); M13 keeps browser font loading.
+- Thumbnail rendering is injectable so tests use a stub; the real Remotion render is verified by running the CLI.
+
+**Next:** M5, Library UI.
+
+---
+
 ## 2026-09-11 · M3 Tag reader and schema generator · DONE (Josh delegated sign-off)
 
 **What exists now**

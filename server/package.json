@@ -16,11 +16,19 @@
     "@remotion/bundler": "4.0.523",
     "@remotion/renderer": "4.0.523",
     "fastify": "5.12.4",
-    "remotion": "4.0.523"
+    "remotion": "4.0.523",
+    "better-sqlite3": "13.0.3"
   },
   "devDependencies": {
     "@types/node": "24.13.4",
     "tsx": "4.23.13",
-    "vitest": "5.0.0"
+    "vitest": "5.0.0",
+    "@types/better-sqlite3": "9.6.0"
+  },
+  "exports": {
+    ".": "./src/app.ts",
+    "./db": "./src/db/index.ts",
+    "./render": "./src/render.ts",
+    "./paths": "./src/paths.ts"
   }
 }

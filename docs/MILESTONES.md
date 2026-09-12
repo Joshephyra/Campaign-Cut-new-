@@ -90,7 +90,7 @@ The most important pure function in the codebase. See `SPEC.md` section 2.
 
 ---
 
-## M4 · Ingest CLI · IN PROGRESS
+## M4 · Ingest CLI · DONE
 
 **Build**
 - `npm run ingest -- <path-to-bodymovin-export> --ad-type "Contrast" --name "..."`
@@ -111,7 +111,7 @@ The most important pure function in the codebase. See `SPEC.md` section 2.
 
 ---
 
-## M5 · Library UI · TODO
+## M5 · Library UI · IN PROGRESS
 
 **Build**
 - Ad type > ad example browse, per `SPEC.md` section 3
