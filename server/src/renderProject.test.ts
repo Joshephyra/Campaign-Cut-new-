@@ -58,6 +58,7 @@ describe('buildProjectProps (server-side runner)', () => {
       src: 'http://127.0.0.1:3001/media/originals/1-r.mp4',
       rect: { x: 0.5, y: 0, w: 0.5, h: 1 },
       fit: 'contain',
+      key: null,
     });
     const lottie = props.elements[0]!.lottie;
     const asset = (lottie.assets as { p: string }[])[0]!;
@@ -121,5 +122,27 @@ describe('POST /images', () => {
     const { payload, headers } = multipart('clip.mp4', Buffer.from('x'), 'video/mp4');
     const res = await app.inject({ method: 'POST', url: '/images', payload, headers });
     expect(res.statusCode).toBe(400);
+  });
+});
+
+describe('buildProjectProps: chroma key travels to the export runner', () => {
+  it('passes the stored key through in media.key', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-rp-key-'));
+    fs.mkdirSync(path.join(tmp, 't'), { recursive: true });
+    fs.writeFileSync(path.join(tmp, 't', 'template.json'), JSON.stringify(lottie));
+    fs.writeFileSync(path.join(tmp, 't', 'schema.json'), JSON.stringify(schema));
+    const db = openDb(':memory:');
+    const t = db.upsertTemplate({ slug: 't', name: 'T', adType: 'Bio', durationFrames: 30, fps: 30, width: 1920, height: 1080, thumbPath: '' });
+    const elementId = db.upsertTemplateElement({ templateId: t.id, slug: 't', zIndex: 0, startFrame: 0, endFrame: 30 }).id;
+    const asset = db.insertMediaAsset({ originalName: 'g.mp4', originalPath: 'originals/g.mp4', proxyPath: 'proxies/g.mp4', thumbPath: 'thumbs/g.jpg', width: 1920, height: 1080, durationS: 2, fps: 25 });
+    const projectId = db.createProject({
+      templateId: t.id,
+      name: 'P',
+      values: [{ elementId, key: 'mediaFill', value: { assetId: asset.id, fit: 'cover', key: { color: 'green', threshold: 0.6, spill: 0.2 } } }],
+    }).id;
+    const props = buildProjectProps({ db, templatesDir: tmp, projectId, serverBase: 'http://x' });
+    expect(props.media?.key).toEqual({ color: 'green', threshold: 0.6, spill: 0.2 });
+    db.close();
+    fs.rmSync(tmp, { recursive: true, force: true });
   });
 });

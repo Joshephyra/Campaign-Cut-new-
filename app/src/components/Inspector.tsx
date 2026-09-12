@@ -1,4 +1,14 @@
-import { hexToRgba, isMediaValue, type Fit, type MediaValue, type ParamValues, type TemplateParam } from '@campaigncut/composition';
+import {
+  DEFAULT_CHROMA_KEY,
+  hexToRgba,
+  isChromaKey,
+  isMediaValue,
+  type ChromaKey,
+  type Fit,
+  type MediaValue,
+  type ParamValues,
+  type TemplateParam,
+} from '@campaigncut/composition';
 import { useEffect, useRef, useState } from 'react';
 import { api, type MediaAsset } from '../api';
 
@@ -244,7 +254,75 @@ function MediaControl({
           </div>
         </div>
       )}
+      {current && <ChromaControls value={current} onChange={onChange} />}
       <p className="font-mono text-[10px] text-muted mt-1">Upload clips in the Footage panel below.</p>
+    </div>
+  );
+}
+
+/** Chroma key: on/off, screen colour, threshold, spill. Stored inside the footage value. */
+function ChromaControls({ value, onChange }: { value: MediaValue; onChange: (v: MediaValue) => void }) {
+  const key: ChromaKey | null = isChromaKey(value.key) ? value.key : null;
+  const withKey = (k: ChromaKey | null): MediaValue => {
+    const { key: _dropped, ...rest } = value;
+    return k ? { ...rest, key: k } : rest;
+  };
+  return (
+    <div className="mt-2 border border-hairline p-2 flex flex-col gap-2 font-mono text-[10px]">
+      <label className="flex items-center gap-2 text-fg">
+        <input
+          type="checkbox"
+          aria-label="Key out green screen"
+          checked={key !== null}
+          onChange={(e) => onChange(withKey(e.target.checked ? DEFAULT_CHROMA_KEY : null))}
+          className="accent-cobalt"
+        />
+        Key out green screen
+      </label>
+      {key && (
+        <>
+          <label className="flex items-center gap-2">
+            <span className="w-20 text-muted">Screen colour</span>
+            <select
+              aria-label="Screen colour"
+              value={key.color}
+              onChange={(e) => onChange(withKey({ ...key, color: e.target.value as ChromaKey['color'] }))}
+              className="bg-panel border border-hairline px-1 py-0.5 text-fg"
+            >
+              <option value="green">green</option>
+              <option value="blue">blue</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-2">
+            <span className="w-20 text-muted">Threshold</span>
+            <input
+              type="range"
+              aria-label="Threshold"
+              min={0}
+              max={1}
+              step={0.05}
+              value={key.threshold}
+              onChange={(e) => onChange(withKey({ ...key, threshold: Number(e.target.value) }))}
+              className="flex-1 accent-cobalt"
+            />
+            <span className="w-8 text-right">{key.threshold.toFixed(2)}</span>
+          </label>
+          <label className="flex items-center gap-2">
+            <span className="w-20 text-muted">Spill</span>
+            <input
+              type="range"
+              aria-label="Spill suppression"
+              min={0}
+              max={1}
+              step={0.05}
+              value={key.spill}
+              onChange={(e) => onChange(withKey({ ...key, spill: Number(e.target.value) }))}
+              className="flex-1 accent-cobalt"
+            />
+            <span className="w-8 text-right">{key.spill.toFixed(2)}</span>
+          </label>
+        </>
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import {
   applyLottieValues,
   fontsFor,
+  isChromaKey,
   isMediaValue,
   mediaFillRect,
   mediaSourceFor,
@@ -54,7 +55,7 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase, run
     const rect = mediaFillRect(source, mediaParam.path);
     if (asset && rect) {
       const src = mediaSourceFor({ proxyUrl: `/media/${asset.proxyPath}`, originalUrl: `/media/${asset.originalPath}` }, runner);
-      media = { src: `${serverBase}${src}`, rect, fit: mediaValue.fit };
+      media = { src: `${serverBase}${src}`, rect, fit: mediaValue.fit, key: isChromaKey(mediaValue.key) ? mediaValue.key : null };
     }
   }
 

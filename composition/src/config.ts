@@ -1,4 +1,5 @@
 import type { ElementProps } from './elements';
+import type { ChromaKey } from './chroma';
 import type { TemplateFont } from './fonts';
 import type { TransitionProps } from './transitions';
 
@@ -60,6 +61,8 @@ export type MainMedia = {
   /** Slot rectangle as fractions of the frame. */
   rect: { x: number; y: number; w: number; h: number };
   fit: 'cover' | 'contain';
+  /** Chroma key applied to the footage, or none. Same filter in both runners. */
+  key?: ChromaKey | null;
 };
 
 export type MainProps = {

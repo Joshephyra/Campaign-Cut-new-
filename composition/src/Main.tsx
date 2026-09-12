@@ -3,6 +3,7 @@ import { fade } from '@remotion/transitions/fade';
 import { slide } from '@remotion/transitions/slide';
 import { wipe } from '@remotion/transitions/wipe';
 import { AbsoluteFill, OffthreadVideo, Sequence } from 'remotion';
+import { chromaFilter } from './chroma';
 import { PREMOUNT_FRAMES, type MainProps } from './config';
 import type { ElementProps } from './elements';
 import { LottieLayer } from './LottieLayer';
@@ -39,6 +40,7 @@ function presentationFor(preset: TransitionPreset): AnyPresentation {
 export function Main({ background, media, elements, transitions = [], fonts = [] }: MainProps) {
   const byId = new Map(elements.map((e) => [e.id, e] as const));
   const { chains } = effectiveTimeline(elements, transitions);
+  const key = media?.key ? chromaFilter(media.key) : null;
 
   return (
     <AbsoluteFill style={{ backgroundColor: background }}>
@@ -53,10 +55,24 @@ export function Main({ background, media, elements, transitions = [], fonts = []
             width: `${media.rect.w * 100}%`,
             height: `${media.rect.h * 100}%`,
             overflow: 'hidden',
-            backgroundColor: '#000000',
+            // Letterbox bars are black; with a key the background must show through the keyed pixels.
+            backgroundColor: key ? 'transparent' : '#000000',
           }}
         >
-          <OffthreadVideo src={media.src} style={{ width: '100%', height: '100%', objectFit: media.fit }} />
+          {key && (
+            <svg width={0} height={0} style={{ position: 'absolute' }} aria-hidden="true">
+              <filter id={key.id} colorInterpolationFilters="sRGB" x="0" y="0" width="100%" height="100%">
+                <feColorMatrix type="matrix" values={key.alphaMatrix} result="keyed" />
+                <feColorMatrix in="keyed" type="matrix" values={key.spillMatrix} result="despilled" />
+                <feComponentTransfer in="despilled">
+                  <feFuncA type="linear" slope="3" intercept="-1" />
+                </feComponentTransfer>
+              </filter>
+            </svg>
+          )}
+          <div data-testid="media-key" style={{ width: '100%', height: '100%', filter: key ? `url(#${key.id})` : undefined }}>
+            <OffthreadVideo src={media.src} style={{ width: '100%', height: '100%', objectFit: media.fit }} />
+          </div>
         </div>
       )}
 

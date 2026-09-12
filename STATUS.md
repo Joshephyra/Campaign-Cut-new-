@@ -3,6 +3,30 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-11 · M14 Background removal (spike) · DONE (Josh delegated sign-off): chroma key ships; ML matting not attempted
+
+**What exists now**
+
+- `composition/src/chroma.ts`: a colour-matrix chroma key. Alpha = 1 − k·(screen − average of the other two channels), k = 1 + threshold; a component transfer hardens the edge; a second matrix pulls the screen colour out of kept pixels (spill). Green or blue screen. `chromaFilter(key)` returns the two matrices and a stable filter id.
+- `Main` applies it as an SVG `<filter>` via CSS on the footage inside the slot, with the slot backing transparent while keyed so the composition shows through. Same filter in the Player and in `renderMedia`: no preview/export split and no exception to one-composition-two-runners, which SPEC 7 allowed but did not require.
+- Stored inside the footage value (`{ assetId, fit, key: { color, threshold, spill } }`); both runners pass it as `media.key`. Inspector: "Key out green screen" toggle, screen colour, threshold and spill sliders.
+- `chroma.render.test.ts` renders a generated green-screen clip (`composition/fixtures/greenscreen-2s.mp4`, green field with a red square) through a real render: without the key the green is green; with it the background shows through and the red square survives. Unit tests cover the matrices.
+- 236 tests across 47 files. Typecheck clean.
+
+**Verified by eye**
+
+- Editor on project 2 with the green-screen clip: key on, threshold 0.5, spill 0.3, the SVG filter attached to the footage; the monitor shows the red square on black with no green.
+- Server render of the same project: sampled pixels at frame 40 are black where the green screen was, red at the square, navy on the panel.
+
+**Limits, stated plainly**
+
+- It is a matrix key, not a matting model: soft hair edges, shadows on the screen and uneven lighting will show. Yellows and cyans lose some opacity because they contain the screen colour. Spill suppression tints kept pixels slightly toward neutral.
+- ML matting (SPEC 7 step 2) was not evaluated. The chroma key met the milestone's done-when on a clean screen, and the spike was timeboxed as instructed.
+
+**Next:** M15, After Effects pre-flight script.
+
+---
+
 ## 2026-09-11 · M13 Fonts · DONE (Josh delegated sign-off)
 
 **What exists now**

@@ -3,6 +3,7 @@ import {
   compositionConfig,
   compositionDurationWithTransitions,
   fontsFor,
+  isChromaKey,
   isMediaValue,
   Main,
   mediaFillRect,
@@ -263,7 +264,7 @@ function Monitor({
     const asset = assets.find((a) => a.id === v.assetId);
     const rect = mediaFillRect(source, mediaParam.path);
     if (!asset || !rect) return null;
-    return { src: api.fileUrl(mediaSourceFor(asset, 'preview')), rect, fit: v.fit };
+    return { src: api.fileUrl(mediaSourceFor(asset, 'preview')), rect, fit: v.fit, key: isChromaKey(v.key) ? v.key : null };
   }, [schema, renderedValues, assets, source]);
 
   // One Bodymovin export is one element today, so every element shares the template's Lottie.

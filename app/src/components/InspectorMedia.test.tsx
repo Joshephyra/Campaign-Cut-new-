@@ -47,3 +47,41 @@ describe('Inspector: image and media params', () => {
     expect(onChange).toHaveBeenCalledWith({ mediaFill: { assetId: 4, fit: 'contain' } });
   });
 });
+
+describe('Inspector: chroma key controls on a footage param', () => {
+  const mediaOnly: TemplateParam[] = [{ key: 'mediaFill', role: 'mediaFill', kind: 'media', label: 'Footage', default: null, path: '/layers/2' }];
+
+  it('shows no key controls until a clip is chosen, then a "key out green screen" toggle', () => {
+    const { rerender } = render(<Inspector schema={mediaOnly} values={{}} onChange={() => {}} assets={assets} templateSlug="t" />);
+    expect(screen.queryByLabelText(/key out/i)).toBeNull();
+    rerender(<Inspector schema={mediaOnly} values={{ mediaFill: { assetId: 4, fit: 'cover' } }} onChange={() => {}} assets={assets} templateSlug="t" />);
+    expect((screen.getByLabelText(/key out/i) as HTMLInputElement).checked).toBe(false);
+  });
+
+  it('turning the key on stores the default key; the sliders adjust threshold and spill; off clears it', () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <Inspector schema={mediaOnly} values={{ mediaFill: { assetId: 4, fit: 'cover' } }} onChange={onChange} assets={assets} templateSlug="t" />,
+    );
+    fireEvent.click(screen.getByLabelText(/key out/i));
+    expect(onChange).toHaveBeenLastCalledWith({ mediaFill: { assetId: 4, fit: 'cover', key: { color: 'green', threshold: 0.5, spill: 0.3 } } });
+
+    rerender(
+      <Inspector
+        schema={mediaOnly}
+        values={{ mediaFill: { assetId: 4, fit: 'cover', key: { color: 'green', threshold: 0.5, spill: 0.3 } } }}
+        onChange={onChange}
+        assets={assets}
+        templateSlug="t"
+      />,
+    );
+    fireEvent.change(screen.getByLabelText(/threshold/i), { target: { value: '0.7' } });
+    expect(onChange).toHaveBeenLastCalledWith({ mediaFill: { assetId: 4, fit: 'cover', key: { color: 'green', threshold: 0.7, spill: 0.3 } } });
+    fireEvent.change(screen.getByLabelText(/spill/i), { target: { value: '0.1' } });
+    expect(onChange).toHaveBeenLastCalledWith({ mediaFill: { assetId: 4, fit: 'cover', key: { color: 'green', threshold: 0.5, spill: 0.1 } } });
+    fireEvent.change(screen.getByLabelText(/screen colour/i), { target: { value: 'blue' } });
+    expect(onChange).toHaveBeenLastCalledWith({ mediaFill: { assetId: 4, fit: 'cover', key: { color: 'blue', threshold: 0.5, spill: 0.3 } } });
+    fireEvent.click(screen.getByLabelText(/key out/i));
+    expect(onChange).toHaveBeenLastCalledWith({ mediaFill: { assetId: 4, fit: 'cover' } });
+  });
+});

@@ -1,3 +1,4 @@
+import type { ChromaKey } from './chroma';
 import type { LottieAnimationData } from './config';
 import { resolvePointer } from './jsonPointer';
 import type { ParamValues, TemplateParam } from './schema';
@@ -13,7 +14,7 @@ export type Rect = { x: number; y: number; w: number; h: number };
 export type MediaProps = { src: string; rect: Rect; fit: Fit };
 
 /** What is stored in project_value for a cc.mediaFill param. */
-export type MediaValue = { assetId: number; fit: Fit };
+export type MediaValue = { assetId: number; fit: Fit; key?: ChromaKey | null };
 
 export function isMediaValue(v: unknown): v is MediaValue {
   return !!v && typeof v === 'object' && typeof (v as MediaValue).assetId === 'number';

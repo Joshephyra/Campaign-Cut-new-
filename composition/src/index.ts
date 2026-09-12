@@ -18,3 +18,5 @@ export { compositionDurationWithTransitions, DEFAULT_TRANSITION_FRAMES, effectiv
 export type { Chain, EffectiveElement, TransitionPreset, TransitionProps } from './transitions';
 export { fontFaceCss, fontsFor, TemplateFonts } from './fonts';
 export type { TemplateFont, TemplateFontFile } from './fonts';
+export { chromaFilter, DEFAULT_CHROMA_KEY, isChromaKey } from './chroma';
+export type { ChromaFilter, ChromaKey } from './chroma';

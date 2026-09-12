@@ -264,7 +264,7 @@ Only start this after M11. Measure before optimizing.
 
 ---
 
-## M14 · Background removal · IN PROGRESS
+## M14 · Background removal · DONE
 
 Spike. Timeboxed. Cut this before cutting anything else.
 
@@ -279,7 +279,7 @@ Spike. Timeboxed. Cut this before cutting anything else.
 
 ---
 
-## M15 · After Effects pre-flight script · TODO
+## M15 · After Effects pre-flight script · IN PROGRESS
 
 **Build**
 - `tools/ae-preflight/preflight.jsx`, run from After Effects via File > Scripts > Run Script File
