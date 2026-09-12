@@ -166,7 +166,7 @@ The most important pure function in the codebase. See `SPEC.md` section 2.
 
 ---
 
-## M8 · Footage and image params · IN PROGRESS
+## M8 · Footage and image params · DONE
 
 **Build**
 - `cc.mediaFill` slot: user footage renders through the template's designated area
@@ -182,7 +182,7 @@ The most important pure function in the codebase. See `SPEC.md` section 2.
 
 ---
 
-## M9 · Timeline · TODO
+## M9 · Timeline · IN PROGRESS
 
 **Build**
 - Element stack in z order with in and out points

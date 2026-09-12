@@ -71,6 +71,12 @@ export const api = {
     return fetch(`${API}/media`, { method: 'POST', body }).then((r) => json<MediaAsset>(r));
   },
 
+  uploadImage: (file: File) => {
+    const body = new FormData();
+    body.append('file', file, file.name);
+    return fetch(`${API}/images`, { method: 'POST', body }).then((r) => json<{ url: string }>(r));
+  },
+
   templateLottie: (slug: string) => fetch(`${API}/templates/${slug}/template.json`).then((r) => json<LottieAnimationData>(r)),
 
   /** Absolute URL for a server-relative file path such as /templates/x/thumb.png. */

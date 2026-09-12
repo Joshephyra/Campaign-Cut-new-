@@ -1,15 +1,20 @@
 import {
   applyLottieValues,
   compositionConfig,
+  isMediaValue,
   lottieDurationInFrames,
   Main,
+  mediaFillRect,
+  mediaSourceFor,
+  resolveLottieAssets,
+  withBaseUrl,
   type LottieAnimationData,
   type MainProps,
   type ParamValues,
 } from '@campaigncut/composition';
 import { Player } from '@remotion/player';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { api, type ProjectDetail } from '../api';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { API, api, type MediaAsset, type ProjectDetail } from '../api';
 import { Inspector } from '../components/Inspector';
 import { MediaPanel } from '../components/MediaPanel';
 
@@ -32,6 +37,7 @@ export function Editor({ projectId, onBack }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [values, setValues] = useState<ParamValues>({});
   const [saveState, setSaveState] = useState<SaveState>('idle');
+  const [assets, setAssets] = useState<MediaAsset[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,6 +58,14 @@ export function Editor({ projectId, onBack }: Props) {
       cancelled = true;
     };
   }, [projectId]);
+
+  const refreshAssets = useCallback(() => {
+    api
+      .media()
+      .then(setAssets)
+      .catch(() => setAssets([]));
+  }, []);
+  useEffect(refreshAssets, [refreshAssets]);
 
   // Persist changed values, debounced. Only the keys that changed are sent.
   const lastSaved = useRef<ParamValues | null>(null);
@@ -83,6 +97,20 @@ export function Editor({ projectId, onBack }: Props) {
     return () => clearTimeout(timer);
   }, [values, loaded, projectId]);
 
+  /** The Footage panel's "use this clip" hands the asset to the first cc.mediaFill param. */
+  const selectFootage = (asset: MediaAsset) => {
+    const mediaParam = loaded?.detail.schema.find((p) => p.kind === 'media');
+    if (!mediaParam) return;
+    const current = values[mediaParam.key];
+    setValues({ ...values, [mediaParam.key]: { assetId: asset.id, fit: isMediaValue(current) ? current.fit : 'cover' } });
+  };
+
+  const selectedAssetId = (() => {
+    const mediaParam = loaded?.detail.schema.find((p) => p.kind === 'media');
+    const v = mediaParam ? values[mediaParam.key] : null;
+    return isMediaValue(v) ? v.assetId : undefined;
+  })();
+
   return (
     <main className="min-h-screen bg-ink text-fg flex flex-col">
       <header className="border-b border-hairline px-8 h-12 flex items-center justify-between shrink-0">
@@ -100,7 +128,26 @@ export function Editor({ projectId, onBack }: Props) {
 
       {error && <p className="font-mono text-xs text-danger p-8">Could not open the project: {error}</p>}
       {!loaded && !error && <p className="font-mono text-xs text-muted p-8">Loading…</p>}
-      {loaded && <EditorBody loaded={loaded} values={values} onChange={setValues} />}
+      {loaded && (
+        <div className="flex flex-1 min-h-0">
+          <Monitor loaded={loaded} values={values} assets={assets} />
+          <aside className="w-80 border-l border-hairline shrink-0 overflow-y-auto">
+            <div className="p-6 border-b border-hairline">
+              <h2 className="text-xs uppercase tracking-widest text-muted mb-4">Inspector</h2>
+              <Inspector
+                schema={loaded.detail.schema}
+                values={values}
+                onChange={setValues}
+                assets={assets}
+                templateSlug={loaded.detail.template.slug}
+              />
+            </div>
+            <div className="p-6">
+              <MediaPanel onSelect={selectFootage} selectedId={selectedAssetId} onChange={setAssets} />
+            </div>
+          </aside>
+        </div>
+      )}
     </main>
   );
 }
@@ -122,44 +169,52 @@ function useDebounced<T>(value: T, delay: number): T {
   return debounced;
 }
 
-function EditorBody({ loaded, values, onChange }: { loaded: Loaded; values: ParamValues; onChange: (v: ParamValues) => void }) {
+/**
+ * The PREVIEW RUNNER's props. Same composition as the server, handed the
+ * PROXY footage and /api-relative URLs. See server/src/renderProject.ts for
+ * the export runner doing the same with originals.
+ */
+function Monitor({ loaded, values, assets }: { loaded: Loaded; values: ParamValues; assets: MediaAsset[] }) {
   const { detail, lottie: source } = loaded;
   const schema = detail.schema;
+  const slug = detail.template.slug;
 
   const renderedValues = useDebounced(values, RENDER_DEBOUNCE_MS);
-  const lottie = useMemo(() => applyLottieValues(source, renderedValues, schema), [source, renderedValues, schema]);
-  const inputProps = useMemo<MainProps>(() => ({ background: BACKGROUND, lottie }), [lottie]);
+  const resolvedSource = useMemo(() => resolveLottieAssets(source, `${API}/templates/${slug}`), [source, slug]);
+  const resolvedValues = useMemo(() => withBaseUrl(renderedValues, schema, API), [renderedValues, schema]);
+  const lottie = useMemo(() => applyLottieValues(resolvedSource, resolvedValues, schema), [resolvedSource, resolvedValues, schema]);
+
+  const media = useMemo<MainProps['media']>(() => {
+    const mediaParam = schema.find((p) => p.kind === 'media');
+    const v = mediaParam ? renderedValues[mediaParam.key] : null;
+    if (!mediaParam || !isMediaValue(v)) return null;
+    const asset = assets.find((a) => a.id === v.assetId);
+    const rect = mediaFillRect(source, mediaParam.path);
+    if (!asset || !rect) return null;
+    return { src: api.fileUrl(mediaSourceFor(asset, 'preview')), rect, fit: v.fit };
+  }, [schema, renderedValues, assets, source]);
+
+  const inputProps = useMemo<MainProps>(() => ({ background: BACKGROUND, lottie, media }), [lottie, media]);
   const durationInFrames = lottieDurationInFrames(lottie, compositionConfig.fps);
 
   return (
-    <div className="flex flex-1 min-h-0">
-      {/* Program monitor. Nothing ever overlays this. */}
-      <section className="flex-1 p-8 min-w-0">
-        <Player
-          component={Main}
-          inputProps={inputProps}
-          durationInFrames={durationInFrames}
-          fps={compositionConfig.fps}
-          compositionWidth={compositionConfig.width}
-          compositionHeight={compositionConfig.height}
-          controls
-          loop
-          style={{ width: '100%' }}
-        />
-        <p className="font-mono text-xs text-muted mt-3">
-          {compositionConfig.width}×{compositionConfig.height} · {compositionConfig.fps} fps · {durationInFrames} frames
-        </p>
-      </section>
-
-      <aside className="w-80 border-l border-hairline shrink-0 overflow-y-auto">
-        <div className="p-6 border-b border-hairline">
-          <h2 className="text-xs uppercase tracking-widest text-muted mb-4">Inspector</h2>
-          <Inspector schema={schema} values={values} onChange={onChange} />
-        </div>
-        <div className="p-6">
-          <MediaPanel />
-        </div>
-      </aside>
-    </div>
+    // Program monitor. Nothing ever overlays this.
+    <section className="flex-1 p-8 min-w-0">
+      <Player
+        component={Main}
+        inputProps={inputProps}
+        durationInFrames={durationInFrames}
+        fps={compositionConfig.fps}
+        compositionWidth={compositionConfig.width}
+        compositionHeight={compositionConfig.height}
+        controls
+        loop
+        style={{ width: '100%' }}
+      />
+      <p className="font-mono text-xs text-muted mt-3">
+        {compositionConfig.width}×{compositionConfig.height} · {compositionConfig.fps} fps · {durationInFrames} frames
+        {media ? ' · footage: proxy' : ''}
+      </p>
+    </section>
   );
 }

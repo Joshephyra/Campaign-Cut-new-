@@ -216,5 +216,25 @@ export function buildApp(options: AppOptions = {}) {
     }
   });
 
+  // ---- images (logo replacement) --------------------------------------
+
+  fs.mkdirSync(path.join(mediaDir, 'images'), { recursive: true });
+
+  app.post('/images', async (req, reply) => {
+    const part = await req.file();
+    if (!part) return reply.code(400).send({ error: 'Send one file in a multipart field named "file"' });
+    const ext = path.extname(part.filename).toLowerCase();
+    if (!part.mimetype.startsWith('image/') && !IMAGE_EXTENSIONS.has(ext)) {
+      part.file.resume();
+      return reply.code(400).send({ error: `${part.filename} is not an image file` });
+    }
+    const stem = `${Date.now()}-${part.filename.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]+/g, '-').slice(0, 60) || 'image'}`;
+    const rel = `images/${stem}${ext || '.png'}`;
+    await pipeline(part.file, fs.createWriteStream(path.join(mediaDir, rel)));
+    return reply.code(201).send({ url: `/media/${rel}` });
+  });
+
   return app;
 }
+
+const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg']);

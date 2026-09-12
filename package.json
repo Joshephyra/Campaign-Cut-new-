@@ -18,7 +18,8 @@
     "build": "npm run build --workspaces --if-present",
     "render:standin": "npm run render:standin -w server --",
     "schema": "npm run schema -w tools/ingest --",
-    "ingest": "npm run ingest -w tools/ingest --"
+    "ingest": "npm run ingest -w tools/ingest --",
+    "render:project": "npm run render:project -w server --"
   },
   "devDependencies": {
     "concurrently": "10.0.5",

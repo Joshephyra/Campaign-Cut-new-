@@ -37,11 +37,22 @@ export type LottieAnimationData = {
   [key: string]: unknown;
 };
 
+/** Footage for the cc.mediaFill slot. Declared here to avoid an import cycle with media.ts. */
+export type MainMedia = {
+  /** Proxy URL in the Player, original URL on the server. See mediaSourceFor(). */
+  src: string;
+  /** Slot rectangle as fractions of the frame. */
+  rect: { x: number; y: number; w: number; h: number };
+  fit: 'cover' | 'contain';
+};
+
 export type MainProps = {
   /** Solid background colour as a #rrggbb hex string. */
   background: string;
   /** The Lottie to composite over the background. */
   lottie: LottieAnimationData;
+  /** User footage shown through the cc.mediaFill slot, or null. */
+  media: MainMedia | null;
 };
 
 /** A valid, empty Lottie so the composition always has something to show. */
@@ -61,4 +72,5 @@ export const EMPTY_LOTTIE: LottieAnimationData = {
 export const defaultProps: MainProps = {
   background: '#0F4C5C',
   lottie: EMPTY_LOTTIE,
+  media: null,
 };

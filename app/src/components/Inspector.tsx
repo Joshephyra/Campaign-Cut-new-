@@ -1,10 +1,15 @@
-import { hexToRgba, type ParamValues, type TemplateParam } from '@campaigncut/composition';
-import { useEffect, useState } from 'react';
+import { hexToRgba, isMediaValue, type Fit, type MediaValue, type ParamValues, type TemplateParam } from '@campaigncut/composition';
+import { useEffect, useRef, useState } from 'react';
+import { api, type MediaAsset } from '../api';
 
 type Props = {
   schema: TemplateParam[];
   values: ParamValues;
   onChange: (next: ParamValues) => void;
+  /** Uploaded footage, for cc.mediaFill params. */
+  assets?: MediaAsset[];
+  /** For resolving a template's own image defaults (images/logo.png). */
+  templateSlug?: string;
 };
 
 /**
@@ -12,7 +17,7 @@ type Props = {
  * code anywhere: a template with three text roles and one accent colour
  * produces three text fields and a colour picker, automatically.
  */
-export function Inspector({ schema, values, onChange }: Props) {
+export function Inspector({ schema, values, onChange, assets = [], templateSlug = '' }: Props) {
   const set = (key: string, value: unknown) => onChange({ ...values, [key]: value });
 
   return (
@@ -21,8 +26,12 @@ export function Inspector({ schema, values, onChange }: Props) {
         <div key={param.key} data-testid={`param-${param.key}`}>
           {param.kind === 'text' && <TextControl param={param} value={valueOf(param, values)} onChange={(v) => set(param.key, v)} />}
           {param.kind === 'color' && <ColorControl param={param} value={valueOf(param, values)} onChange={(v) => set(param.key, v)} />}
-          {param.kind === 'image' && <Placeholder param={param} note="Logo upload arrives in M8." />}
-          {param.kind === 'media' && <Placeholder param={param} note="Footage upload arrives in M7 and M8." />}
+          {param.kind === 'image' && (
+            <ImageControl param={param} value={valueOf(param, values)} templateSlug={templateSlug} onChange={(v) => set(param.key, v)} />
+          )}
+          {param.kind === 'media' && (
+            <MediaControl param={param} value={values[param.key]} assets={assets} onChange={(v) => set(param.key, v)} />
+          )}
         </div>
       ))}
     </div>
@@ -46,6 +55,8 @@ function Label({ param, htmlFor, right }: { param: TemplateParam; htmlFor?: stri
   );
 }
 
+// ---- text --------------------------------------------------------------
+
 function TextControl({ param, value, onChange }: { param: TemplateParam; value: string; onChange: (v: string) => void }) {
   const max = param.maxChars;
   const id = `param-${param.key}-input`;
@@ -64,6 +75,8 @@ function TextControl({ param, value, onChange }: { param: TemplateParam; value: 
     </div>
   );
 }
+
+// ---- colour ------------------------------------------------------------
 
 function ColorControl({ param, value, onChange }: { param: TemplateParam; value: string; onChange: (v: string) => void }) {
   // The hex field can hold a half-typed value; only valid hex is emitted.
@@ -110,11 +123,128 @@ function normalizeHex(hex: string): string {
   return `#${byte(rgba[0])}${byte(rgba[1])}${byte(rgba[2])}`;
 }
 
-function Placeholder({ param, note }: { param: TemplateParam; note: string }) {
+// ---- image (cc.logo) ---------------------------------------------------
+
+/** Where an image value can be shown from, in the browser. */
+function imagePreviewUrl(value: string, templateSlug: string): string | null {
+  if (!value) return null;
+  if (value.startsWith('data:') || /^https?:/.test(value)) return value;
+  if (value.startsWith('/')) return api.fileUrl(value);
+  return `${api.fileUrl(`/templates/${templateSlug}`)}/${value}`;
+}
+
+function ImageControl({
+  param,
+  value,
+  templateSlug,
+  onChange,
+}: {
+  param: TemplateParam;
+  value: string;
+  templateSlug: string;
+  onChange: (v: string) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const preview = imagePreviewUrl(value, templateSlug);
+
+  const onFile = async (file: File | undefined) => {
+    if (!file) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const { url } = await api.uploadImage(file);
+      onChange(url);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+      if (fileInput.current) fileInput.current.value = '';
+    }
+  };
+
   return (
     <div>
-      <Label param={param} />
-      <div className="border border-dashed border-hairline px-2 py-2 font-mono text-[10px] text-muted">{note}</div>
+      <Label param={param} right={busy ? 'uploading…' : undefined} />
+      <div className="flex gap-3 items-center">
+        <div className="w-20 h-12 bg-panel border border-hairline flex items-center justify-center overflow-hidden shrink-0">
+          {preview ? (
+            <img src={preview} alt="" data-testid={`image-preview-${param.key}`} className="max-w-full max-h-full object-contain" />
+          ) : (
+            <span className="font-mono text-[10px] text-muted">none</span>
+          )}
+        </div>
+        <label className="text-xs text-cobalt cursor-pointer">
+          Replace
+          <input
+            ref={fileInput}
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            data-testid={`image-file-${param.key}`}
+            onChange={(e) => void onFile(e.target.files?.[0])}
+          />
+        </label>
+      </div>
+      <p className="font-mono text-[10px] text-muted mt-1">Fitted into the authored slot.</p>
+      {error && <p className="font-mono text-[10px] text-danger mt-1">{error}</p>}
+    </div>
+  );
+}
+
+// ---- media (cc.mediaFill) ----------------------------------------------
+
+function MediaControl({
+  param,
+  value,
+  assets,
+  onChange,
+}: {
+  param: TemplateParam;
+  value: unknown;
+  assets: MediaAsset[];
+  onChange: (v: MediaValue | null) => void;
+}) {
+  const current = isMediaValue(value) ? value : null;
+  const id = `param-${param.key}-select`;
+  const chosen = current ? assets.find((a) => a.id === current.assetId) : undefined;
+  const fit: Fit = current?.fit ?? 'cover';
+
+  return (
+    <div>
+      <Label param={param} htmlFor={id} />
+      <select
+        id={id}
+        value={current ? String(current.assetId) : ''}
+        onChange={(e) => onChange(e.target.value ? { assetId: Number(e.target.value), fit } : null)}
+        className="w-full bg-panel border border-hairline px-2 py-1.5 text-sm text-fg focus:outline-none focus:border-cobalt"
+      >
+        <option value="">None (authored slot)</option>
+        {assets.map((a) => (
+          <option key={a.id} value={String(a.id)}>
+            {a.originalName}
+          </option>
+        ))}
+      </select>
+      {current && (
+        <div className="flex items-center gap-2 mt-2">
+          {chosen && <img src={api.fileUrl(chosen.thumbUrl)} alt="" className="w-16 aspect-video object-cover bg-black block" />}
+          <div className="flex border border-hairline font-mono text-[10px]">
+            {(['cover', 'contain'] as const).map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => onChange({ assetId: current.assetId, fit: f })}
+                className={`px-2 py-1 ${fit === f ? 'bg-cobalt text-white' : 'text-muted hover:text-fg'}`}
+              >
+                {f === 'cover' ? 'Cover (crop)' : 'Contain (letterbox)'}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      <p className="font-mono text-[10px] text-muted mt-1">Upload clips in the Footage panel below.</p>
     </div>
   );
 }

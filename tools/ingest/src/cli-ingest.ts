@@ -45,7 +45,7 @@ try {
     fontsDir: paths.fonts,
     db,
     renderThumbnail: ({ lottie, outputPath, frame }) =>
-      renderThumbnail({ outputPath, inputProps: { background: '#000000', lottie }, frame }).then(() => undefined),
+      renderThumbnail({ outputPath, inputProps: { background: '#000000', lottie, media: null }, frame }).then(() => undefined),
     log: (line) => console.log(`  ${line}`),
   });
 

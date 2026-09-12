@@ -1,0 +1,58 @@
+import {
+  applyLottieValues,
+  isMediaValue,
+  mediaFillRect,
+  mediaSourceFor,
+  resolveLottieAssets,
+  withBaseUrl,
+  type LottieAnimationData,
+  type MainProps,
+  type ParamValues,
+  type TemplateParam,
+} from '@campaigncut/composition';
+import fs from 'node:fs';
+import path from 'node:path';
+import type { Db } from './db/index';
+
+export type BuildProjectPropsOptions = {
+  db: Db;
+  templatesDir: string;
+  projectId: number;
+  /** Absolute origin of this server, e.g. http://127.0.0.1:3001. The renderer fetches media from it. */
+  serverBase: string;
+};
+
+/**
+ * The SERVER-SIDE RUNNER's props for a project: the same composition the
+ * Player shows, handed the ORIGINAL footage and absolute URLs. The browser
+ * does the same thing with 'preview' and its /api base (see Editor.tsx).
+ */
+export function buildProjectProps({ db, templatesDir, projectId, serverBase }: BuildProjectPropsOptions): MainProps {
+  const project = db.getProject(projectId);
+  if (!project) throw new Error(`No project ${projectId}`);
+
+  const dir = path.join(templatesDir, project.templateSlug);
+  const source = JSON.parse(fs.readFileSync(path.join(dir, 'template.json'), 'utf8')) as LottieAnimationData;
+  const schema = JSON.parse(fs.readFileSync(path.join(dir, 'schema.json'), 'utf8')) as TemplateParam[];
+
+  const raw: ParamValues = {};
+  for (const v of project.values) raw[v.key] = v.value;
+
+  let media: MainProps['media'] = null;
+  const mediaParam = schema.find((p) => p.kind === 'media');
+  const mediaValue = mediaParam ? raw[mediaParam.key] : null;
+  if (mediaParam && isMediaValue(mediaValue)) {
+    const asset = db.getMediaAsset(mediaValue.assetId);
+    const rect = mediaFillRect(source, mediaParam.path);
+    if (asset && rect) {
+      const src = mediaSourceFor({ proxyUrl: `/media/${asset.proxyPath}`, originalUrl: `/media/${asset.originalPath}` }, 'export');
+      media = { src: `${serverBase}${src}`, rect, fit: mediaValue.fit };
+    }
+  }
+
+  const resolvedSource = resolveLottieAssets(source, `${serverBase}/templates/${project.templateSlug}`);
+  const values = withBaseUrl(raw, schema, serverBase);
+  const lottie = applyLottieValues(resolvedSource, values, schema);
+
+  return { background: '#000000', lottie, media };
+}

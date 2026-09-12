@@ -1,6 +1,8 @@
 export { applyLottieValues } from './applyLottieValues';
 export { compositionConfig, defaultProps, EMPTY_LOTTIE } from './config';
-export type { LottieAnimationData, MainProps } from './config';
+export type { LottieAnimationData, MainMedia, MainProps } from './config';
+export { isMediaValue, mediaFillRect, mediaSourceFor, resolveLottieAssets, withBaseUrl } from './media';
+export type { Fit, MediaProps, MediaValue, Rect } from './media';
 export { hexToRgba, rgbaToHex } from './hexToRgba';
 export type { Rgba } from './hexToRgba';
 export { resolvePointer } from './jsonPointer';

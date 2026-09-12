@@ -3,13 +3,15 @@ import { useEffect, useRef, useState } from 'react';
 import { api, type MediaAsset } from '../api';
 
 type Props = {
-  /** Called with the chosen asset when the user picks one (wired to cc.mediaFill in M8). */
+  /** Called with the chosen asset when the user picks one; the editor hands it to cc.mediaFill. */
   onSelect?: (asset: MediaAsset) => void;
   selectedId?: number;
+  /** Fired whenever the list is (re)loaded, so the editor can share it with the inspector. */
+  onChange?: (assets: MediaAsset[]) => void;
 };
 
 /** Uploaded footage: thumbnail, name, duration, dimensions. */
-export function MediaPanel({ onSelect, selectedId }: Props) {
+export function MediaPanel({ onSelect, selectedId, onChange }: Props) {
   const [assets, setAssets] = useState<MediaAsset[] | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +20,10 @@ export function MediaPanel({ onSelect, selectedId }: Props) {
   const refresh = () =>
     api
       .media()
-      .then(setAssets)
+      .then((list) => {
+        setAssets(list);
+        onChange?.(list);
+      })
       .catch((e: Error) => setError(e.message));
 
   useEffect(() => {

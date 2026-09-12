@@ -38,7 +38,7 @@ let lastShown = -1;
 
 const finalPath = await renderComposition({
   outputPath,
-  inputProps: { background: '#0F4C5C', lottie },
+  inputProps: { background: '#0F4C5C', lottie, media: null },
   onProgress: (p) => {
     const pct = Math.floor(p * 100);
     if (pct !== lastShown && pct % 10 === 0) {

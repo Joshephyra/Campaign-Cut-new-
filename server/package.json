@@ -9,7 +9,8 @@
     "start": "tsx src/index.ts",
     "render:standin": "tsx src/render-standin.ts",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "render:project": "tsx src/render-project.ts"
   },
   "dependencies": {
     "@campaigncut/composition": "0.0.1",

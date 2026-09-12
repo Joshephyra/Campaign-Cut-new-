@@ -3,6 +3,31 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-11 · M8 Footage and image params · DONE (Josh delegated sign-off). AT-3 complete.
+
+**What exists now**
+
+- `composition/src/media.ts`: `mediaFillRect` (the cc.mediaFill slot as fractions of the frame, from a solid or a rectangle shape with layer and group transforms; rotation ignored), `mediaSourceFor(asset, 'preview' | 'export')` (THE two-runners decision, one function both runners call), `withBaseUrl` (server-relative image values get the runner's base), `resolveLottieAssets` (a template's own `images/` resolve to the template folder on the server).
+- `Main` takes a `media` prop `{ src, rect, fit }` and renders `OffthreadVideo` in the slot rectangle UNDER the Lottie. `applyLottieValues` makes the slot layer transparent when footage is assigned, so the video shows through. No branch on runner anywhere in the composition; `Main.test.tsx` proves the same component renders the proxy or the original purely from props.
+- Preview runner (`Editor.tsx` `Monitor`): proxy URL through `/api`. Export runner (`server/src/renderProject.ts` `buildProjectProps`): original at an absolute server URL. `npm run render:project -- --id N` renders a saved project server-side (the dev server must be running: footage and images are fetched over HTTP, which is why CORS matters).
+- `POST /images` stores a replacement logo under `/media/images/`; the inspector's image control uploads and previews it. Footage control: a select over uploaded clips plus Cover/Contain. The Footage panel's click also assigns the clip.
+- Stand-in fixture now has `cc.logo` (an orange placeholder PNG in `images/`) and a `cc.mediaFill` solid over the right half. Six params after re-ingest.
+- 153 tests across 28 files. Typecheck clean.
+
+**Verified by eye**
+
+- Editor: footage select shows the uploaded clip; the Player's video element points at the proxy, sits at left 50% / width 50%, object-fit cover; the Lottie's logo image points at the uploaded blue PNG.
+- Server render of the same project (`m8-project-1.mp4`): frames 20 and 75 show the test-pattern footage in the right half, the blue logo bottom right, the headline and bar on the panel. Same layout as the preview.
+
+**Notes**
+
+- Footage shorter than the composition simply ends; looping or trimming is a timeline concern (M9+).
+- Lottie image replacement uses lottie-web's default `xMidYMid slice` (cover) inside the authored slot.
+
+**Next:** M9, timeline.
+
+---
+
 ## 2026-09-11 · M7 Media upload and proxies · DONE (Josh delegated sign-off)
 
 **What exists now**

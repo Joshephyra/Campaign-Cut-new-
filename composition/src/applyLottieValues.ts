@@ -56,9 +56,20 @@ function applyOne(param: TemplateParam, node: AnyRecord, value: unknown): void {
       applyImage(node, value);
       return;
     case 'media':
-      // Reserved for M8 (cc.mediaFill). Nothing to write into the Lottie.
+      applyMedia(node, value);
       return;
   }
+}
+
+/**
+ * Footage is rendered by the composition UNDER the Lottie, in the slot's
+ * rectangle. All the Lottie has to do is get out of the way: the slot layer
+ * becomes fully transparent so the video shows through it.
+ */
+function applyMedia(layer: AnyRecord, value: unknown): void {
+  if (!value || typeof value !== 'object') return;
+  const ks = (layer.ks && typeof layer.ks === 'object' ? layer.ks : (layer.ks = {})) as AnyRecord;
+  ks.o = { a: 0, k: 0 };
 }
 
 /** Text lives at layer.t.d.k[].s.t on text layers (ty 5). */
