@@ -51,6 +51,14 @@ export type ThumbnailOptions = {
   frame?: number;
 };
 
+/** One PNG frame at full size at an exact frame index, for parity checks. */
+export async function renderStillFrame({ outputPath, inputProps, frame }: { outputPath: string; inputProps: MainProps; frame: number }): Promise<string> {
+  const serveUrl = await getServeUrl();
+  const composition = await selectComposition({ serveUrl, id: compositionConfig.id, inputProps });
+  await renderStill({ composition, serveUrl, output: outputPath, inputProps, frame, imageFormat: 'png' });
+  return path.resolve(outputPath);
+}
+
 /** One PNG frame of the same composition, for template thumbnails. */
 export async function renderThumbnail({ outputPath, inputProps, frame }: ThumbnailOptions): Promise<string> {
   const serveUrl = await getServeUrl();

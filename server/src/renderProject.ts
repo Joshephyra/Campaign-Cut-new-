@@ -21,6 +21,8 @@ export type BuildProjectPropsOptions = {
   projectId: number;
   /** Absolute origin of this server, e.g. http://127.0.0.1:3001. The renderer fetches media from it. */
   serverBase: string;
+  /** 'export' (default) hands the composition the original footage; 'preview' the proxy, as the Player does. */
+  runner?: 'preview' | 'export';
 };
 
 /**
@@ -28,7 +30,7 @@ export type BuildProjectPropsOptions = {
  * Player shows, handed the ORIGINAL footage and absolute URLs. The browser
  * does the same thing with 'preview' and its /api base (see Editor.tsx).
  */
-export function buildProjectProps({ db, templatesDir, projectId, serverBase }: BuildProjectPropsOptions): MainProps {
+export function buildProjectProps({ db, templatesDir, projectId, serverBase, runner = 'export' }: BuildProjectPropsOptions): MainProps {
   const project = db.getProject(projectId);
   if (!project) throw new Error(`No project ${projectId}`);
 
@@ -46,7 +48,7 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase }: B
     const asset = db.getMediaAsset(mediaValue.assetId);
     const rect = mediaFillRect(source, mediaParam.path);
     if (asset && rect) {
-      const src = mediaSourceFor({ proxyUrl: `/media/${asset.proxyPath}`, originalUrl: `/media/${asset.originalPath}` }, 'export');
+      const src = mediaSourceFor({ proxyUrl: `/media/${asset.proxyPath}`, originalUrl: `/media/${asset.originalPath}` }, runner);
       media = { src: `${serverBase}${src}`, rect, fit: mediaValue.fit };
     }
   }

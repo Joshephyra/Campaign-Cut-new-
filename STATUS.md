@@ -3,6 +3,34 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-11 · M11 Export and parity · DONE (Josh delegated sign-off). AT-5 automated half in place; the human half is watching the file.
+
+**What exists now**
+
+- `server/src/renderQueue.ts`: in-process queue, one render at a time, jobs in the `render` table (queued → rendering → done | failed, progress 0..1, output path, error). The render function is injectable; the real one is `renderMedia` on the one composition with the ORIGINAL footage via `buildProjectProps`.
+- Routes: `POST /render { projectId }` → 202, `GET /render/:id` (status, progress, `outputUrl` when done), `GET /renders?projectId=`. Output files under `media/renders/project-<p>-<r>.mp4`, served by the static media route.
+- `server/src/index.ts` passes the server's own origin into the app so the render worker fetches footage, images and template files over HTTP from itself.
+- `server/src/parity.ts`: `compareFrames` (mean absolute difference per channel, max, fraction of differing pixels; different sizes sampled down), `extractFrame` (ffmpeg), `runParity` (export frame vs the same frame rendered from the PREVIEW runner's props, proxy footage included). `npm run parity -- --id N [--frames a,b,c] [--export file]`. Threshold: mean diff ≤ 6/255.
+- `buildProjectProps` takes `runner: 'preview' | 'export'` so parity can build the Player's props on the server.
+- App: `ExportPanel` in the editor header: Export MP4 button, Queued / Rendering n% / Download MP4 / Export failed.
+- Missing-export-bug guard: `server/src/exportRegression.test.ts` exports a project on the real stand-in with a live server, pulls frame 75 out of the MP4 and checks the panel colour AND the logo fetched over HTTP. It caught a real bug: a project keeping the template's default logo (`images/logo.png`) made `applyLottieValues` clear the asset directory, so both runners drew a broken image. Fixed: relative image values keep the directory; unit test added.
+- 207 tests across 41 files. Typecheck clean.
+
+**Verified by eye**
+
+- Editor: pressed Export MP4; header went Queued → Rendering → Download MP4 in 9 s; the link serves `video/mp4`, 285 frames of H.264 at 1920x1080.
+- `npm run parity -- --id 1 --frames 10,75,142,200`: all within threshold (mean 4.2 to 4.7 out of 255, about 1.8% of pixels differing, which is the proxy's 960-wide footage against the 1280-wide original along the test pattern's hard edges). Frame pairs inspected side by side.
+- Rendered a fresh default project earlier in this milestone and looked at frame 75: that is how the broken logo was found.
+
+**Notes**
+
+- Broadcast delivery specs (bitrate targets, LUFS) are out of scope per SPEC 6; H.264 defaults from Remotion are used.
+- Preview parity is measured with a server-side still of the preview props, not a screenshot of the Player element. Same composition, same props the Player gets.
+
+**Next:** M12, playback performance.
+
+---
+
 ## 2026-09-11 · M10 Transitions · DONE (Josh delegated sign-off)
 
 **What exists now**

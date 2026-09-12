@@ -117,6 +117,27 @@ describe('applyLottieValues', () => {
     expect(result.layers).toEqual(source.layers);
   });
 
+  it('a relative image value keeps the asset directory (the template default stays loadable)', () => {
+    // REGRESSION: an untouched default "images/logo.png" used to clear u, so the
+    // renderer fetched a relative path that did not exist and drew a broken image.
+    const source: LottieAnimationData = {
+      fr: 30, ip: 0, op: 30, w: 100, h: 100,
+      assets: [{ id: 'image_0', w: 200, h: 100, u: 'http://127.0.0.1:3001/templates/standin/images/', p: 'logo.png', e: 0 }],
+      layers: [{ ty: 2, nm: 'cc.logo', refId: 'image_0' }],
+    };
+    const logoSchema: TemplateParam[] = [
+      { key: 'logo', role: 'logo', kind: 'image', label: 'Logo', default: 'images/logo.png', path: '/assets/0' },
+    ];
+    const result = applyLottieValues(source, { logo: 'images/logo.png' }, logoSchema);
+    const asset = (result.assets as AnyRecord[])[0]!;
+    expect(asset.u).toBe('http://127.0.0.1:3001/templates/standin/images/');
+    expect(asset.p).toBe('logo.png');
+    expect(asset.e).toBe(0);
+
+    const swapped = applyLottieValues(source, { logo: '/media/images/new.png' }, logoSchema);
+    expect((swapped.assets as AnyRecord[])[0]).toMatchObject({ u: '', p: '/media/images/new.png', e: 0 });
+  });
+
   it('writes text into every keyframe of an animated text document', () => {
     const source: LottieAnimationData = {
       fr: 30, ip: 0, op: 30, w: 100, h: 100,

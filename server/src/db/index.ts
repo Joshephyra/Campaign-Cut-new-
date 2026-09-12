@@ -59,6 +59,22 @@ export type ProjectElementPatch = Partial<Pick<ProjectElement, 'startFrame' | 'e
 /** A transition stored on the boundary after an element, for one project. */
 export type ProjectTransition = { afterElementId: number; preset: string; durationInFrames: number };
 
+export type RenderStatus = 'queued' | 'rendering' | 'done' | 'failed';
+
+export type RenderRow = {
+  id: number;
+  projectId: number;
+  status: RenderStatus;
+  progress: number;
+  /** Relative to the media directory, e.g. renders/project-1-5.mp4. Empty until done. */
+  outputPath: string;
+  error: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RenderPatch = Partial<Pick<RenderRow, 'status' | 'progress' | 'outputPath' | 'error'>>;
+
 export type MediaAssetInput = {
   originalName: string;
   /** Paths relative to the media directory. */
@@ -74,6 +90,10 @@ export type MediaAssetInput = {
 export type MediaAssetRow = MediaAssetInput & { id: number; createdAt: string };
 
 export type Db = Database.Database & {
+  insertRender(projectId: number): { id: number };
+  updateRender(id: number, patch: RenderPatch): void;
+  getRender(id: number): RenderRow | undefined;
+  listRenders(projectId?: number): RenderRow[];
   insertMediaAsset(a: MediaAssetInput): { id: number };
   getMediaAsset(id: number): MediaAssetRow | undefined;
   listMediaAssets(): MediaAssetRow[];
@@ -160,6 +180,17 @@ CREATE TABLE IF NOT EXISTS project_transition (
   PRIMARY KEY (project_id, after_element_id)
 );
 
+CREATE TABLE IF NOT EXISTS render (
+  id           INTEGER PRIMARY KEY,
+  project_id   INTEGER NOT NULL REFERENCES project(id),
+  status       TEXT    NOT NULL,
+  progress     REAL    NOT NULL DEFAULT 0,
+  output_path  TEXT    NOT NULL DEFAULT '',
+  error        TEXT,
+  created_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+  updated_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS media_asset (
   id             INTEGER PRIMARY KEY,
   original_name  TEXT    NOT NULL,
@@ -204,6 +235,10 @@ export function openDb(file: string): Db {
     getProjectTransitions: (projectId: number) => getProjectTransitions(db, projectId),
     setProjectTransition: (projectId: number, afterElementId: number, t: { preset: string; durationInFrames: number }) =>
       setProjectTransition(db, projectId, afterElementId, t),
+    insertRender: (projectId: number) => insertRender(db, projectId),
+    updateRender: (id: number, patch: RenderPatch) => updateRender(db, id, patch),
+    getRender: (id: number) => getRender(db, id),
+    listRenders: (projectId?: number) => listRenders(db, projectId),
     insertMediaAsset: (a: MediaAssetInput) => insertMediaAsset(db, a),
     getMediaAsset: (id: number) => getMediaAsset(db, id),
     listMediaAssets: () => listMediaAssets(db),
@@ -273,6 +308,49 @@ function setProjectTransition(
     ).run(projectId, afterElementId, t.preset, Math.round(t.durationInFrames));
   }
   db.prepare(`UPDATE project SET updated_at = datetime('now') WHERE id = ?`).run(projectId);
+}
+
+// ---- renders -----------------------------------------------------------
+
+const RENDER_SELECT = `
+  SELECT id, project_id AS projectId, status, progress, output_path AS outputPath, error,
+         created_at AS createdAt, updated_at AS updatedAt
+  FROM render`;
+
+function insertRender(db: Database.Database, projectId: number): { id: number } {
+  const info = db.prepare(`INSERT INTO render (project_id, status) VALUES (?, 'queued')`).run(projectId);
+  return { id: Number(info.lastInsertRowid) };
+}
+
+function updateRender(db: Database.Database, id: number, patch: RenderPatch): void {
+  const sets: string[] = [`updated_at = datetime('now')`];
+  const params: Record<string, unknown> = { id };
+  if (patch.status !== undefined) {
+    sets.push('status = @status');
+    params.status = patch.status;
+  }
+  if (patch.progress !== undefined) {
+    sets.push('progress = @progress');
+    params.progress = patch.progress;
+  }
+  if (patch.outputPath !== undefined) {
+    sets.push('output_path = @outputPath');
+    params.outputPath = patch.outputPath;
+  }
+  if (patch.error !== undefined) {
+    sets.push('error = @error');
+    params.error = patch.error;
+  }
+  db.prepare(`UPDATE render SET ${sets.join(', ')} WHERE id = @id`).run(params);
+}
+
+function getRender(db: Database.Database, id: number): RenderRow | undefined {
+  return db.prepare(`${RENDER_SELECT} WHERE id = ?`).get(id) as RenderRow | undefined;
+}
+
+function listRenders(db: Database.Database, projectId?: number): RenderRow[] {
+  if (projectId === undefined) return db.prepare(`${RENDER_SELECT} ORDER BY id DESC`).all() as RenderRow[];
+  return db.prepare(`${RENDER_SELECT} WHERE project_id = ? ORDER BY id DESC`).all(projectId) as RenderRow[];
 }
 
 // ---- media -------------------------------------------------------------

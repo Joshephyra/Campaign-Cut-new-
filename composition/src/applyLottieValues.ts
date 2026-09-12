@@ -103,13 +103,25 @@ function applyColor(item: AnyRecord, value: unknown): void {
 }
 
 /**
- * Images are referenced through the top-level assets array. We point the
- * asset at the new source. A data URI is marked embedded (e: 1) with an
- * empty directory so lottie-web loads it directly.
+ * Images are referenced through the top-level assets array.
+ *
+ *   - An absolute URL or a data URI replaces the source outright: `p` is the
+ *     value, the directory `u` is cleared, and a data URI is marked embedded.
+ *   - A relative value (the template's own default, e.g. "images/logo.png")
+ *     names a file inside the template's asset directory: only the file name
+ *     goes into `p`; `u` is left alone so the directory that
+ *     resolveLottieAssets() pointed at the server is kept. Clobbering `u`
+ *     here produced a broken image in exports for untouched defaults.
  */
 function applyImage(asset: AnyRecord, value: unknown): void {
   if (typeof value !== 'string' || value.length === 0) return;
-  asset.p = value;
-  asset.u = '';
-  asset.e = value.startsWith('data:') ? 1 : 0;
+  const absolute = /^(https?:|data:|blob:|\/)/.test(value);
+  if (absolute) {
+    asset.p = value;
+    asset.u = '';
+    asset.e = value.startsWith('data:') ? 1 : 0;
+    return;
+  }
+  asset.p = value.slice(value.lastIndexOf('/') + 1);
+  asset.e = 0;
 }

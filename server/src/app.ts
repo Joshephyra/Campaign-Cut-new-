@@ -9,11 +9,27 @@ import { pipeline } from 'node:stream/promises';
 import { openDb, type Db, type MediaAssetRow } from './db/index';
 import { makePoster, makeProxy, probe } from './media/ffmpeg';
 import { paths } from './paths';
+import { renderComposition } from './render';
+import { RenderQueue, type RenderFn } from './renderQueue';
 
 export type AppOptions = {
   db?: Db;
   templatesDir?: string;
   mediaDir?: string;
+  /** Absolute origin the renderer fetches media from. Defaults to this server's own port. */
+  serverBase?: string;
+  /** The render function; tests inject a fast stand-in. Defaults to renderMedia. */
+  render?: RenderFn;
+};
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    renderQueue: RenderQueue;
+  }
+}
+
+const defaultRender: RenderFn = async ({ props, outputPath, onProgress }) => {
+  await renderComposition({ outputPath, inputProps: props, onProgress });
 };
 
 function readJson<T>(file: string): T | undefined {
@@ -263,6 +279,50 @@ export function buildApp(options: AppOptions = {}) {
       for (const p of [originalPath, proxyPath, thumbPath]) fs.rmSync(path.join(mediaDir, p), { force: true });
       return reply.code(400).send({ error: (err as Error).message });
     }
+  });
+
+  // ---- render (export) -------------------------------------------------
+
+  const serverBase = options.serverBase ?? `http://127.0.0.1:${process.env.CAMPAIGNCUT_SERVER_PORT ?? 3001}`;
+  const queue = new RenderQueue({
+    db,
+    templatesDir,
+    rendersDir: path.join(mediaDir, 'renders'),
+    serverBase,
+    render: options.render ?? defaultRender,
+  });
+
+  app.decorate('renderQueue', queue);
+
+  const renderJson = (r: NonNullable<ReturnType<Db['getRender']>>) => ({
+    id: r.id,
+    projectId: r.projectId,
+    status: r.status,
+    progress: r.progress,
+    outputUrl: r.status === 'done' && r.outputPath ? `/media/${r.outputPath}` : null,
+    error: r.error,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+  });
+
+  /** Queue an export of a project. One render at a time; poll GET /render/:id. */
+  app.post<{ Body: { projectId?: number } }>('/render', async (req, reply) => {
+    const projectId = Number(req.body?.projectId);
+    if (!projectId) return reply.code(400).send({ error: 'projectId is required' });
+    if (!db.getProject(projectId)) return reply.code(404).send({ error: `No project ${projectId}` });
+    const { id } = queue.enqueue(projectId);
+    return reply.code(202).send(renderJson(db.getRender(id)!));
+  });
+
+  app.get<{ Params: { id: string } }>('/render/:id', async (req, reply) => {
+    const r = db.getRender(Number(req.params.id));
+    if (!r) return reply.code(404).send({ error: `No render ${req.params.id}` });
+    return renderJson(r);
+  });
+
+  app.get<{ Querystring: { projectId?: string } }>('/renders', async (req) => {
+    const projectId = req.query.projectId ? Number(req.query.projectId) : undefined;
+    return db.listRenders(projectId).map(renderJson);
   });
 
   // ---- images (logo replacement) --------------------------------------

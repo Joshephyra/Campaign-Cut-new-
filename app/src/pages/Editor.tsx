@@ -18,6 +18,7 @@ import {
 import { Player, type PlayerRef } from '@remotion/player';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API, api, type MediaAsset, type ProjectDetail, type ProjectElement, type ProjectTransition } from '../api';
+import { ExportPanel } from '../components/ExportPanel';
 import { Inspector } from '../components/Inspector';
 import { MediaPanel } from '../components/MediaPanel';
 import { Timeline, type ElementPatch } from '../components/Timeline';
@@ -164,9 +165,10 @@ export function Editor({ projectId, onBack }: Props) {
           </button>
           <h1 className="text-sm font-semibold tracking-tight">{loaded?.detail.project.name ?? '…'}</h1>
         </div>
-        <div className="font-mono text-xs text-muted flex gap-4">
+        <div className="font-mono text-xs text-muted flex items-center gap-4">
           <SaveIndicator state={saveState} />
           <span>{loaded ? loaded.detail.template.slug : `project ${projectId}`}</span>
+          {loaded && <ExportPanel projectId={projectId} />}
         </div>
       </header>
 

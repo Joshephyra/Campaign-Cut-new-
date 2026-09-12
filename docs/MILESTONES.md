@@ -213,7 +213,7 @@ The most important pure function in the codebase. See `SPEC.md` section 2.
 
 ---
 
-## M11 · Export and parity · IN PROGRESS
+## M11 · Export and parity · DONE
 
 The milestone that decides whether this is a product.
 
@@ -232,7 +232,7 @@ The milestone that decides whether this is a product.
 
 ---
 
-## M12 · Playback performance · TODO
+## M12 · Playback performance · IN PROGRESS
 
 Only start this after M11. Measure before optimizing.
 

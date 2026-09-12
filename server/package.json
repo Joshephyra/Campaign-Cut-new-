@@ -10,7 +10,8 @@
     "render:standin": "tsx src/render-standin.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "render:project": "tsx src/render-project.ts"
+    "render:project": "tsx src/render-project.ts",
+    "parity": "tsx src/cli-parity.ts"
   },
   "dependencies": {
     "@campaigncut/composition": "0.0.1",
@@ -26,6 +27,8 @@
   "devDependencies": {
     "@types/better-sqlite3": "9.6.0",
     "@types/node": "24.13.4",
+    "@types/pngjs": "6.0.5",
+    "pngjs": "7.0.0",
     "tsx": "4.23.13",
     "vitest": "5.0.0"
   },

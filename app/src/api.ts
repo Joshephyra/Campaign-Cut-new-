@@ -21,6 +21,15 @@ export type ProjectValue = { elementId: number; key: string; value: unknown };
 
 export type ProjectElement = { id: number; slug: string; zIndex: number; startFrame: number; endFrame: number; enabled: boolean };
 
+export type RenderJob = {
+  id: number;
+  projectId: number;
+  status: 'queued' | 'rendering' | 'done' | 'failed';
+  progress: number;
+  outputUrl: string | null;
+  error: string | null;
+};
+
 export type ProjectTransition = { afterElementId: number; preset: TransitionPreset; durationInFrames: number };
 
 export type ProjectDetail = {
@@ -81,6 +90,15 @@ export const api = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(t),
     }).then((r) => json<{ transitions: ProjectTransition[] }>(r)),
+
+  startRender: (projectId: number) =>
+    fetch(`${API}/render`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ projectId }),
+    }).then((r) => json<RenderJob>(r)),
+
+  renderStatus: (id: number) => fetch(`${API}/render/${id}`).then((r) => json<RenderJob>(r)),
 
   media: () => fetch(`${API}/media`).then((r) => json<MediaAsset[]>(r)),
 
