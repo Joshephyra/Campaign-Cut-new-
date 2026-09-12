@@ -1,7 +1,7 @@
 import {
   applyLottieValues,
   compositionConfig,
-  compositionDurationFor,
+  compositionDurationWithTransitions,
   isMediaValue,
   Main,
   mediaFillRect,
@@ -12,10 +12,12 @@ import {
   type LottieAnimationData,
   type MainProps,
   type ParamValues,
+  type TransitionPreset,
+  type TransitionProps,
 } from '@campaigncut/composition';
 import { Player, type PlayerRef } from '@remotion/player';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { API, api, type MediaAsset, type ProjectDetail, type ProjectElement } from '../api';
+import { API, api, type MediaAsset, type ProjectDetail, type ProjectElement, type ProjectTransition } from '../api';
 import { Inspector } from '../components/Inspector';
 import { MediaPanel } from '../components/MediaPanel';
 import { Timeline, type ElementPatch } from '../components/Timeline';
@@ -39,6 +41,7 @@ export function Editor({ projectId, onBack }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [values, setValues] = useState<ParamValues>({});
   const [elements, setElements] = useState<ProjectElement[]>([]);
+  const [transitions, setTransitions] = useState<ProjectTransition[]>([]);
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [assets, setAssets] = useState<MediaAsset[]>([]);
 
@@ -53,6 +56,7 @@ export function Editor({ projectId, onBack }: Props) {
         for (const v of detail.values) initial[v.key] = v.value;
         setValues(initial);
         setElements(detail.elements.map((e) => ({ ...e, enabled: e.enabled ?? true })));
+        setTransitions(detail.transitions ?? []);
         setLoaded({ detail, lottie });
       })
       .catch((e: Error) => {
@@ -122,6 +126,21 @@ export function Editor({ projectId, onBack }: Props) {
     }, SAVE_DEBOUNCE_MS);
   };
 
+  /** Choose the transition after an element. Saved immediately; a cut removes the row. */
+  const onTransitionChange = async (afterElementId: number, t: { preset: TransitionPreset; durationInFrames: number }) => {
+    setTransitions((prev) => {
+      const rest = prev.filter((x) => x.afterElementId !== afterElementId);
+      return t.preset === 'cut' ? rest : [...rest, { afterElementId, ...t }];
+    });
+    setSaveState('saving');
+    try {
+      await api.saveTransition(projectId, afterElementId, t);
+      setSaveState('saved');
+    } catch {
+      setSaveState('error');
+    }
+  };
+
   /** The Footage panel's "use this clip" hands the asset to the first cc.mediaFill param. */
   const selectFootage = (asset: MediaAsset) => {
     const mediaParam = loaded?.detail.schema.find((p) => p.kind === 'media');
@@ -155,7 +174,15 @@ export function Editor({ projectId, onBack }: Props) {
       {!loaded && !error && <p className="font-mono text-xs text-muted p-8">Loading…</p>}
       {loaded && (
         <div className="flex flex-1 min-h-0">
-          <Monitor loaded={loaded} values={values} elements={elements} assets={assets} onElementChange={onElementChange} />
+          <Monitor
+            loaded={loaded}
+            values={values}
+            elements={elements}
+            transitions={transitions}
+            assets={assets}
+            onElementChange={onElementChange}
+            onTransitionChange={onTransitionChange}
+          />
           <aside className="w-80 border-l border-hairline shrink-0 overflow-y-auto">
             <div className="p-6 border-b border-hairline">
               <h2 className="text-xs uppercase tracking-widest text-muted mb-4">Inspector</h2>
@@ -203,14 +230,18 @@ function Monitor({
   loaded,
   values,
   elements,
+  transitions,
   assets,
   onElementChange,
+  onTransitionChange,
 }: {
   loaded: Loaded;
   values: ParamValues;
   elements: ProjectElement[];
+  transitions: ProjectTransition[];
   assets: MediaAsset[];
   onElementChange: (id: number, patch: ElementPatch) => void;
+  onTransitionChange: (afterElementId: number, t: { preset: TransitionPreset; durationInFrames: number }) => void;
 }) {
   const { detail, lottie: source } = loaded;
   const schema = detail.schema;
@@ -237,8 +268,15 @@ function Monitor({
     [elements, lottie],
   );
 
-  const inputProps = useMemo<MainProps>(() => ({ background: BACKGROUND, media, elements: elementProps }), [media, elementProps]);
-  const durationInFrames = compositionDurationFor(elementProps);
+  const transitionProps = useMemo<TransitionProps[]>(
+    () => transitions.map((t) => ({ afterElementId: String(t.afterElementId), preset: t.preset, durationInFrames: t.durationInFrames })),
+    [transitions],
+  );
+  const inputProps = useMemo<MainProps>(
+    () => ({ background: BACKGROUND, media, elements: elementProps, transitions: transitionProps }),
+    [media, elementProps, transitionProps],
+  );
+  const durationInFrames = compositionDurationWithTransitions(elementProps, transitionProps);
 
   // Playhead: follow the Player, and drive it when the timeline is scrubbed.
   const playerRef = useRef<PlayerRef>(null);
@@ -281,6 +319,8 @@ function Monitor({
         frame={frame}
         onSeek={seek}
         onChange={onElementChange}
+        transitions={transitions}
+        onTransitionChange={onTransitionChange}
       />
     </section>
   );

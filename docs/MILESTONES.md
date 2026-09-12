@@ -198,7 +198,7 @@ The most important pure function in the codebase. See `SPEC.md` section 2.
 
 ---
 
-## M10 · Transitions · IN PROGRESS
+## M10 · Transitions · DONE
 
 **Build**
 - `@remotion/transitions` with `TransitionSeries` between elements
@@ -213,7 +213,7 @@ The most important pure function in the codebase. See `SPEC.md` section 2.
 
 ---
 
-## M11 · Export and parity · TODO
+## M11 · Export and parity · IN PROGRESS
 
 The milestone that decides whether this is a product.
 

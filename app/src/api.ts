@@ -1,4 +1,4 @@
-import type { LottieAnimationData, TemplateParam } from '@campaigncut/composition';
+import type { LottieAnimationData, TemplateParam, TransitionPreset } from '@campaigncut/composition';
 
 /** All API calls go through Vite's /api proxy in dev. */
 export const API = '/api';
@@ -21,11 +21,14 @@ export type ProjectValue = { elementId: number; key: string; value: unknown };
 
 export type ProjectElement = { id: number; slug: string; zIndex: number; startFrame: number; endFrame: number; enabled: boolean };
 
+export type ProjectTransition = { afterElementId: number; preset: TransitionPreset; durationInFrames: number };
+
 export type ProjectDetail = {
   project: { id: number; name: string; templateId: number; templateSlug: string; templateName: string };
   template: TemplateSummary;
   schema: TemplateParam[];
   elements: ProjectElement[];
+  transitions?: ProjectTransition[];
   values: ProjectValue[];
 };
 
@@ -71,6 +74,13 @@ export const api = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(patch),
     }).then((r) => json<ProjectElement>(r)),
+
+  saveTransition: (projectId: number, afterElementId: number, t: { preset: TransitionPreset; durationInFrames: number }) =>
+    fetch(`${API}/projects/${projectId}/transitions/${afterElementId}`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(t),
+    }).then((r) => json<{ transitions: ProjectTransition[] }>(r)),
 
   media: () => fetch(`${API}/media`).then((r) => json<MediaAsset[]>(r)),
 

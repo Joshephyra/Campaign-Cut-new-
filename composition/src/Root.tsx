@@ -1,12 +1,12 @@
 import { Composition } from 'remotion';
 import { compositionConfig, defaultProps, type MainProps } from './config';
-import { compositionDurationFor } from './elements';
 import { Main } from './Main';
+import { compositionDurationWithTransitions } from './transitions';
 
 /**
  * Registers the single composition with Remotion for the server renderer.
- * Duration comes from the elements handed in as props, so the timeline
- * ends when its last enabled element ends.
+ * Duration comes from the elements and transitions handed in as props, so
+ * the timeline ends when its last chain ends.
  */
 export function RemotionRoot() {
   return (
@@ -16,10 +16,10 @@ export function RemotionRoot() {
       width={compositionConfig.width}
       height={compositionConfig.height}
       fps={compositionConfig.fps}
-      durationInFrames={compositionDurationFor(defaultProps.elements)}
+      durationInFrames={compositionDurationWithTransitions(defaultProps.elements, defaultProps.transitions ?? [])}
       defaultProps={defaultProps}
       calculateMetadata={({ props }: { props: MainProps }) => ({
-        durationInFrames: compositionDurationFor(props.elements),
+        durationInFrames: compositionDurationWithTransitions(props.elements, props.transitions ?? []),
       })}
     />
   );

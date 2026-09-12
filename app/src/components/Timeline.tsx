@@ -1,5 +1,7 @@
-import { formatTimecode } from '@campaigncut/composition';
+import { DEFAULT_TRANSITION_FRAMES, formatTimecode, TRANSITION_PRESETS, type TransitionPreset } from '@campaigncut/composition';
 import { useRef, type PointerEvent as ReactPointerEvent } from 'react';
+
+export type TimelineTransition = { afterElementId: number; preset: TransitionPreset; durationInFrames: number };
 
 export type TimelineElement = {
   id: number;
@@ -20,6 +22,9 @@ type Props = {
   frame: number;
   onSeek: (frame: number) => void;
   onChange: (elementId: number, patch: ElementPatch) => void;
+  /** Transitions per boundary. A boundary with no entry is a cut. */
+  transitions?: TimelineTransition[];
+  onTransitionChange?: (afterElementId: number, t: { preset: TransitionPreset; durationInFrames: number }) => void;
 };
 
 /**
@@ -27,10 +32,15 @@ type Props = {
  * points. Drag a bar to move an element in time; tick to toggle it; click
  * or drag the ruler to scrub. Timecodes in Plex Mono, per DESIGN.md.
  */
-export function Timeline({ elements, fps, durationInFrames, frame, onSeek, onChange }: Props) {
+export function Timeline({ elements, fps, durationInFrames, frame, onSeek, onChange, transitions = [], onTransitionChange }: Props) {
   const total = Math.max(1, durationInFrames);
   const pct = (f: number) => `${(Math.min(Math.max(f, 0), total) / total) * 100}%`;
   const rows = [...elements].sort((a, b) => b.zIndex - a.zIndex || b.id - a.id);
+
+  // Boundaries exist between consecutive ENABLED elements in start order.
+  const inOrder = elements.filter((e) => e.enabled).sort((a, b) => a.startFrame - b.startFrame || a.zIndex - b.zIndex);
+  const hasBoundaryAfter = new Set(inOrder.slice(0, -1).map((e) => e.id));
+  const transitionAfter = (id: number) => transitions.find((t) => t.afterElementId === id);
 
   const frameAt = (clientX: number, track: HTMLElement) => {
     const rect = track.getBoundingClientRect();
@@ -141,9 +151,65 @@ export function Timeline({ elements, fps, durationInFrames, frame, onSeek, onCha
               </div>
               <div className="absolute top-0 bottom-0 w-px bg-cobalt pointer-events-none" style={{ left: pct(frame) }} />
             </div>
+
+            {hasBoundaryAfter.has(el.id) && (
+              <TransitionControl
+                element={el}
+                transition={transitionAfter(el.id)}
+                onChange={(t) => onTransitionChange?.(el.id, t)}
+              />
+            )}
           </div>
         ))}
       </div>
     </div>
+  );
+}
+
+/** The transition on the boundary after an element: preset plus length in frames. */
+function TransitionControl({
+  element,
+  transition,
+  onChange,
+}: {
+  element: TimelineElement;
+  transition: TimelineTransition | undefined;
+  onChange: (t: { preset: TransitionPreset; durationInFrames: number }) => void;
+}) {
+  const preset = transition?.preset ?? 'cut';
+  const length = transition?.durationInFrames ?? DEFAULT_TRANSITION_FRAMES;
+  return (
+    <>
+      <div className="h-7 border-b border-hairline flex items-center pr-3 text-muted">
+        <span className="pl-5">↳ then</span>
+      </div>
+      <div className="h-7 border-b border-hairline flex items-center gap-2" data-testid={`transition-after-${element.id}`}>
+        <select
+          aria-label={`Transition after ${element.slug}`}
+          value={preset}
+          onChange={(e) => onChange({ preset: e.target.value as TransitionPreset, durationInFrames: length })}
+          className="bg-panel border border-hairline px-1 py-0.5 text-fg focus:outline-none focus:border-cobalt"
+        >
+          {TRANSITION_PRESETS.map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
+        {preset !== 'cut' && (
+          <>
+            <input
+              type="number"
+              min={1}
+              aria-label={`Transition length after ${element.slug}`}
+              value={length}
+              onChange={(e) => onChange({ preset, durationInFrames: Math.max(1, Math.round(Number(e.target.value)) || 1) })}
+              className="w-14 bg-panel border border-hairline px-1 py-0.5 text-fg focus:outline-none focus:border-cobalt"
+            />
+            <span className="text-muted">frames</span>
+          </>
+        )}
+      </div>
+    </>
   );
 }

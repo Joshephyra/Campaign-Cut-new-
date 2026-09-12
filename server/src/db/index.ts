@@ -56,6 +56,9 @@ export type ProjectElement = {
 
 export type ProjectElementPatch = Partial<Pick<ProjectElement, 'startFrame' | 'endFrame' | 'enabled'>>;
 
+/** A transition stored on the boundary after an element, for one project. */
+export type ProjectTransition = { afterElementId: number; preset: string; durationInFrames: number };
+
 export type MediaAssetInput = {
   originalName: string;
   /** Paths relative to the media directory. */
@@ -88,6 +91,9 @@ export type Db = Database.Database & {
   getProjectElements(projectId: number): ProjectElement[];
   /** Move or toggle one element in one project. The template is untouched. */
   setProjectElement(projectId: number, elementId: number, patch: ProjectElementPatch): void;
+  getProjectTransitions(projectId: number): ProjectTransition[];
+  /** 'cut' removes the row; anything else upserts it. */
+  setProjectTransition(projectId: number, afterElementId: number, t: { preset: string; durationInFrames: number }): void;
 };
 
 const MIGRATIONS = `
@@ -146,6 +152,14 @@ CREATE TABLE IF NOT EXISTS project_element (
   PRIMARY KEY (project_id, element_id)
 );
 
+CREATE TABLE IF NOT EXISTS project_transition (
+  project_id        INTEGER NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+  after_element_id  INTEGER NOT NULL REFERENCES template_element(id),
+  preset            TEXT    NOT NULL,
+  duration_frames   INTEGER NOT NULL,
+  PRIMARY KEY (project_id, after_element_id)
+);
+
 CREATE TABLE IF NOT EXISTS media_asset (
   id             INTEGER PRIMARY KEY,
   original_name  TEXT    NOT NULL,
@@ -187,6 +201,9 @@ export function openDb(file: string): Db {
     getProjectElements: (projectId: number) => getProjectElements(db, projectId),
     setProjectElement: (projectId: number, elementId: number, patch: ProjectElementPatch) =>
       setProjectElement(db, projectId, elementId, patch),
+    getProjectTransitions: (projectId: number) => getProjectTransitions(db, projectId),
+    setProjectTransition: (projectId: number, afterElementId: number, t: { preset: string; durationInFrames: number }) =>
+      setProjectTransition(db, projectId, afterElementId, t),
     insertMediaAsset: (a: MediaAssetInput) => insertMediaAsset(db, a),
     getMediaAsset: (id: number) => getMediaAsset(db, id),
     listMediaAssets: () => listMediaAssets(db),
@@ -227,6 +244,34 @@ function setProjectElement(db: Database.Database, projectId: number, elementId: 
     endFrame: patch.endFrame ?? null,
     enabled: patch.enabled === undefined ? null : patch.enabled ? 1 : 0,
   });
+  db.prepare(`UPDATE project SET updated_at = datetime('now') WHERE id = ?`).run(projectId);
+}
+
+// ---- transitions -------------------------------------------------------
+
+function getProjectTransitions(db: Database.Database, projectId: number): ProjectTransition[] {
+  return db
+    .prepare(
+      `SELECT after_element_id AS afterElementId, preset, duration_frames AS durationInFrames
+       FROM project_transition WHERE project_id = ? ORDER BY after_element_id`,
+    )
+    .all(projectId) as ProjectTransition[];
+}
+
+function setProjectTransition(
+  db: Database.Database,
+  projectId: number,
+  afterElementId: number,
+  t: { preset: string; durationInFrames: number },
+): void {
+  if (t.preset === 'cut') {
+    db.prepare(`DELETE FROM project_transition WHERE project_id = ? AND after_element_id = ?`).run(projectId, afterElementId);
+  } else {
+    db.prepare(
+      `INSERT INTO project_transition (project_id, after_element_id, preset, duration_frames) VALUES (?, ?, ?, ?)
+       ON CONFLICT(project_id, after_element_id) DO UPDATE SET preset = excluded.preset, duration_frames = excluded.duration_frames`,
+    ).run(projectId, afterElementId, t.preset, Math.round(t.durationInFrames));
+  }
   db.prepare(`UPDATE project SET updated_at = datetime('now') WHERE id = ?`).run(projectId);
 }
 

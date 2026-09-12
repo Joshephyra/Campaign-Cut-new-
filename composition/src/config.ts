@@ -1,4 +1,5 @@
 import type { ElementProps } from './elements';
+import type { TransitionProps } from './transitions';
 
 /**
  * The single composition's fixed parameters. There is exactly one
@@ -55,6 +56,8 @@ export type MainProps = {
   media: MainMedia | null;
   /** The timeline: every element with its Lottie and in/out points. */
   elements: ElementProps[];
+  /** Transitions per element boundary. Absent or empty means every boundary is a cut. */
+  transitions?: TransitionProps[];
 };
 
 /** A valid, empty Lottie for tests and placeholders. */

@@ -3,6 +3,26 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-11 · M10 Transitions · DONE (Josh delegated sign-off)
+
+**What exists now**
+
+- `composition/src/transitions.ts`: presets `cut | fade | wipe | slide`, `TransitionProps` per boundary (`afterElementId`), `effectiveTimeline` (elements in start order; neighbours joined by a non-cut transition form a chain where the next element begins where the previous ends minus the overlap; transitions capped below the shorter neighbour), `compositionDurationWithTransitions`.
+- `Main` renders a chain of one as a plain `Sequence`, and a chain of several with `@remotion/transitions` `TransitionSeries` (fade, wipe from left, slide from right, `linearTiming`). `Root` takes its duration from the chains. `transitions.render.test.ts` proves the M10 tests at the pixel level with real `renderStill`: a cut is red then blue, a fade blends both at the boundary, switching to a wipe changes the output (one side blue, the other red), and the composition shrinks by the overlap.
+- DB: `project_transition` (project, after_element, preset, duration). `getProjectTransitions`, `setProjectTransition` ('cut' deletes). Server: `GET /projects/:id` includes `transitions`; `PUT /projects/:id/transitions/:afterElementId { preset, durationInFrames }` validates preset and length. Export runner passes transitions with string element ids.
+- App: the timeline shows a "then" row under each element that has a following enabled element, with a preset select and a length field. Saved immediately; the Player duration and bars follow the effective timeline.
+- Stand-in has a second element (`standin-2`, frames 150 to 300, same Lottie) added directly in the database for verification; ingest still creates one element per export.
+- 192 tests across 37 files. Typecheck clean.
+
+**Verified by eye**
+
+- Editor: set the transition after element 1 to fade. Footer went from 300 to 285 frames, the PUT returned 200 and the header showed Saved. Scrubbed to `00:04:22`, the middle of the boundary: the outgoing headline and bar are half-transparent over the incoming element.
+- Server render: 285 frames. Frames 130, 142, 160 extracted: before the boundary, mid-fade (both elements visible blended), after (second element only).
+
+**Next:** M11, export and parity.
+
+---
+
 ## 2026-09-11 · M9 Timeline · DONE (Josh delegated sign-off)
 
 **What exists now**

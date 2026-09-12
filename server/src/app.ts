@@ -1,7 +1,7 @@
 import fastifyCors from '@fastify/cors';
 import fastifyMultipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
-import type { TemplateParam } from '@campaigncut/composition';
+import { TRANSITION_PRESETS, type TemplateParam } from '@campaigncut/composition';
 import Fastify from 'fastify';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -123,9 +123,33 @@ export function buildApp(options: AppOptions = {}) {
       template: templateJson(t),
       schema: readJson<TemplateParam[]>(path.join(dir, 'schema.json')) ?? [],
       elements: db.getProjectElements(project.id),
+      transitions: db.getProjectTransitions(project.id),
       values,
     };
   });
+
+  /** Choose the transition on the boundary after an element. 'cut' clears it. */
+  app.put<{ Params: { id: string; afterElementId: string }; Body: { preset?: string; durationInFrames?: number } }>(
+    '/projects/:id/transitions/:afterElementId',
+    async (req, reply) => {
+      const id = Number(req.params.id);
+      const afterElementId = Number(req.params.afterElementId);
+      const preset = req.body?.preset;
+      if (!preset || !(TRANSITION_PRESETS as readonly string[]).includes(preset)) {
+        return reply.code(400).send({ error: `preset must be one of ${TRANSITION_PRESETS.join(', ')}` });
+      }
+      const durationInFrames = preset === 'cut' ? 0 : Math.round(Number(req.body?.durationInFrames));
+      if (preset !== 'cut' && (!Number.isFinite(durationInFrames) || durationInFrames < 1)) {
+        return reply.code(400).send({ error: 'durationInFrames must be a whole number of at least 1' });
+      }
+      if (!db.getProject(id)) return reply.code(404).send({ error: `No project ${id}` });
+      if (!db.getProjectElements(id).some((e) => e.id === afterElementId)) {
+        return reply.code(404).send({ error: `No element ${afterElementId} in project ${id}` });
+      }
+      db.setProjectTransition(id, afterElementId, { preset, durationInFrames });
+      return { transitions: db.getProjectTransitions(id) };
+    },
+  );
 
   /** Move an element in time or toggle it, for this project only. */
   app.put<{ Params: { id: string; elementId: string }; Body: { startFrame?: number; endFrame?: number; enabled?: boolean } }>(

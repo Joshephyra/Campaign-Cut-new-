@@ -9,6 +9,7 @@ import {
   type MainProps,
   type ParamValues,
   type TemplateParam,
+  type TransitionPreset,
 } from '@campaigncut/composition';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -65,5 +66,11 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase }: B
     enabled: e.enabled,
   }));
 
-  return { background: '#000000', media, elements };
+  const transitions = db.getProjectTransitions(projectId).map((t) => ({
+    afterElementId: String(t.afterElementId),
+    preset: t.preset as TransitionPreset,
+    durationInFrames: t.durationInFrames,
+  }));
+
+  return { background: '#000000', media, elements, transitions };
 }
