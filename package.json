@@ -16,7 +16,8 @@
     "test:watch": "vitest",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
-    "render:standin": "npm run render:standin -w server --"
+    "render:standin": "npm run render:standin -w server --",
+    "schema": "npm run schema -w tools/ingest --"
   },
   "devDependencies": {
     "concurrently": "10.0.5",

@@ -1,0 +1,268 @@
+import { rgbaToHex, type LottieAnimationData, type ParamKind, type TemplateParam } from '@campaigncut/composition';
+import { keyFor, KNOWN_ROLES, labelFor, ROLES } from './roles';
+import { parseTag } from './tags';
+
+type AnyRecord = Record<string, unknown>;
+
+export type IngestError = { layer: string; message: string };
+
+export type TagReport = {
+  /** The layer name as authored. */
+  layer: string;
+  status: ParamKind | 'error';
+  path?: string;
+  message?: string;
+};
+
+export type GeneratedSchema = {
+  params: TemplateParam[];
+  /** Font families referenced by any text layer, de-duplicated, in order of first use. */
+  fonts: string[];
+  /** Every cc.* tag encountered, in layer order, including the ones that errored. */
+  report: TagReport[];
+  errors: IngestError[];
+};
+
+/** Lottie layer types we care about. */
+const LAYER_PRECOMP = 0;
+const LAYER_IMAGE = 2;
+const LAYER_SHAPE = 4;
+const LAYER_TEXT = 5;
+
+/** Average glyph width as a fraction of font size, for deriving maxChars. */
+const AVERAGE_GLYPH_WIDTH = 0.55;
+
+/**
+ * Walk a Bodymovin export, find every cc.* layer, and emit the template
+ * schema. Never throws for authoring mistakes: they come back in `errors`,
+ * each naming the layer, so the CLI can print all of them at once.
+ */
+export function generateSchema(lottie: LottieAnimationData): GeneratedSchema {
+  const params: Array<TemplateParam & { _order: number; _index: number }> = [];
+  const report: TagReport[] = [];
+  const errors: IngestError[] = [];
+  const fontNames: string[] = [];
+  const seenKeys = new Set<string>();
+  const roleOrder = new Map<string, number>();
+
+  const fail = (layer: string, message: string) => {
+    errors.push({ layer, message });
+    report.push({ layer, status: 'error', message });
+  };
+
+  for (const { layer, pointer } of walkLayers(lottie)) {
+    if (layer.ty === LAYER_TEXT) collectFonts(layer, fontNames);
+
+    const name = typeof layer.nm === 'string' ? layer.nm : '';
+    const parsed = parseTag(name);
+    if (!parsed) continue;
+
+    const { tag, role, index } = parsed;
+    const spec = ROLES[role];
+    if (!spec) {
+      fail(tag, `Layer "${tag}": unknown role "${role}". Known roles: ${KNOWN_ROLES.join(', ')}. Tags are case-sensitive.`);
+      continue;
+    }
+    if (spec.repeated && index === undefined) {
+      fail(tag, `Layer "${tag}": role "${role}" is repeated and needs an index, e.g. cc.${role}.1`);
+      continue;
+    }
+    if (!spec.repeated && index !== undefined) {
+      fail(tag, `Layer "${tag}": role "${role}" is not repeatable; drop the ".${index}"`);
+      continue;
+    }
+
+    const key = keyFor(role, index);
+    if (seenKeys.has(key)) {
+      fail(tag, `Layer "${tag}": duplicate tag; another layer already uses it`);
+      continue;
+    }
+
+    const resolved = resolveTarget(spec.kind, layer, pointer, lottie, tag);
+    if ('error' in resolved) {
+      fail(tag, resolved.error);
+      continue;
+    }
+
+    seenKeys.add(key);
+    if (!roleOrder.has(role)) roleOrder.set(role, roleOrder.size);
+
+    const param: TemplateParam & { _order: number; _index: number } = {
+      key,
+      role,
+      kind: spec.kind,
+      label: labelFor(role, index),
+      default: resolved.defaultValue,
+      path: resolved.path,
+      _order: roleOrder.get(role)!,
+      _index: index ?? 0,
+    };
+    if (resolved.maxChars !== undefined) param.maxChars = resolved.maxChars;
+    if (spec.locked) param.locked = true;
+    params.push(param);
+    report.push({ layer: tag, status: spec.kind, path: resolved.path });
+  }
+
+  params.sort((a, b) => a._order - b._order || a._index - b._index);
+  const cleaned = params.map(({ _order, _index, ...p }) => p);
+
+  return { params: cleaned, fonts: resolveFontFamilies(lottie, fontNames), report, errors };
+}
+
+// ---- walking -----------------------------------------------------------
+
+type Visit = { layer: AnyRecord; pointer: string };
+
+function* walkLayers(lottie: LottieAnimationData): Generator<Visit> {
+  const assets = Array.isArray(lottie.assets) ? (lottie.assets as AnyRecord[]) : [];
+  const visitedComps = new Set<string>();
+
+  function* walk(layers: unknown, prefix: string): Generator<Visit> {
+    if (!Array.isArray(layers)) return;
+    for (let i = 0; i < layers.length; i++) {
+      const layer = layers[i] as AnyRecord;
+      if (!layer || typeof layer !== 'object') continue;
+      const pointer = `${prefix}/layers/${i}`;
+      yield { layer, pointer };
+
+      if (layer.ty === LAYER_PRECOMP && typeof layer.refId === 'string' && !visitedComps.has(layer.refId)) {
+        const assetIndex = assets.findIndex((a) => a?.id === layer.refId);
+        if (assetIndex >= 0) {
+          visitedComps.add(layer.refId);
+          yield* walk(assets[assetIndex]!.layers, `/assets/${assetIndex}`);
+        }
+      }
+    }
+  }
+
+  yield* walk(lottie.layers, '');
+}
+
+// ---- resolving each kind ----------------------------------------------
+
+type Resolved = { path: string; defaultValue: unknown; maxChars?: number } | { error: string };
+
+function resolveTarget(kind: ParamKind, layer: AnyRecord, pointer: string, lottie: LottieAnimationData, tag: string): Resolved {
+  switch (kind) {
+    case 'text':
+      return resolveText(layer, pointer, tag);
+    case 'color':
+      return resolveColor(layer, pointer, tag);
+    case 'image':
+      return resolveImage(layer, lottie, tag);
+    case 'media':
+      return { path: pointer, defaultValue: null };
+  }
+}
+
+function firstTextStyle(layer: AnyRecord): AnyRecord | undefined {
+  const doc = (layer.t as AnyRecord | undefined)?.d as AnyRecord | undefined;
+  const keyframes = doc?.k;
+  if (!Array.isArray(keyframes) || keyframes.length === 0) return undefined;
+  const style = (keyframes[0] as AnyRecord).s;
+  return style && typeof style === 'object' ? (style as AnyRecord) : undefined;
+}
+
+function resolveText(layer: AnyRecord, pointer: string, tag: string): Resolved {
+  if (layer.ty !== LAYER_TEXT) {
+    return { error: `Layer "${tag}": tagged as text but it is not a text layer (ty ${String(layer.ty)})` };
+  }
+  const style = firstTextStyle(layer);
+  if (!style) return { error: `Layer "${tag}": text layer has no text document` };
+
+  const out: Resolved = { path: pointer, defaultValue: typeof style.t === 'string' ? style.t : '' };
+  const maxChars = deriveMaxChars(style);
+  if (maxChars !== undefined) out.maxChars = maxChars;
+  return out;
+}
+
+/**
+ * Bodymovin writes box text (paragraph text) with `sz: [w, h]`. Point text
+ * has no box, so no limit can be derived. Estimate: characters per line
+ * from the box width and font size, times the number of lines that fit.
+ */
+function deriveMaxChars(style: AnyRecord): number | undefined {
+  const size = style.sz;
+  const fontSize = typeof style.s === 'number' ? style.s : undefined;
+  if (!Array.isArray(size) || size.length < 2 || !fontSize || fontSize <= 0) return undefined;
+  const [w, h] = size as [number, number];
+  const lineHeight = typeof style.lh === 'number' && style.lh > 0 ? style.lh : fontSize * 1.2;
+  const perLine = Math.floor(w / (AVERAGE_GLYPH_WIDTH * fontSize));
+  const lines = Math.max(1, Math.floor(h / lineHeight));
+  return Math.max(1, perLine * lines);
+}
+
+function resolveColor(layer: AnyRecord, pointer: string, tag: string): Resolved {
+  if (layer.ty !== LAYER_SHAPE) {
+    return { error: `Layer "${tag}": tagged as a colour but it is not a shape layer, so it has no fill or stroke` };
+  }
+  const found = findFillOrStroke(layer.shapes, `${pointer}/shapes`);
+  if (!found) return { error: `Layer "${tag}": tagged as a colour but it has no fill or stroke to change` };
+
+  const colour = (found.item.c as AnyRecord | undefined) ?? {};
+  let rgba: number[] | undefined;
+  if (Array.isArray(colour.k) && typeof colour.k[0] === 'number') rgba = colour.k as number[];
+  else if (Array.isArray(colour.k) && Array.isArray((colour.k[0] as AnyRecord | undefined)?.s)) rgba = (colour.k[0] as AnyRecord).s as number[];
+
+  return { path: found.path, defaultValue: rgba ? rgbaToHex(rgba) : null };
+}
+
+/** First fill in document order; failing that, the first stroke. Recurses into groups. */
+function findFillOrStroke(shapes: unknown, prefix: string): { item: AnyRecord; path: string } | undefined {
+  let firstStroke: { item: AnyRecord; path: string } | undefined;
+
+  const visit = (items: unknown, p: string): { item: AnyRecord; path: string } | undefined => {
+    if (!Array.isArray(items)) return undefined;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i] as AnyRecord;
+      if (!item || typeof item !== 'object') continue;
+      const path = `${p}/${i}`;
+      if (item.ty === 'fl') return { item, path };
+      if (item.ty === 'st' && !firstStroke) firstStroke = { item, path };
+      if (item.ty === 'gr') {
+        const inner = visit(item.it, `${path}/it`);
+        if (inner) return inner;
+      }
+    }
+    return undefined;
+  };
+
+  return visit(shapes, prefix) ?? firstStroke;
+}
+
+function resolveImage(layer: AnyRecord, lottie: LottieAnimationData, tag: string): Resolved {
+  if (layer.ty !== LAYER_IMAGE || typeof layer.refId !== 'string') {
+    return { error: `Layer "${tag}": tagged as an image but it is not an image layer` };
+  }
+  const assets = Array.isArray(lottie.assets) ? (lottie.assets as AnyRecord[]) : [];
+  const index = assets.findIndex((a) => a?.id === layer.refId);
+  if (index < 0 || typeof assets[index]!.p !== 'string') {
+    return { error: `Layer "${tag}": image layer references asset "${layer.refId}" which has no image source` };
+  }
+  const asset = assets[index]!;
+  const dir = typeof asset.u === 'string' ? asset.u : '';
+  return { path: `/assets/${index}`, defaultValue: `${dir}${asset.p as string}` };
+}
+
+// ---- fonts -------------------------------------------------------------
+
+function collectFonts(layer: AnyRecord, into: string[]): void {
+  const doc = (layer.t as AnyRecord | undefined)?.d as AnyRecord | undefined;
+  if (!Array.isArray(doc?.k)) return;
+  for (const keyframe of doc.k as AnyRecord[]) {
+    const style = keyframe.s as AnyRecord | undefined;
+    if (style && typeof style.f === 'string' && !into.includes(style.f)) into.push(style.f);
+  }
+}
+
+/** Map Bodymovin font names (fName) to families (fFamily) via the fonts list. */
+function resolveFontFamilies(lottie: LottieAnimationData, fontNames: string[]): string[] {
+  const list = ((lottie.fonts as AnyRecord | undefined)?.list as AnyRecord[] | undefined) ?? [];
+  const families: string[] = [];
+  for (const name of fontNames) {
+    const entry = list.find((f) => f.fName === name);
+    const family = typeof entry?.fFamily === 'string' ? entry.fFamily : name;
+    if (!families.includes(family)) families.push(family);
+  }
+  return families;
+}

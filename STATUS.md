@@ -3,6 +3,27 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-11 · M3 Tag reader and schema generator · built and verified by Claude, awaiting Josh's own check
+
+**What exists now**
+
+- `tools/ingest/src/tags.ts`: `parseTag` for `cc.<role>` and `cc.<role>.<n>`. Case-sensitive, exact.
+- `tools/ingest/src/roles.ts`: the role table from SPEC 1.1 (kind, label, repeated, locked). Adding a role is a one-line change here.
+- `tools/ingest/src/generateSchema.ts`: walks every layer including pre-comp layers (paths into `/assets/N/layers/M`), resolves each tag to its JSON-pointer target (text layer; first fill else first stroke inside the shape; image asset), reads authored defaults (text, colour as hex, image source), derives `maxChars` from box text size, extracts font families via the Bodymovin fonts list. Returns params, fonts, a report of every tag, and errors naming the layer. Never throws for authoring mistakes.
+- `npm run schema -- <lottie.json> [--out file] [--dry-run]`: prints the tag list and fonts, writes `schema.json` next to the input, exits 1 and writes nothing on any error.
+- `templates/standin/schema.json` is now generated, not hand-written. The generator caught a rounding mistake in my hand-written accent default (`#F0592A` should be `#F05929`).
+- 66 tests across 10 files. Typecheck clean.
+
+**Verified by eye**
+
+- CLI on the stand-in: lists all four tags with paths, fonts `Arial`, four params, writes the file.
+- CLI on a deliberately broken copy (wrong-case `cc.Headline`, `cc.accent` with its fill removed, unknown `cc.tagline`): three errors each naming the layer, exit code 1, nothing written.
+- App still shows the four harness fields from the generated schema and the Player renders.
+
+**Next:** M4, the ingest CLI. Not started.
+
+---
+
 ## 2026-09-11 · M2 The mutation layer · DONE (verified by Josh)
 
 **What exists now**

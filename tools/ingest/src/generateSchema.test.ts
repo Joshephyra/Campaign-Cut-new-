@@ -1,0 +1,281 @@
+import type { LottieAnimationData, TemplateParam } from '@campaigncut/composition';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { describe, expect, it } from 'vitest';
+import { generateSchema } from './generateSchema';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(here, '..', '..', '..');
+
+// ---- fixture builders --------------------------------------------------
+
+const textLayer = (nm: string, text: string, extra: Record<string, unknown> = {}) => ({
+  ty: 5,
+  nm,
+  ks: {},
+  t: { d: { k: [{ s: { t: text, f: 'Arial-Regular', s: 60, lh: 72, ...extra }, t: 0 }] } },
+});
+
+const fillShapeLayer = (nm: string, rgba: number[]) => ({
+  ty: 4,
+  nm,
+  ks: {},
+  shapes: [
+    {
+      ty: 'gr',
+      it: [
+        { ty: 'rc', s: { a: 0, k: [10, 10] } },
+        { ty: 'fl', c: { a: 0, k: rgba }, o: { a: 0, k: 100 } },
+        { ty: 'tr' },
+      ],
+    },
+  ],
+});
+
+const strokeOnlyShapeLayer = (nm: string, rgba: number[]) => ({
+  ty: 4,
+  nm,
+  ks: {},
+  shapes: [{ ty: 'gr', it: [{ ty: 'el' }, { ty: 'st', c: { a: 0, k: rgba }, w: { a: 0, k: 4 } }, { ty: 'tr' }] }],
+});
+
+const noFillShapeLayer = (nm: string) => ({
+  ty: 4,
+  nm,
+  ks: {},
+  shapes: [{ ty: 'gr', it: [{ ty: 'rc', s: { a: 0, k: [10, 10] } }, { ty: 'tr' }] }],
+});
+
+const imageLayer = (nm: string, refId: string) => ({ ty: 2, nm, ks: {}, refId });
+const solidLayer = (nm: string) => ({ ty: 1, nm, ks: {}, sc: '#000000', sw: 1920, sh: 1080 });
+
+const lottie = (layers: unknown[], extra: Partial<LottieAnimationData> = {}): LottieAnimationData => ({
+  v: '5.12.2',
+  fr: 30,
+  ip: 0,
+  op: 150,
+  w: 1920,
+  h: 1080,
+  nm: 'fixture',
+  ddd: 0,
+  assets: [],
+  layers,
+  fonts: { list: [{ fName: 'Arial-Regular', fFamily: 'Arial', fStyle: 'Regular', ascent: 71 }] },
+  ...extra,
+});
+
+// ---- tests -------------------------------------------------------------
+
+describe('generateSchema: every role', () => {
+  const source = lottie(
+    [
+      textLayer('cc.headline', 'Headline here'),
+      textLayer('cc.subhead', 'Subhead here'),
+      textLayer('cc.body', 'Body here'),
+      fillShapeLayer('cc.accent', [1, 0, 0, 1]),
+      fillShapeLayer('cc.surface', [0, 0, 1, 1]),
+      imageLayer('cc.logo', 'image_0'),
+      solidLayer('cc.mediaFill'),
+      textLayer('cc.safe.disclaimer', 'Paid for by X'),
+      fillShapeLayer('untagged-craft', [0, 1, 0, 1]),
+    ],
+    { assets: [{ id: 'image_0', w: 100, h: 50, u: 'images/', p: 'logo.png', e: 0 }] },
+  );
+  const out = generateSchema(source);
+
+  it('has no errors', () => {
+    expect(out.errors).toEqual([]);
+  });
+
+  it('emits one param per tagged layer and none for untagged layers', () => {
+    expect(out.params.map((p) => p.key)).toEqual([
+      'headline',
+      'subhead',
+      'body',
+      'accent',
+      'surface',
+      'logo',
+      'mediaFill',
+      'disclaimer',
+    ]);
+  });
+
+  it('maps roles to kinds per SPEC 1.1', () => {
+    const kinds = Object.fromEntries(out.params.map((p) => [p.key, p.kind]));
+    expect(kinds).toEqual({
+      headline: 'text',
+      subhead: 'text',
+      body: 'text',
+      accent: 'color',
+      surface: 'color',
+      logo: 'image',
+      mediaFill: 'media',
+      disclaimer: 'text',
+    });
+  });
+
+  it('points text params at the text layer and reads the authored text as default', () => {
+    const headline = out.params.find((p) => p.key === 'headline')!;
+    expect(headline.path).toBe('/layers/0');
+    expect(headline.default).toBe('Headline here');
+    expect(headline.label).toBe('Headline');
+  });
+
+  it('points colour params at the fill item and reads the authored colour as hex', () => {
+    const accent = out.params.find((p) => p.key === 'accent')!;
+    expect(accent.path).toBe('/layers/3/shapes/0/it/1');
+    expect(accent.default).toBe('#FF0000');
+  });
+
+  it('points image params at the asset and reads its source as default', () => {
+    const logo = out.params.find((p) => p.key === 'logo')!;
+    expect(logo.path).toBe('/assets/0');
+    expect(logo.default).toBe('images/logo.png');
+  });
+
+  it('locks the disclaimer', () => {
+    const disclaimer = out.params.find((p) => p.key === 'disclaimer')!;
+    expect(disclaimer.role).toBe('safe.disclaimer');
+    expect(disclaimer.locked).toBe(true);
+    expect(disclaimer.path).toBe('/layers/7');
+  });
+
+  it('reports every tag it found, in layer order', () => {
+    expect(out.report.map((r) => `${r.layer} -> ${r.status}`)).toEqual([
+      'cc.headline -> text',
+      'cc.subhead -> text',
+      'cc.body -> text',
+      'cc.accent -> color',
+      'cc.surface -> color',
+      'cc.logo -> image',
+      'cc.mediaFill -> media',
+      'cc.safe.disclaimer -> text',
+    ]);
+  });
+
+  it('extracts referenced font families, de-duplicated', () => {
+    expect(out.fonts).toEqual(['Arial']);
+  });
+});
+
+describe('generateSchema: repeated slots', () => {
+  it('produces N distinct params in index order even if authored out of order', () => {
+    const out = generateSchema(
+      lottie([textLayer('cc.stat.3', 'C'), textLayer('cc.stat.1', 'A'), textLayer('cc.stat.2', 'B')]),
+    );
+    expect(out.errors).toEqual([]);
+    expect(out.params.map((p) => [p.key, p.role, p.default, p.label])).toEqual([
+      ['stat.1', 'stat', 'A', 'Stat 1'],
+      ['stat.2', 'stat', 'B', 'Stat 2'],
+      ['stat.3', 'stat', 'C', 'Stat 3'],
+    ]);
+  });
+});
+
+describe('generateSchema: loud failures naming the layer', () => {
+  it('unknown role', () => {
+    const out = generateSchema(lottie([textLayer('cc.tagline', 'x')]));
+    expect(out.errors).toHaveLength(1);
+    expect(out.errors[0]!.layer).toBe('cc.tagline');
+    expect(out.errors[0]!.message).toMatch(/unknown role "tagline"/i);
+    expect(out.params).toEqual([]);
+  });
+
+  it('cc.accent on a layer with no fill or stroke', () => {
+    const out = generateSchema(lottie([noFillShapeLayer('cc.accent')]));
+    expect(out.errors).toHaveLength(1);
+    expect(out.errors[0]!.layer).toBe('cc.accent');
+    expect(out.errors[0]!.message).toMatch(/no fill or stroke/i);
+  });
+
+  it('cc.accent on a text layer', () => {
+    const out = generateSchema(lottie([textLayer('cc.accent', 'x')]));
+    expect(out.errors).toHaveLength(1);
+    expect(out.errors[0]!.layer).toBe('cc.accent');
+  });
+
+  it('is case-sensitive: cc.Headline is unknown', () => {
+    const out = generateSchema(lottie([textLayer('cc.Headline', 'x')]));
+    expect(out.errors).toHaveLength(1);
+    expect(out.errors[0]!.layer).toBe('cc.Headline');
+    expect(out.errors[0]!.message).toMatch(/unknown role "Headline"/);
+  });
+
+  it('a text role on a shape layer', () => {
+    const out = generateSchema(lottie([fillShapeLayer('cc.headline', [0, 0, 0, 1])]));
+    expect(out.errors).toHaveLength(1);
+    expect(out.errors[0]!.layer).toBe('cc.headline');
+    expect(out.errors[0]!.message).toMatch(/not a text layer/i);
+  });
+
+  it('cc.logo on a layer with no image asset', () => {
+    const out = generateSchema(lottie([solidLayer('cc.logo')]));
+    expect(out.errors).toHaveLength(1);
+    expect(out.errors[0]!.layer).toBe('cc.logo');
+  });
+
+  it('two layers with the same tag', () => {
+    const out = generateSchema(lottie([textLayer('cc.headline', 'a'), textLayer('cc.headline', 'b')]));
+    expect(out.errors).toHaveLength(1);
+    expect(out.errors[0]!.message).toMatch(/duplicate/i);
+  });
+
+  it('errored tags still appear in the report', () => {
+    const out = generateSchema(lottie([textLayer('cc.tagline', 'x'), textLayer('cc.headline', 'y')]));
+    expect(out.report.map((r) => r.layer)).toEqual(['cc.tagline', 'cc.headline']);
+    expect(out.report[0]!.status).toBe('error');
+  });
+});
+
+describe('generateSchema: stroke, pre-comps, maxChars', () => {
+  it('accepts a stroke as the colour target when there is no fill', () => {
+    const out = generateSchema(lottie([strokeOnlyShapeLayer('cc.accent', [0, 0, 0, 1])]));
+    expect(out.errors).toEqual([]);
+    expect(out.params[0]!.path).toBe('/layers/0/shapes/0/it/1');
+  });
+
+  it('finds tags inside a pre-comp with paths into the assets list', () => {
+    const source = lottie([{ ty: 0, nm: 'lower-third', refId: 'comp_0', ks: {}, w: 1920, h: 1080 }], {
+      assets: [{ id: 'comp_0', layers: [textLayer('cc.subhead', 'Inside precomp')] }],
+    });
+    const out = generateSchema(source);
+    expect(out.errors).toEqual([]);
+    expect(out.params).toHaveLength(1);
+    expect(out.params[0]!.key).toBe('subhead');
+    expect(out.params[0]!.path).toBe('/assets/0/layers/0');
+    expect(out.params[0]!.default).toBe('Inside precomp');
+  });
+
+  it('derives maxChars from a box-text size when present', () => {
+    // 600px wide box, one line, 60px font: roughly 600 / (0.55 * 60) = 18 chars.
+    const out = generateSchema(lottie([textLayer('cc.headline', 'x', { sz: [600, 72] })]));
+    expect(out.params[0]!.maxChars).toBe(18);
+  });
+
+  it('gives a two-line box twice the characters', () => {
+    const out = generateSchema(lottie([textLayer('cc.body', 'x', { sz: [600, 144] })]));
+    expect(out.params[0]!.maxChars).toBe(36);
+  });
+
+  it('omits maxChars for point text (no box)', () => {
+    const out = generateSchema(lottie([textLayer('cc.headline', 'x')]));
+    expect(out.params[0]!.maxChars).toBeUndefined();
+  });
+});
+
+describe('generateSchema: the stand-in template', () => {
+  it('generates the schema M2 has been using', () => {
+    const source = JSON.parse(
+      fs.readFileSync(path.join(repoRoot, 'templates', 'standin', 'template.json'), 'utf8'),
+    ) as LottieAnimationData;
+    const expected = JSON.parse(
+      fs.readFileSync(path.join(repoRoot, 'templates', 'standin', 'schema.json'), 'utf8'),
+    ) as TemplateParam[];
+    const out = generateSchema(source);
+    expect(out.errors).toEqual([]);
+    const byKey = (a: TemplateParam, b: TemplateParam) => a.key.localeCompare(b.key);
+    expect([...out.params].sort(byKey)).toEqual([...expected].sort(byKey));
+    expect(out.fonts).toEqual(['Arial']);
+  });
+});

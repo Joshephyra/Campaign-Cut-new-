@@ -1,5 +1,14 @@
 [
   {
+    "key": "disclaimer",
+    "role": "safe.disclaimer",
+    "kind": "text",
+    "label": "Disclaimer",
+    "default": "Paid for by Example Committee",
+    "path": "/layers/0",
+    "locked": true
+  },
+  {
     "key": "headline",
     "role": "headline",
     "kind": "text",
@@ -8,20 +17,11 @@
     "path": "/layers/1"
   },
   {
-    "key": "disclaimer",
-    "role": "safe.disclaimer",
-    "kind": "text",
-    "label": "Disclaimer",
-    "default": "Paid for by Example Committee",
-    "locked": true,
-    "path": "/layers/0"
-  },
-  {
     "key": "accent",
     "role": "accent",
     "kind": "color",
     "label": "Accent colour",
-    "default": "#F0592A",
+    "default": "#F05929",
     "path": "/layers/2/shapes/0/it/1"
   },
   {
