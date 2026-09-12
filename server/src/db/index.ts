@@ -53,6 +53,8 @@ export type Db = Database.Database & {
   createProject(p: ProjectInput): { id: number };
   getProject(id: number): ProjectDetail | undefined;
   listProjects(): ProjectRow[];
+  /** Upsert the given values (others untouched) and bump updated_at. */
+  setProjectValues(projectId: number, values: ProjectValue[]): void;
 };
 
 const MIGRATIONS = `
@@ -126,6 +128,7 @@ export function openDb(file: string): Db {
     createProject: (p: ProjectInput) => createProject(db, p),
     getProject: (id: number) => getProject(db, id),
     listProjects: () => listProjects(db),
+    setProjectValues: (projectId: number, values: ProjectValue[]) => setProjectValues(db, projectId, values),
   });
 }
 
@@ -230,4 +233,16 @@ function getProject(db: Database.Database, id: number): ProjectDetail | undefine
 
 function listProjects(db: Database.Database): ProjectRow[] {
   return db.prepare(`${PROJECT_SELECT} ORDER BY p.id DESC`).all() as ProjectRow[];
+}
+
+function setProjectValues(db: Database.Database, projectId: number, values: ProjectValue[]): void {
+  const upsert = db.prepare(
+    `INSERT INTO project_value (project_id, element_id, param_key, value_json) VALUES (?, ?, ?, ?)
+     ON CONFLICT(project_id, element_id, param_key) DO UPDATE SET value_json = excluded.value_json`,
+  );
+  const touch = db.prepare(`UPDATE project SET updated_at = datetime('now') WHERE id = ?`);
+  db.transaction(() => {
+    for (const v of values) upsert.run(projectId, v.elementId, v.key, JSON.stringify(v.value ?? null));
+    touch.run(projectId);
+  })();
 }

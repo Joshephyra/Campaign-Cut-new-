@@ -3,6 +3,23 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-11 · M6 Schema-driven inspector · DONE (Josh delegated sign-off). Most of AT-3.
+
+**What exists now**
+
+- `app/src/components/Inspector.tsx`: controls generated from the schema, one per param, no per-template code. Text: input with `maxLength` from `maxChars`, truncation, a `n/max` counter, and a "position and size locked" note for the disclaimer. Colour: swatch plus hex field; only valid hex is emitted, invalid hex shows a red border and leaves the authored colour alone. Image and media: placeholders until M7/M8.
+- `app/src/pages/Editor.tsx`: values flow into `applyLottieValues` and the Player live, debounced 60 ms so typing stays smooth. Changed keys are saved 400 ms after the last edit via `PUT /projects/:id/values`; the header shows Unsaved / Saving… / Saved / Save failed.
+- Server: `PUT /projects/:id/values` upserts only the given keys and bumps `updated_at` (`db.setProjectValues`). 400 on a bad body, 404 on a missing project.
+- 116 tests across 20 files. Typecheck clean. App tests stub the Player to expose its inputProps.
+
+**Verified by eye**
+
+- In the editor, set the headline to "LIVE FROM M6" and the accent to `#2B54E6`: the Player's SVG text and bar fill changed within a second, the header showed "Saved". Reloaded the page: both fields and the video came back with the edited values.
+
+**Next:** M7, media upload and proxies.
+
+---
+
 ## 2026-09-11 · M5 Library UI · DONE (Josh delegated sign-off)
 
 **What exists now**

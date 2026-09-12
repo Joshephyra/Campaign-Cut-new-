@@ -114,5 +114,20 @@ export function buildApp(options: AppOptions = {}) {
     };
   });
 
+  /** Save edited values. Only the given keys change; the rest are untouched. */
+  app.put<{ Params: { id: string }; Body: { values?: { elementId: number; key: string; value: unknown }[] } }>(
+    '/projects/:id/values',
+    async (req, reply) => {
+      const id = Number(req.params.id);
+      const values = req.body?.values;
+      if (!Array.isArray(values) || values.some((v) => !v || typeof v.elementId !== 'number' || typeof v.key !== 'string')) {
+        return reply.code(400).send({ error: 'body must be { values: [{ elementId, key, value }] }' });
+      }
+      if (!db.getProject(id)) return reply.code(404).send({ error: `No project ${id}` });
+      db.setProjectValues(id, values);
+      return { ok: true, saved: values.length };
+    },
+  );
+
   return app;
 }

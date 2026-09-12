@@ -127,7 +127,7 @@ The most important pure function in the codebase. See `SPEC.md` section 2.
 
 ---
 
-## M6 · Schema-driven inspector · IN PROGRESS
+## M6 · Schema-driven inspector · DONE
 
 **Build**
 - Inspector renders controls **generated from the schema**. No per-template code.
@@ -147,7 +147,7 @@ The most important pure function in the codebase. See `SPEC.md` section 2.
 
 ---
 
-## M7 · Media upload and proxies · TODO
+## M7 · Media upload and proxies · IN PROGRESS
 
 **Build**
 - Upload endpoint, files land in `/media/originals`

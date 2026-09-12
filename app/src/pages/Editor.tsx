@@ -6,13 +6,17 @@ import {
   type LottieAnimationData,
   type MainProps,
   type ParamValues,
-  type TemplateParam,
 } from '@campaigncut/composition';
 import { Player } from '@remotion/player';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, type ProjectDetail } from '../api';
+import { Inspector } from '../components/Inspector';
 
 const BACKGROUND = '#000000';
+/** Keep typing smooth: the composition re-applies values this long after the last keystroke. */
+const RENDER_DEBOUNCE_MS = 60;
+/** Persist this long after the last change. */
+const SAVE_DEBOUNCE_MS = 400;
 
 type Props = {
   projectId: number;
@@ -20,11 +24,13 @@ type Props = {
 };
 
 type Loaded = { detail: ProjectDetail; lottie: LottieAnimationData };
+type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
 
 export function Editor({ projectId, onBack }: Props) {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [values, setValues] = useState<ParamValues>({});
+  const [saveState, setSaveState] = useState<SaveState>('idle');
 
   useEffect(() => {
     let cancelled = false;
@@ -46,6 +52,36 @@ export function Editor({ projectId, onBack }: Props) {
     };
   }, [projectId]);
 
+  // Persist changed values, debounced. Only the keys that changed are sent.
+  const lastSaved = useRef<ParamValues | null>(null);
+  useEffect(() => {
+    if (!loaded) return;
+    if (lastSaved.current === null) {
+      lastSaved.current = values; // the values we loaded with; nothing to save yet
+      return;
+    }
+    if (lastSaved.current === values) return;
+    setSaveState('dirty');
+    const timer = setTimeout(async () => {
+      const previous = lastSaved.current ?? {};
+      const elementId = loaded.detail.elements[0]?.id;
+      if (elementId === undefined) return;
+      const changed = Object.entries(values)
+        .filter(([key, value]) => previous[key] !== value)
+        .map(([key, value]) => ({ elementId, key, value }));
+      if (changed.length === 0) return;
+      setSaveState('saving');
+      try {
+        await api.saveValues(projectId, changed);
+        lastSaved.current = values;
+        setSaveState('saved');
+      } catch {
+        setSaveState('error');
+      }
+    }, SAVE_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [values, loaded, projectId]);
+
   return (
     <main className="min-h-screen bg-ink text-fg flex flex-col">
       <header className="border-b border-hairline px-8 h-12 flex items-center justify-between shrink-0">
@@ -55,7 +91,10 @@ export function Editor({ projectId, onBack }: Props) {
           </button>
           <h1 className="text-sm font-semibold tracking-tight">{loaded?.detail.project.name ?? '…'}</h1>
         </div>
-        <span className="font-mono text-xs text-muted">{loaded ? loaded.detail.template.slug : `project ${projectId}`}</span>
+        <div className="font-mono text-xs text-muted flex gap-4">
+          <SaveIndicator state={saveState} />
+          <span>{loaded ? loaded.detail.template.slug : `project ${projectId}`}</span>
+        </div>
       </header>
 
       {error && <p className="font-mono text-xs text-danger p-8">Could not open the project: {error}</p>}
@@ -65,11 +104,29 @@ export function Editor({ projectId, onBack }: Props) {
   );
 }
 
+function SaveIndicator({ state }: { state: SaveState }) {
+  if (state === 'idle') return null;
+  const text = { dirty: 'Unsaved', saving: 'Saving…', saved: 'Saved', error: 'Save failed' }[state];
+  const colour = state === 'error' ? 'text-danger' : state === 'saved' ? 'text-muted' : 'text-cobalt';
+  return <span className={colour}>{text}</span>;
+}
+
+/** A value that trails `value` by `delay` ms, so fast typing does not re-render the video on every keystroke. */
+function useDebounced<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
 function EditorBody({ loaded, values, onChange }: { loaded: Loaded; values: ParamValues; onChange: (v: ParamValues) => void }) {
   const { detail, lottie: source } = loaded;
   const schema = detail.schema;
 
-  const lottie = useMemo(() => applyLottieValues(source, values, schema), [source, values, schema]);
+  const renderedValues = useDebounced(values, RENDER_DEBOUNCE_MS);
+  const lottie = useMemo(() => applyLottieValues(source, renderedValues, schema), [source, renderedValues, schema]);
   const inputProps = useMemo<MainProps>(() => ({ background: BACKGROUND, lottie }), [lottie]);
   const durationInFrames = lottieDurationInFrames(lottie, compositionConfig.fps);
 
@@ -93,45 +150,10 @@ function EditorBody({ loaded, values, onChange }: { loaded: Loaded; values: Para
         </p>
       </section>
 
-      {/* Inspector. M6 generates the real controls from the schema; this is the M2 harness in its place. */}
-      <aside className="w-80 border-l border-hairline p-6 shrink-0">
+      <aside className="w-80 border-l border-hairline p-6 shrink-0 overflow-y-auto">
         <h2 className="text-xs uppercase tracking-widest text-muted mb-4">Inspector</h2>
-        <Harness schema={schema} values={values} onChange={onChange} />
+        <Inspector schema={schema} values={values} onChange={onChange} />
       </aside>
-    </div>
-  );
-}
-
-function Harness({ schema, values, onChange }: { schema: TemplateParam[]; values: ParamValues; onChange: (v: ParamValues) => void }) {
-  return (
-    <div className="flex flex-col gap-4 font-mono text-xs">
-      {schema.map((param) => {
-        const value = String(values[param.key] ?? param.default ?? '');
-        const set = (v: string) => onChange({ ...values, [param.key]: v });
-        return (
-          <label key={param.key} className="flex flex-col gap-1">
-            <span className="text-muted">{param.label}</span>
-            <div className="flex gap-2">
-              {param.kind === 'color' && (
-                <input
-                  type="color"
-                  value={value}
-                  onChange={(e) => set(e.target.value)}
-                  className="h-8 w-10 bg-transparent border border-hairline"
-                  data-testid={`harness-${param.key}-swatch`}
-                />
-              )}
-              <input
-                type="text"
-                value={value}
-                onChange={(e) => set(e.target.value)}
-                className="flex-1 bg-panel border border-hairline px-2 py-1 text-fg focus:outline-none focus:border-cobalt"
-                data-testid={`harness-${param.key}`}
-              />
-            </div>
-          </label>
-        );
-      })}
     </div>
   );
 }
