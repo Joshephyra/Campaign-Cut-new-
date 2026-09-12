@@ -137,6 +137,7 @@ export function buildApp(options: AppOptions = {}) {
     return {
       project: rest,
       template: templateJson(t),
+      meta: readJson(path.join(dir, 'meta.json')) ?? null,
       schema: readJson<TemplateParam[]>(path.join(dir, 'schema.json')) ?? [],
       elements: db.getProjectElements(project.id),
       transitions: db.getProjectTransitions(project.id),

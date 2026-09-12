@@ -21,6 +21,7 @@ const detail = {
   template: { id: 1, slug: 'demo', name: 'Demo', durationFrames: 60, fps: 30, width: 1920, height: 1080, thumbUrl: '' },
   schema: [{ key: 'headline', role: 'headline', kind: 'text', label: 'Headline', default: 'AUTHORED', path: '/layers/0' }],
   elements: [{ id: 3, slug: 'demo', zIndex: 0, startFrame: 0, endFrame: 60, enabled: true }],
+  meta: { fonts: ['IBM Plex Sans'], fontFiles: [{ family: 'IBM Plex Sans', file: 'IBMPlexSans-Regular.ttf' }] },
   values: [{ elementId: 3, key: 'headline', value: 'SAVED EARLIER' }],
 };
 
@@ -43,6 +44,14 @@ const playerHeadline = () => {
 };
 
 describe('Editor', () => {
+  it('hands the template fonts to the Player as /api URLs (preview runner)', async () => {
+    mockApi();
+    render(<Editor projectId={7} onBack={() => {}} />);
+    await waitFor(() => expect(screen.getByLabelText('Headline')).toBeTruthy());
+    const props = JSON.parse(screen.getByTestId('player').getAttribute('data-props')!) as { fonts: { family: string; url: string }[] };
+    expect(props.fonts).toEqual([{ family: 'IBM Plex Sans', url: '/api/templates/demo/fonts/IBMPlexSans-Regular.ttf' }]);
+  });
+
   it('restores saved values on load, into the inspector and the composition', async () => {
     mockApi();
     render(<Editor projectId={7} onBack={() => {}} />);

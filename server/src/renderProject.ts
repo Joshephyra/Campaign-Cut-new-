@@ -1,5 +1,6 @@
 import {
   applyLottieValues,
+  fontsFor,
   isMediaValue,
   mediaFillRect,
   mediaSourceFor,
@@ -8,6 +9,7 @@ import {
   type LottieAnimationData,
   type MainProps,
   type ParamValues,
+  type TemplateFontFile,
   type TemplateParam,
   type TransitionPreset,
 } from '@campaigncut/composition';
@@ -37,6 +39,9 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase, run
   const dir = path.join(templatesDir, project.templateSlug);
   const source = JSON.parse(fs.readFileSync(path.join(dir, 'template.json'), 'utf8')) as LottieAnimationData;
   const schema = JSON.parse(fs.readFileSync(path.join(dir, 'schema.json'), 'utf8')) as TemplateParam[];
+  const metaFile = path.join(dir, 'meta.json');
+  const meta = fs.existsSync(metaFile) ? (JSON.parse(fs.readFileSync(metaFile, 'utf8')) as { fontFiles?: TemplateFontFile[] }) : {};
+  const fonts = fontsFor(meta.fontFiles, project.templateSlug, serverBase);
 
   const raw: ParamValues = {};
   for (const v of project.values) raw[v.key] = v.value;
@@ -74,5 +79,5 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase, run
     durationInFrames: t.durationInFrames,
   }));
 
-  return { background: '#000000', media, elements, transitions };
+  return { background: '#000000', media, elements, transitions, fonts };
 }

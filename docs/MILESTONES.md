@@ -248,7 +248,7 @@ Only start this after M11. Measure before optimizing.
 
 ---
 
-## M13 · Fonts · IN PROGRESS
+## M13 · Fonts · DONE
 
 **Build**
 - Extract font references at ingest, fail validation on missing fonts
@@ -264,7 +264,7 @@ Only start this after M11. Measure before optimizing.
 
 ---
 
-## M14 · Background removal · TODO
+## M14 · Background removal · IN PROGRESS
 
 Spike. Timeboxed. Cut this before cutting anything else.
 

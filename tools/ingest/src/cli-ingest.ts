@@ -45,13 +45,14 @@ try {
     templatesDir: paths.templates,
     fontsDir: paths.fonts,
     db,
-    renderThumbnail: ({ lottie, outputPath, frame }) =>
+    renderThumbnail: ({ lottie, outputPath, frame, fonts }) =>
       renderThumbnail({
         outputPath,
         inputProps: {
           background: '#000000',
           media: null,
           elements: [{ id: 'thumb', lottie, startFrame: 0, endFrame: lottieDurationInFrames(lottie, compositionConfig.fps), zIndex: 0, enabled: true }],
+          fonts,
         },
         frame,
       }).then(() => undefined),

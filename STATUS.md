@@ -3,6 +3,32 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-11 · M13 Fonts · DONE (Josh delegated sign-off)
+
+**What exists now**
+
+- Ingest ships each referenced font file into `templates/<slug>/fonts/` and records it in `meta.json` as `fontFiles: [{ family, file }]`. The lookup prefers the file matching the Lottie's `fStyle` (Regular, Bold…), then Regular, then the first match. The M4 rejection of missing fonts is unchanged.
+- `composition/src/fonts.tsx`: `TemplateFonts` injects one `@font-face` per font (family name equals the Lottie's `fFamily`, so lottie-web's text picks it up) and holds the first frame with `delayRender` until `document.fonts.load` and `document.fonts.ready` resolve (SPEC 8). Both runners honour that, so preview and export wait the same way. `fontsFor(meta.fontFiles, slug, base)` builds the URLs per runner (`/api` in the Player, the server origin for export); `fontFaceCss` handles ttf/otf/woff/woff2 and data URIs.
+- `MainProps.fonts`; `GET /projects/:id` now includes `meta`; `buildProjectProps` passes absolute font URLs; the editor passes `/api` ones.
+- Ingest thumbnails render with the shipped fonts and the template's images embedded as data URIs, so they are correct without a running server.
+- `fonts.render.test.ts`: two fresh real renders of a Plex text line are pixel-identical, and differ from a render without the font. Ingest, server and editor tests cover the plumbing.
+- 226 tests across 45 files. Typecheck clean.
+
+**Verified by eye**
+
+- Thumbnail: "STAND-IN HEADLINE" in IBM Plex Sans (was a serif fallback since M4).
+- Editor: a `@font-face` style tag for the template font is present, `document.fonts.check` reports IBM Plex Sans loaded, the SVG text's font-family is IBM Plex Sans.
+- Export of project 1: frame 75 shows the headline in Plex; parity at frames 75 and 200 within threshold.
+
+**Notes**
+
+- "Matches the After Effects reference in size, weight and line breaks" is Germain's call on a real template; the mechanism is in place and proven deterministic.
+- Fonts are loaded by family name only. A template that uses two weights of one family under the same `fFamily` needs the Bodymovin `fName` mapped to a weight; not needed by the stand-in.
+
+**Next:** M14, background removal (chroma key spike).
+
+---
+
 ## 2026-09-11 · M12 Playback performance · IN PROGRESS: needs one measurement on a visible browser tab
 
 **What exists now**

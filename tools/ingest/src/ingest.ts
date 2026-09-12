@@ -16,7 +16,13 @@ export class IngestFailure extends Error {
   }
 }
 
-export type ThumbnailRenderer = (opts: { lottie: LottieAnimationData; outputPath: string; frame: number }) => Promise<void>;
+export type ThumbnailRenderer = (opts: {
+  lottie: LottieAnimationData;
+  outputPath: string;
+  frame: number;
+  /** The shipped fonts as data URIs, so the thumbnail draws real text without a running server. */
+  fonts: { family: string; url: string }[];
+}) => Promise<void>;
 
 export type IngestOptions = {
   /** A handover folder (with data.json and optional images/ and fonts/) or a path to the Lottie JSON. */
@@ -42,7 +48,10 @@ export type TemplateMeta = {
   fps: number;
   width: number;
   height: number;
+  /** Font families referenced by text layers. */
   fonts: string[];
+  /** The font file shipped for each family under templates/<slug>/fonts/. */
+  fontFiles: { family: string; file: string }[];
 };
 
 export type IngestResult = {
@@ -93,6 +102,7 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
     width: Number(lottie.w),
     height: Number(lottie.h),
     fonts: generated.fonts,
+    fontFiles: [],
   };
   for (const field of ['durationInFrames', 'fps', 'width', 'height'] as const) {
     const v = meta[field];
@@ -102,12 +112,22 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
   // 4. Every referenced font must have a file. Fonts in the handover get copied in.
   const handoverFonts = path.join(handoverDir, 'fonts');
   const fontCopies: Array<{ from: string; to: string }> = [];
+  /** Where each family's file comes from, so it can be shipped with the template. */
+  const fontSources: Array<{ family: string; from: string }> = [];
+  const styleOf = (family: string): string | undefined => {
+    const list = ((lottie.fonts as { list?: { fFamily?: string; fStyle?: string }[] } | undefined)?.list) ?? [];
+    return list.find((f) => f.fFamily === family)?.fStyle;
+  };
   for (const family of generated.fonts) {
-    const inApp = findFontFile(family, [fontsDir]);
-    if (inApp) continue;
-    const inHandover = findFontFile(family, [handoverFonts]);
+    const inApp = findFontFile(family, [fontsDir], styleOf(family));
+    if (inApp) {
+      fontSources.push({ family, from: inApp });
+      continue;
+    }
+    const inHandover = findFontFile(family, [handoverFonts], styleOf(family));
     if (inHandover) {
       fontCopies.push({ from: inHandover, to: path.join(fontsDir, path.basename(inHandover)) });
+      fontSources.push({ family, from: inHandover });
       continue;
     }
     problems.push(
@@ -133,13 +153,28 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
     fs.cpSync(imagesDir, path.join(dir, 'images'), { recursive: true });
     log(`Copied images/`);
   }
+  // SPEC 8: ship the font files alongside the template.
+  fs.mkdirSync(path.join(dir, 'fonts'), { recursive: true });
+  for (const { family, from } of fontSources) {
+    const file = path.basename(from);
+    fs.copyFileSync(from, path.join(dir, 'fonts', file));
+    meta.fontFiles.push({ family, file });
+  }
+  if (fontSources.length > 0) log(`Shipped ${fontSources.length} font file(s) -> ${path.join(dir, 'fonts')}`);
   fs.writeFileSync(path.join(dir, 'schema.json'), JSON.stringify(generated.params, null, 2) + '\n');
   fs.writeFileSync(path.join(dir, 'meta.json'), JSON.stringify(meta, null, 2) + '\n');
   log(`Wrote template.json, schema.json, meta.json -> ${dir}`);
 
   // 6. Thumbnail from the middle frame, through the same composition.
   const thumbPath = path.join(dir, 'thumb.png');
-  await renderThumbnail({ lottie, outputPath: thumbPath, frame: Math.floor(meta.durationInFrames / 2) });
+  const thumbFonts = meta.fontFiles.map(({ family, file }) => {
+    const bytes = fs.readFileSync(path.join(dir, 'fonts', file));
+    const ext = path.extname(file).toLowerCase().slice(1);
+    const mime = ext === 'woff2' ? 'font/woff2' : ext === 'woff' ? 'font/woff' : ext === 'otf' ? 'font/otf' : 'font/ttf';
+    return { family, url: `data:${mime};base64,${bytes.toString('base64')}` };
+  });
+  // Likewise the template's own images: the thumbnail render has no server to fetch them from.
+  await renderThumbnail({ lottie: withEmbeddedImages(lottie, dir), outputPath: thumbPath, frame: Math.floor(meta.durationInFrames / 2), fonts: thumbFonts });
   log(`Wrote thumb.png`);
 
   // 7. Register. Same slug updates rather than duplicates. A Bodymovin
@@ -158,6 +193,23 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
   log(`Registered "${name}" (${slug}) under ad type "${adType}"`);
 
   return { slug, dir, params: generated.params, fonts: generated.fonts, report: generated.report, meta };
+}
+
+/** A copy of the Lottie with relative image assets embedded as data URIs, for renders that have no server. */
+export function withEmbeddedImages(lottie: LottieAnimationData, templateDir: string): LottieAnimationData {
+  if (!Array.isArray(lottie.assets)) return lottie;
+  const mimeFor = (file: string) => {
+    const ext = path.extname(file).toLowerCase();
+    return ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : ext === '.gif' ? 'image/gif' : ext === '.webp' ? 'image/webp' : ext === '.svg' ? 'image/svg+xml' : 'image/png';
+  };
+  const assets = (lottie.assets as Record<string, unknown>[]).map((a) => {
+    if (typeof a.p !== 'string' || a.e === 1 || /^(https?:|data:|\/)/.test(a.p)) return a;
+    const dir = typeof a.u === 'string' ? a.u : '';
+    const file = path.join(templateDir, dir, a.p);
+    if (!fs.existsSync(file)) return a;
+    return { ...a, u: '', e: 1, p: `data:${mimeFor(file)};base64,${fs.readFileSync(file).toString('base64')}` };
+  });
+  return { ...lottie, assets };
 }
 
 function locateInput(input: string): { jsonPath: string; handoverDir: string } {

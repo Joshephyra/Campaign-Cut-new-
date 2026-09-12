@@ -8,5 +8,11 @@
   "height": 1080,
   "fonts": [
     "IBM Plex Sans"
+  ],
+  "fontFiles": [
+    {
+      "family": "IBM Plex Sans",
+      "file": "IBMPlexSans-Regular.ttf"
+    }
   ]
 }

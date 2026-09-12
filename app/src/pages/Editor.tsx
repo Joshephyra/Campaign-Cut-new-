@@ -2,6 +2,7 @@ import {
   applyLottieValues,
   compositionConfig,
   compositionDurationWithTransitions,
+  fontsFor,
   isMediaValue,
   Main,
   mediaFillRect,
@@ -275,9 +276,10 @@ function Monitor({
     () => transitions.map((t) => ({ afterElementId: String(t.afterElementId), preset: t.preset, durationInFrames: t.durationInFrames })),
     [transitions],
   );
+  const fonts = useMemo(() => fontsFor(detail.meta?.fontFiles, slug, API), [detail.meta, slug]);
   const inputProps = useMemo<MainProps>(
-    () => ({ background: BACKGROUND, media, elements: elementProps, transitions: transitionProps }),
-    [media, elementProps, transitionProps],
+    () => ({ background: BACKGROUND, media, elements: elementProps, transitions: transitionProps, fonts }),
+    [media, elementProps, transitionProps, fonts],
   );
   const durationInFrames = compositionDurationWithTransitions(elementProps, transitionProps);
 

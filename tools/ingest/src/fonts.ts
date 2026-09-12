@@ -11,18 +11,25 @@ export function normalizeFontName(name: string): string {
 /**
  * Find a font file for a family by file name: a file whose normalized name
  * starts with the normalized family. Searches the directories in order.
- * Deliberately simple; reading name tables out of font binaries is more
- * than a proof of concept needs.
+ * Among matches, prefer the one whose name contains the requested style
+ * (Bodymovin's fStyle, e.g. "Regular", "Bold"), then a "Regular" file, then
+ * the first alphabetically. Deliberately simple; reading name tables out of
+ * font binaries is more than a proof of concept needs.
  */
-export function findFontFile(family: string, dirs: string[]): string | undefined {
+export function findFontFile(family: string, dirs: string[], style?: string): string | undefined {
   const wanted = normalizeFontName(family);
   if (!wanted) return undefined;
+  const wantedStyle = style ? normalizeFontName(style) : '';
   for (const dir of dirs) {
     if (!fs.existsSync(dir)) continue;
-    for (const file of fs.readdirSync(dir).sort()) {
-      if (!FONT_EXTENSIONS.has(path.extname(file).toLowerCase())) continue;
-      if (normalizeFontName(file).startsWith(wanted)) return path.join(dir, file);
-    }
+    const matches = fs
+      .readdirSync(dir)
+      .sort()
+      .filter((file) => FONT_EXTENSIONS.has(path.extname(file).toLowerCase()) && normalizeFontName(file).startsWith(wanted));
+    if (matches.length === 0) continue;
+    const byStyle = wantedStyle ? matches.find((f) => normalizeFontName(f).slice(wanted.length).includes(wantedStyle)) : undefined;
+    const regular = matches.find((f) => normalizeFontName(f).slice(wanted.length).includes('regular'));
+    return path.join(dir, byStyle ?? regular ?? matches[0]!);
   }
   return undefined;
 }

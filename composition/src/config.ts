@@ -1,4 +1,5 @@
 import type { ElementProps } from './elements';
+import type { TemplateFont } from './fonts';
 import type { TransitionProps } from './transitions';
 
 /**
@@ -70,6 +71,8 @@ export type MainProps = {
   elements: ElementProps[];
   /** Transitions per element boundary. Absent or empty means every boundary is a cut. */
   transitions?: TransitionProps[];
+  /** Fonts the template's text layers reference, at URLs this runner can fetch. Loaded before the first frame. */
+  fonts?: TemplateFont[];
 };
 
 /** A valid, empty Lottie for tests and placeholders. */

@@ -44,3 +44,26 @@ describe('findFontFile', () => {
     expect(findFontFile('Arial', [path.join(dir, 'does-not-exist'), dir])).toBeTruthy();
   });
 });
+
+describe('findFontFile: style preference', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-fonts-style-'));
+    for (const f of ['IBMPlexSans-Bold.ttf', 'IBMPlexSans-Regular.ttf', 'IBMPlexSans-Italic.ttf']) fs.writeFileSync(path.join(dir, f), 'x');
+  });
+
+  afterEach(() => {
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('prefers the file matching the requested style', () => {
+    expect(path.basename(findFontFile('IBM Plex Sans', [dir], 'Bold')!)).toBe('IBMPlexSans-Bold.ttf');
+    expect(path.basename(findFontFile('IBM Plex Sans', [dir], 'Regular')!)).toBe('IBMPlexSans-Regular.ttf');
+  });
+
+  it('falls back to Regular when no style is given or the style has no file', () => {
+    expect(path.basename(findFontFile('IBM Plex Sans', [dir])!)).toBe('IBMPlexSans-Regular.ttf');
+    expect(path.basename(findFontFile('IBM Plex Sans', [dir], 'Black')!)).toBe('IBMPlexSans-Regular.ttf');
+  });
+});

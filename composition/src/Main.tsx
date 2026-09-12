@@ -6,6 +6,7 @@ import { AbsoluteFill, OffthreadVideo, Sequence } from 'remotion';
 import { PREMOUNT_FRAMES, type MainProps } from './config';
 import type { ElementProps } from './elements';
 import { LottieLayer } from './LottieLayer';
+import { TemplateFonts } from './fonts';
 import { effectiveTimeline, type TransitionPreset } from './transitions';
 
 /** Each preset carries its own props type; the series only needs the common shape. */
@@ -35,12 +36,13 @@ function presentationFor(preset: TransitionPreset): AnyPresentation {
  * either one element in a Sequence at its in/out points, or several
  * elements joined by transitions, rendered with TransitionSeries.
  */
-export function Main({ background, media, elements, transitions = [] }: MainProps) {
+export function Main({ background, media, elements, transitions = [], fonts = [] }: MainProps) {
   const byId = new Map(elements.map((e) => [e.id, e] as const));
   const { chains } = effectiveTimeline(elements, transitions);
 
   return (
     <AbsoluteFill style={{ backgroundColor: background }}>
+      <TemplateFonts key={fonts.map((f) => f.url).join('|')} fonts={fonts} />
       {media && (
         <div
           data-testid="media-slot"

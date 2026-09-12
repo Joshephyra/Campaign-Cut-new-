@@ -1,4 +1,4 @@
-import type { LottieAnimationData, TemplateParam, TransitionPreset } from '@campaigncut/composition';
+import type { LottieAnimationData, TemplateFontFile, TemplateParam, TransitionPreset } from '@campaigncut/composition';
 
 /** All API calls go through Vite's /api proxy in dev. */
 export const API = '/api';
@@ -35,6 +35,7 @@ export type ProjectTransition = { afterElementId: number; preset: TransitionPres
 export type ProjectDetail = {
   project: { id: number; name: string; templateId: number; templateSlug: string; templateName: string };
   template: TemplateSummary;
+  meta?: { fonts?: string[]; fontFiles?: TemplateFontFile[] } | null;
   schema: TemplateParam[];
   elements: ProjectElement[];
   transitions?: ProjectTransition[];

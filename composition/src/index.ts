@@ -16,3 +16,5 @@ export { compositionDurationFor, visibleElementsInOrder } from './elements';
 export type { ElementProps } from './elements';
 export { compositionDurationWithTransitions, DEFAULT_TRANSITION_FRAMES, effectiveTimeline, TRANSITION_PRESETS } from './transitions';
 export type { Chain, EffectiveElement, TransitionPreset, TransitionProps } from './transitions';
+export { fontFaceCss, fontsFor, TemplateFonts } from './fonts';
+export type { TemplateFont, TemplateFontFile } from './fonts';

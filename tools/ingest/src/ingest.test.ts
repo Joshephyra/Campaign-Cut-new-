@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { IngestFailure, ingestTemplate, slugify } from './ingest';
+import { IngestFailure, ingestTemplate, slugify, type ThumbnailRenderer } from './ingest';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const fixtureDir = path.resolve(here, '..', 'fixtures', 'standin');
@@ -158,5 +158,83 @@ describe('slugify', () => {
     expect(slugify('Contrast :30 / Split Record')).toBe('contrast-30-split-record');
     expect(slugify('  Bio  ')).toBe('bio');
     expect(slugify('GOTV!!')).toBe('gotv');
+  });
+});
+
+describe('ingestTemplate: shipping fonts with the template (M13)', () => {
+  let tmp: string;
+  let templatesDir: string;
+  let fontsDir: string;
+  let db: Db;
+
+  beforeEach(() => {
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-ingest-fonts-'));
+    templatesDir = path.join(tmp, 'templates');
+    fontsDir = path.join(tmp, 'fonts');
+    fs.mkdirSync(fontsDir, { recursive: true });
+    fs.writeFileSync(path.join(fontsDir, 'IBMPlexSans-Regular.ttf'), 'plex-bytes');
+    db = openDb(':memory:');
+  });
+
+  afterEach(() => {
+    db.close();
+    fs.rmSync(tmp, { recursive: true, force: true });
+  });
+
+  it('copies every referenced font file into templates/<slug>/fonts and lists it in meta.fontFiles', async () => {
+    await ingestTemplate({
+      input: makeHandover(tmp),
+      adType: 'Contrast',
+      name: 'Stand-in',
+      slug: 'standin',
+      templatesDir,
+      fontsDir,
+      db,
+      renderThumbnail: fakeThumbnail,
+    });
+    const shipped = path.join(templatesDir, 'standin', 'fonts', 'IBMPlexSans-Regular.ttf');
+    expect(fs.existsSync(shipped)).toBe(true);
+    expect(fs.readFileSync(shipped, 'utf8')).toBe('plex-bytes');
+    const meta = JSON.parse(fs.readFileSync(path.join(templatesDir, 'standin', 'meta.json'), 'utf8')) as AnyRecord;
+    expect(meta.fonts).toEqual(['IBM Plex Sans']);
+    expect(meta.fontFiles).toEqual([{ family: 'IBM Plex Sans', file: 'IBMPlexSans-Regular.ttf' }]);
+  });
+});
+
+describe('ingestTemplate: thumbnail render gets embedded fonts and images', () => {
+  it('hands the thumbnail renderer data-URI fonts and data-URI images (no server needed at ingest time)', async () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-ingest-thumb-'));
+    const templatesDir = path.join(tmp, 'templates');
+    const fontsDir = path.join(tmp, 'fonts');
+    fs.mkdirSync(fontsDir, { recursive: true });
+    fs.writeFileSync(path.join(fontsDir, 'IBMPlexSans-Regular.ttf'), 'plex-bytes');
+    const input = makeHandover(tmp);
+    fs.mkdirSync(path.join(input, 'images'));
+    fs.writeFileSync(path.join(input, 'images', 'logo.png'), Buffer.from('89504e47', 'hex'));
+    const db = openDb(':memory:');
+    let seen: Parameters<ThumbnailRenderer>[0] | undefined;
+    await ingestTemplate({
+      input,
+      adType: 'Contrast',
+      name: 'Stand-in',
+      slug: 'standin',
+      templatesDir,
+      fontsDir,
+      db,
+      renderThumbnail: async (opts) => {
+        seen = opts;
+        await fakeThumbnail(opts);
+      },
+    });
+    expect(seen!.fonts).toEqual([{ family: 'IBM Plex Sans', url: `data:font/ttf;base64,${Buffer.from('plex-bytes').toString('base64')}` }]);
+    const logo = (seen!.lottie.assets as AnyRecord[]).find((a) => a.id === 'image_0')!;
+    expect(logo.e).toBe(1);
+    expect(logo.u).toBe('');
+    expect(String(logo.p).startsWith('data:image/png;base64,')).toBe(true);
+    // the template on disk is untouched: it still references images/logo.png
+    const written = JSON.parse(fs.readFileSync(path.join(templatesDir, 'standin', 'template.json'), 'utf8')) as { assets: AnyRecord[] };
+    expect(written.assets.find((a) => a.id === 'image_0')).toMatchObject({ u: 'images/', p: 'logo.png' });
+    db.close();
+    fs.rmSync(tmp, { recursive: true, force: true });
   });
 });
