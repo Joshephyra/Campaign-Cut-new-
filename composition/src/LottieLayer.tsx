@@ -1,6 +1,6 @@
 import { Lottie } from '@remotion/lottie';
 import type { CSSProperties } from 'react';
-import type { LottieAnimationData } from './config';
+import { LOTTIE_RENDERER, type LottieAnimationData } from './config';
 
 export type LottieLayerProps = {
   animationData: LottieAnimationData;
@@ -30,6 +30,7 @@ export function LottieLayer({ animationData }: LottieLayerProps) {
         // @remotion/lottie's type is the lottie-web AnimationItem data shape;
         // ours is a structural subset with the fields we read.
         animationData={animationData as never}
+        renderer={LOTTIE_RENDERER}
         style={{ width: '100%', height: '100%' }}
       />
     </div>

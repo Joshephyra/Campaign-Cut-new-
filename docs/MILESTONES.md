@@ -248,7 +248,7 @@ Only start this after M11. Measure before optimizing.
 
 ---
 
-## M13 · Fonts · TODO
+## M13 · Fonts · IN PROGRESS
 
 **Build**
 - Extract font references at ingest, fail validation on missing fonts

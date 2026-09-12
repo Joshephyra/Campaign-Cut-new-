@@ -3,7 +3,7 @@ import { fade } from '@remotion/transitions/fade';
 import { slide } from '@remotion/transitions/slide';
 import { wipe } from '@remotion/transitions/wipe';
 import { AbsoluteFill, OffthreadVideo, Sequence } from 'remotion';
-import type { MainProps } from './config';
+import { PREMOUNT_FRAMES, type MainProps } from './config';
 import type { ElementProps } from './elements';
 import { LottieLayer } from './LottieLayer';
 import { effectiveTimeline, type TransitionPreset } from './transitions';
@@ -63,13 +63,25 @@ export function Main({ background, media, elements, transitions = [] }: MainProp
         const first = members[0]!;
         if (members.length === 1) {
           return (
-            <Sequence key={first.id} name={first.id} from={chain.startFrame} durationInFrames={chain.durationInFrames} layout="none">
+            <Sequence
+              key={first.id}
+              name={first.id}
+              from={chain.startFrame}
+              durationInFrames={chain.durationInFrames}
+              premountFor={PREMOUNT_FRAMES}
+            >
               <LottieLayer animationData={first.lottie} />
             </Sequence>
           );
         }
         return (
-          <Sequence key={first.id} name={chain.elementIds.join('+')} from={chain.startFrame} durationInFrames={chain.durationInFrames} layout="none">
+          <Sequence
+            key={first.id}
+            name={chain.elementIds.join('+')}
+            from={chain.startFrame}
+            durationInFrames={chain.durationInFrames}
+            premountFor={PREMOUNT_FRAMES}
+          >
             <TransitionSeries>
               {members.flatMap((element, index) => {
                 const parts = [

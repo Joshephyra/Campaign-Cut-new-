@@ -18,6 +18,18 @@ export const compositionConfig = {
 } as const;
 
 /**
+ * How lottie-web draws. ONE setting for both runners: the Player and the
+ * server render must draw the same way or their output drifts (CLAUDE.md).
+ * SPEC 5 lever 2 was tried in M12 ('canvas'): the Player never advanced a
+ * frame (lottie-web canvas mode never reports ready inside the Player), so
+ * it stays 'svg'. See docs/perf-baseline.json.
+ */
+export const LOTTIE_RENDERER: 'svg' | 'canvas' = 'svg';
+
+/** Mount an element this many frames before its in point so its first frame is not late (SPEC 5 lever 3). */
+export const PREMOUNT_FRAMES = 15;
+
+/**
  * The parts of a Bodymovin/Lottie export the composition needs to know
  * about. Everything else is passed through untouched to the renderer.
  */

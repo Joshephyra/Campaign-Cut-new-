@@ -1,0 +1,33 @@
+{
+  "date": "2026-09-11",
+  "template": "standin (2 elements, fade transition, 960-wide proxy footage, IBM Plex Sans text, logo image)",
+  "machine": "Josh's Windows 11 laptop; in-app Chromium browser pane driven by Claude Code",
+  "target": 24,
+  "method": "Open the editor with ?perf=<seconds>. The Player is played from frame 0 for that long while 'frameupdate' events are counted (app/src/perf.ts). The number is what the eye sees.",
+  "environmentNote": "The in-app browser pane only paints while the desktop app window is on screen. Every run except the first happened while it was occluded, so the Player's animation loop was paused and no frames were counted. Runs with environment 'visible' are the only ones that count toward the target; a run on Josh's own browser tab is still needed.",
+  "runs": [
+    {
+      "lever": "baseline: svg renderer, no premount",
+      "environment": "background pane, first run right after it was fronted",
+      "fps": 23.42,
+      "frames": 186,
+      "seconds": 7.9,
+      "droppedFrames": 1,
+      "worstGapMs": 52
+    }
+  ],
+  "attempted": [
+    {
+      "lever": "SPEC 5 lever 2: lottie-web canvas renderer (LOTTIE_RENDERER = 'canvas')",
+      "result": "The Player never advanced a frame in four runs (0 frames), and the Lottie did not draw. Reverted to svg. Not usable as a plain switch; would need investigation of @remotion/lottie's ready signalling in canvas mode."
+    },
+    {
+      "lever": "SPEC 5 lever 3: premount each element 15 frames before its in point (PREMOUNT_FRAMES = 15)",
+      "result": "Applied. Could not be measured in the occluded pane; measure on a visible tab."
+    },
+    {
+      "lever": "SPEC 5 lever 1: lower proxy resolution",
+      "result": "Not applied. The proxy is already 960 wide; try 640 only if a visible-tab run is under 24 fps with footage but over it without (compare ?perf on a project with and without footage)."
+    }
+  ]
+}

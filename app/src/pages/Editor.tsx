@@ -22,6 +22,7 @@ import { ExportPanel } from '../components/ExportPanel';
 import { Inspector } from '../components/Inspector';
 import { MediaPanel } from '../components/MediaPanel';
 import { Timeline, type ElementPatch } from '../components/Timeline';
+import { measurePlayback, type PlaybackSummary } from '../perf';
 
 const BACKGROUND = '#000000';
 /** Keep typing smooth: the composition re-applies values this long after the last keystroke. */
@@ -295,6 +296,22 @@ function Monitor({
     setFrame(f);
   };
 
+  // M12 measurement mode: open the editor with ?perf=<seconds> and the Player
+  // is played from the start for that long while frame updates are counted.
+  // The result lands in the footer and on window.__ccPerf for scripts.
+  const [perf, setPerf] = useState<PlaybackSummary | null>(null);
+  useEffect(() => {
+    const seconds = Number(new URLSearchParams(window.location.search).get('perf'));
+    const player = playerRef.current;
+    if (!seconds || !player) return;
+    const t = setTimeout(async () => {
+      const result = await measurePlayback(player, seconds, compositionConfig.fps);
+      (window as unknown as { __ccPerf?: PlaybackSummary }).__ccPerf = result;
+      setPerf(result);
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [loaded]);
+
   return (
     // Program monitor. Nothing ever overlays this.
     <section className="flex-1 p-8 min-w-0 overflow-y-auto">
@@ -313,6 +330,11 @@ function Monitor({
       <p className="font-mono text-xs text-muted mt-3">
         {compositionConfig.width}×{compositionConfig.height} · {compositionConfig.fps} fps · {durationInFrames} frames
         {media ? ' · footage: proxy' : ''}
+        {perf && (
+          <span data-testid="perf-result" className={perf.meetsTarget ? ' text-emerald-400' : ' text-danger'}>
+            {' · measured '}{perf.fps.toFixed(1)} fps over {perf.seconds.toFixed(1)} s, {perf.droppedFrames} dropped, worst gap {Math.round(perf.worstGapMs)} ms
+          </span>
+        )}
       </p>
       <Timeline
         elements={elements}

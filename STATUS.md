@@ -3,6 +3,29 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-11 · M12 Playback performance · IN PROGRESS: needs one measurement on a visible browser tab
+
+**What exists now**
+
+- `app/src/perf.ts`: `summarizePlayback` (fps from the Player's `frameupdate` timestamps, dropped-frame estimate, worst gap) and `measurePlayback`. Open the editor with `?perf=<seconds>` and it plays from frame 0 for that long, then prints the result in the footer and on `window.__ccPerf`.
+- `docs/perf-baseline.json`: the recorded baseline and every lever tried, with the environment each run happened in. `app/src/perf.test.ts` checks its shape; the "sustains 24 fps" check runs only against a run made on a visible tab.
+- Composition: `LOTTIE_RENDERER` (one setting for both runners; stays `svg`) and `PREMOUNT_FRAMES = 15` (each element mounts 15 frames before its in point so its first frame is ready). Elements outside their window were already unmounted by `Sequence`.
+
+**What was measured**
+
+- Baseline, svg, no premount, stand-in with footage and a fade: 23.4 fps over 7.9 s, 1 dropped frame, worst gap 52 ms. Measured in the in-app browser pane right after it was fronted.
+- Every later run returned 0 frames: the pane stops painting when the desktop app window is behind other windows, which pauses the animation loop the Player runs on. Forcing paints with screenshots made the Player advance but measured the screenshots (4.4 fps with one-second gaps), so it is not a valid number. Recorded as such.
+- Lever 2 (canvas renderer): the Player never advanced a frame and the Lottie did not draw, in four runs. Reverted. Not a free switch.
+- Lever 1 (lower proxy): not applied; the proxy is already 960 wide.
+
+**What Josh needs to do (this is AT-4's human half anyway)**
+
+Open `http://localhost:5173/projects/1?perf=8` in a normal browser tab, wait ten seconds, and read the green or red "measured … fps" line under the video. Tell me the number. If it is 24 or more, I record it under environment "visible" and M12 is done. If it is under 24, the next lever is a 640-wide proxy, and comparing `?perf=8` on project 2 (no footage) tells us whether footage or Lottie is the cost.
+
+**Next:** M13, fonts.
+
+---
+
 ## 2026-09-11 · M11 Export and parity · DONE (Josh delegated sign-off). AT-5 automated half in place; the human half is watching the file.
 
 **What exists now**
