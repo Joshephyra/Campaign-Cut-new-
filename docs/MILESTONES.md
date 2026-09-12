@@ -30,7 +30,7 @@ Get a running skeleton with the module boundary that matters.
 
 ---
 
-## M1 · Lottie on screen · TODO
+## M1 · Lottie on screen · IN PROGRESS
 
 **Build**
 - `<LottieLayer>` in `composition` wrapping `@remotion/lottie`

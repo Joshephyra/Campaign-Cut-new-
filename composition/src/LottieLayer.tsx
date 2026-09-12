@@ -1,0 +1,37 @@
+import { Lottie } from '@remotion/lottie';
+import type { CSSProperties } from 'react';
+import type { LottieAnimationData } from './config';
+
+export type LottieLayerProps = {
+  animationData: LottieAnimationData;
+};
+
+/**
+ * FULL-FRAME ABSOLUTELY POSITIONED WRAPPER.
+ *
+ * This wrapper is the fix for the positioning bug in the previous build,
+ * where ingested designs rendered BELOW the video frame instead of over it.
+ * Do not remove it, do not make it relative, do not size it in pixels.
+ * LottieLayer.test.tsx guards it.
+ */
+const fullFrame: CSSProperties = {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  width: '100%',
+  height: '100%',
+  overflow: 'hidden',
+};
+
+export function LottieLayer({ animationData }: LottieLayerProps) {
+  return (
+    <div data-testid="lottie-wrapper" style={fullFrame}>
+      <Lottie
+        // @remotion/lottie's type is the lottie-web AnimationItem data shape;
+        // ours is a structural subset with the fields we read.
+        animationData={animationData as never}
+        style={{ width: '100%', height: '100%' }}
+      />
+    </div>
+  );
+}

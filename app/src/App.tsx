@@ -1,6 +1,14 @@
-import { compositionConfig, defaultProps, FrameCounter } from '@campaigncut/composition';
+import {
+  compositionConfig,
+  lottieDurationInFrames,
+  Main,
+  type LottieAnimationData,
+  type MainProps,
+} from '@campaigncut/composition';
 import { Player } from '@remotion/player';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+// M1: one hardcoded template. The library and ingest come in later milestones.
+import standinLottie from '../../templates/standin/template.json';
 
 type ServerState = 'checking' | 'ok' | 'down';
 
@@ -26,6 +34,10 @@ function useServerHealth(): ServerState {
 export function App() {
   const server = useServerHealth();
 
+  const lottie = standinLottie as LottieAnimationData;
+  const inputProps = useMemo<MainProps>(() => ({ background: '#0F4C5C', lottie }), [lottie]);
+  const durationInFrames = lottieDurationInFrames(lottie, compositionConfig.fps);
+
   return (
     <main className="min-h-screen bg-neutral-950 text-neutral-200 p-8">
       <header className="flex items-baseline justify-between mb-6 max-w-5xl mx-auto">
@@ -41,9 +53,9 @@ export function App() {
       {/* Program monitor. Nothing ever overlays this. */}
       <section className="max-w-5xl mx-auto">
         <Player
-          component={FrameCounter}
-          inputProps={defaultProps}
-          durationInFrames={compositionConfig.durationInFrames}
+          component={Main}
+          inputProps={inputProps}
+          durationInFrames={durationInFrames}
           fps={compositionConfig.fps}
           compositionWidth={compositionConfig.width}
           compositionHeight={compositionConfig.height}
@@ -53,7 +65,7 @@ export function App() {
         />
         <p className="font-mono text-xs text-neutral-500 mt-3">
           {compositionConfig.id} · {compositionConfig.width}×{compositionConfig.height} · {compositionConfig.fps} fps ·{' '}
-          {compositionConfig.durationInFrames} frames
+          {durationInFrames} frames · template: {String(lottie.nm ?? 'unnamed')}
         </p>
       </section>
     </main>

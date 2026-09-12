@@ -1,5 +1,6 @@
-export { compositionConfig, defaultProps } from './config';
-export type { MainProps } from './config';
-export { FrameCounter } from './FrameCounter';
-export { FrameCounterView, formatTimecode } from './FrameCounterView';
+export { compositionConfig, defaultProps, EMPTY_LOTTIE } from './config';
+export type { LottieAnimationData, MainProps } from './config';
+export { lottieDurationInFrames } from './lottieDuration';
+export { LottieLayer } from './LottieLayer';
+export { Main } from './Main';
 export { RemotionRoot } from './Root';
