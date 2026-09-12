@@ -11,6 +11,7 @@ import { Player } from '@remotion/player';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, type ProjectDetail } from '../api';
 import { Inspector } from '../components/Inspector';
+import { MediaPanel } from '../components/MediaPanel';
 
 const BACKGROUND = '#000000';
 /** Keep typing smooth: the composition re-applies values this long after the last keystroke. */
@@ -150,9 +151,14 @@ function EditorBody({ loaded, values, onChange }: { loaded: Loaded; values: Para
         </p>
       </section>
 
-      <aside className="w-80 border-l border-hairline p-6 shrink-0 overflow-y-auto">
-        <h2 className="text-xs uppercase tracking-widest text-muted mb-4">Inspector</h2>
-        <Inspector schema={schema} values={values} onChange={onChange} />
+      <aside className="w-80 border-l border-hairline shrink-0 overflow-y-auto">
+        <div className="p-6 border-b border-hairline">
+          <h2 className="text-xs uppercase tracking-widest text-muted mb-4">Inspector</h2>
+          <Inspector schema={schema} values={values} onChange={onChange} />
+        </div>
+        <div className="p-6">
+          <MediaPanel />
+        </div>
       </aside>
     </div>
   );

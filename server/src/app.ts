@@ -1,14 +1,19 @@
+import fastifyCors from '@fastify/cors';
+import fastifyMultipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import type { TemplateParam } from '@campaigncut/composition';
 import Fastify from 'fastify';
 import fs from 'node:fs';
 import path from 'node:path';
-import { openDb, type Db } from './db/index';
+import { pipeline } from 'node:stream/promises';
+import { openDb, type Db, type MediaAssetRow } from './db/index';
+import { makePoster, makeProxy, probe } from './media/ffmpeg';
 import { paths } from './paths';
 
 export type AppOptions = {
   db?: Db;
   templatesDir?: string;
+  mediaDir?: string;
 };
 
 function readJson<T>(file: string): T | undefined {
@@ -16,19 +21,27 @@ function readJson<T>(file: string): T | undefined {
   return JSON.parse(fs.readFileSync(file, 'utf8')) as T;
 }
 
+const VIDEO_EXTENSIONS = new Set(['.mp4', '.mov', '.m4v', '.webm', '.mkv', '.avi', '.mxf', '.mts', '.m2ts']);
+
 /** Builds the Fastify app without listening, so tests can inject requests. */
 export function buildApp(options: AppOptions = {}) {
   const db = options.db ?? openDb(paths.db);
   const templatesDir = options.templatesDir ?? paths.templates;
+  const mediaDir = options.mediaDir ?? paths.media;
   const app = Fastify({ logger: false });
+
+  // CORS on everything. The render process fetches template files and media
+  // over HTTP from a different origin; a missing header here was the
+  // missing-export bug (CLAUDE.md). media.test.ts guards it.
+  app.register(fastifyCors, { origin: true });
+  app.register(fastifyMultipart, { limits: { fileSize: 8 * 1024 * 1024 * 1024, files: 1 } });
 
   app.get('/health', async () => ({ status: 'ok' }));
 
   // ---- templates -------------------------------------------------------
 
-  // Template files (template.json, thumb.png, images/) served as-is.
   fs.mkdirSync(templatesDir, { recursive: true });
-  app.register(fastifyStatic, { root: templatesDir, prefix: '/templates/', index: false, list: false });
+  app.register(fastifyStatic, { root: templatesDir, prefix: '/templates/', index: false, list: false, decorateReply: true });
 
   const templateJson = (t: ReturnType<Db['listTemplates']>[number]) => ({
     id: t.id,
@@ -128,6 +141,80 @@ export function buildApp(options: AppOptions = {}) {
       return { ok: true, saved: values.length };
     },
   );
+
+  // ---- media -----------------------------------------------------------
+
+  for (const sub of ['originals', 'proxies', 'thumbs']) fs.mkdirSync(path.join(mediaDir, sub), { recursive: true });
+  app.register(fastifyStatic, { root: mediaDir, prefix: '/media/', index: false, list: false, decorateReply: false });
+
+  const assetJson = (a: MediaAssetRow) => ({
+    id: a.id,
+    originalName: a.originalName,
+    originalUrl: `/media/${a.originalPath}`,
+    proxyUrl: `/media/${a.proxyPath}`,
+    thumbUrl: `/media/${a.thumbPath}`,
+    width: a.width,
+    height: a.height,
+    durationS: a.durationS,
+    fps: a.fps,
+    createdAt: a.createdAt,
+  });
+
+  app.get('/media', async () => db.listMediaAssets().map(assetJson));
+
+  app.get<{ Params: { id: string } }>('/media/:id', async (req, reply) => {
+    const a = db.getMediaAsset(Number(req.params.id));
+    if (!a) return reply.code(404).send({ error: `No media asset ${req.params.id}` });
+    return assetJson(a);
+  });
+
+  /**
+   * Upload footage. The original lands in /media/originals; ffprobe reads
+   * its metadata; ffmpeg writes a 960-wide proxy (what the Player uses) and
+   * a poster. Processing happens inline: one clip at a time is fine here.
+   */
+  app.post('/media', async (req, reply) => {
+    const part = await req.file();
+    if (!part) return reply.code(400).send({ error: 'Send one file in a multipart field named "file"' });
+
+    const ext = path.extname(part.filename).toLowerCase();
+    if (!part.mimetype.startsWith('video/') && !VIDEO_EXTENSIONS.has(ext)) {
+      part.file.resume();
+      return reply.code(400).send({ error: `${part.filename} is not a video file` });
+    }
+
+    const stem = `${Date.now()}-${part.filename.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]+/g, '-').slice(0, 60) || 'clip'}`;
+    const originalPath = `originals/${stem}${ext || '.mp4'}`;
+    const proxyPath = `proxies/${stem}.mp4`;
+    const thumbPath = `thumbs/${stem}.jpg`;
+    const originalFile = path.join(mediaDir, originalPath);
+
+    await pipeline(part.file, fs.createWriteStream(originalFile));
+    if (part.file.truncated) {
+      fs.rmSync(originalFile, { force: true });
+      return reply.code(413).send({ error: 'File too large' });
+    }
+
+    try {
+      const info = await probe(originalFile);
+      await makeProxy(originalFile, path.join(mediaDir, proxyPath));
+      await makePoster(originalFile, path.join(mediaDir, thumbPath), Math.min(1, info.durationS / 2));
+      const { id } = db.insertMediaAsset({
+        originalName: part.filename,
+        originalPath,
+        proxyPath,
+        thumbPath,
+        width: info.width,
+        height: info.height,
+        durationS: info.durationS,
+        fps: info.fps,
+      });
+      return reply.code(201).send(assetJson(db.getMediaAsset(id)!));
+    } catch (err) {
+      for (const p of [originalPath, proxyPath, thumbPath]) fs.rmSync(path.join(mediaDir, p), { force: true });
+      return reply.code(400).send({ error: (err as Error).message });
+    }
+  });
 
   return app;
 }

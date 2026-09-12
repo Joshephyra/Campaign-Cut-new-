@@ -44,7 +44,24 @@ export type ProjectRow = {
 
 export type ProjectDetail = ProjectRow & { values: ProjectValue[] };
 
+export type MediaAssetInput = {
+  originalName: string;
+  /** Paths relative to the media directory. */
+  originalPath: string;
+  proxyPath: string;
+  thumbPath: string;
+  width: number;
+  height: number;
+  durationS: number;
+  fps: number;
+};
+
+export type MediaAssetRow = MediaAssetInput & { id: number; createdAt: string };
+
 export type Db = Database.Database & {
+  insertMediaAsset(a: MediaAssetInput): { id: number };
+  getMediaAsset(id: number): MediaAssetRow | undefined;
+  listMediaAssets(): MediaAssetRow[];
   upsertTemplate(t: TemplateInput): { id: number };
   listTemplates(): TemplateRow[];
   getTemplateBySlug(slug: string): TemplateRow | undefined;
@@ -103,6 +120,19 @@ CREATE TABLE IF NOT EXISTS project_value (
   value_json  TEXT    NOT NULL,
   PRIMARY KEY (project_id, element_id, param_key)
 );
+
+CREATE TABLE IF NOT EXISTS media_asset (
+  id             INTEGER PRIMARY KEY,
+  original_name  TEXT    NOT NULL,
+  original_path  TEXT    NOT NULL,
+  proxy_path     TEXT    NOT NULL,
+  thumb_path     TEXT    NOT NULL,
+  width          INTEGER NOT NULL,
+  height         INTEGER NOT NULL,
+  duration_s     REAL    NOT NULL,
+  fps            REAL    NOT NULL,
+  created_at     TEXT    NOT NULL DEFAULT (datetime('now'))
+);
 `;
 
 /**
@@ -129,7 +159,35 @@ export function openDb(file: string): Db {
     getProject: (id: number) => getProject(db, id),
     listProjects: () => listProjects(db),
     setProjectValues: (projectId: number, values: ProjectValue[]) => setProjectValues(db, projectId, values),
+    insertMediaAsset: (a: MediaAssetInput) => insertMediaAsset(db, a),
+    getMediaAsset: (id: number) => getMediaAsset(db, id),
+    listMediaAssets: () => listMediaAssets(db),
   });
+}
+
+// ---- media -------------------------------------------------------------
+
+const MEDIA_SELECT = `
+  SELECT id, original_name AS originalName, original_path AS originalPath, proxy_path AS proxyPath,
+         thumb_path AS thumbPath, width, height, duration_s AS durationS, fps, created_at AS createdAt
+  FROM media_asset`;
+
+function insertMediaAsset(db: Database.Database, a: MediaAssetInput): { id: number } {
+  const info = db
+    .prepare(
+      `INSERT INTO media_asset (original_name, original_path, proxy_path, thumb_path, width, height, duration_s, fps)
+       VALUES (@originalName, @originalPath, @proxyPath, @thumbPath, @width, @height, @durationS, @fps)`,
+    )
+    .run(a);
+  return { id: Number(info.lastInsertRowid) };
+}
+
+function getMediaAsset(db: Database.Database, id: number): MediaAssetRow | undefined {
+  return db.prepare(`${MEDIA_SELECT} WHERE id = ?`).get(id) as MediaAssetRow | undefined;
+}
+
+function listMediaAssets(db: Database.Database): MediaAssetRow[] {
+  return db.prepare(`${MEDIA_SELECT} ORDER BY id DESC`).all() as MediaAssetRow[];
 }
 
 // ---- ad types and templates -------------------------------------------

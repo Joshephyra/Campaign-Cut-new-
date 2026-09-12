@@ -27,6 +27,18 @@ export type ProjectDetail = {
   values: ProjectValue[];
 };
 
+export type MediaAsset = {
+  id: number;
+  originalName: string;
+  originalUrl: string;
+  proxyUrl: string;
+  thumbUrl: string;
+  width: number;
+  height: number;
+  durationS: number;
+  fps: number;
+};
+
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   return (await res.json()) as T;
@@ -50,6 +62,14 @@ export const api = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ values }),
     }).then((r) => json<{ ok: boolean }>(r)),
+
+  media: () => fetch(`${API}/media`).then((r) => json<MediaAsset[]>(r)),
+
+  uploadMedia: (file: File) => {
+    const body = new FormData();
+    body.append('file', file, file.name);
+    return fetch(`${API}/media`, { method: 'POST', body }).then((r) => json<MediaAsset>(r));
+  },
 
   templateLottie: (slug: string) => fetch(`${API}/templates/${slug}/template.json`).then((r) => json<LottieAnimationData>(r)),
 

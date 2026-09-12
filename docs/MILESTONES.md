@@ -147,7 +147,7 @@ The most important pure function in the codebase. See `SPEC.md` section 2.
 
 ---
 
-## M7 · Media upload and proxies · IN PROGRESS
+## M7 · Media upload and proxies · DONE
 
 **Build**
 - Upload endpoint, files land in `/media/originals`
@@ -166,7 +166,7 @@ The most important pure function in the codebase. See `SPEC.md` section 2.
 
 ---
 
-## M8 · Footage and image params · TODO
+## M8 · Footage and image params · IN PROGRESS
 
 **Build**
 - `cc.mediaFill` slot: user footage renders through the template's designated area

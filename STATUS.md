@@ -3,6 +3,31 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-11 · M7 Media upload and proxies · DONE (Josh delegated sign-off)
+
+**What exists now**
+
+- `server/src/media/ffmpeg.ts`: `findBinary` (env `CAMPAIGNCUT_FFMPEG_DIR`, PATH, then the winget install folder on Windows), `probe` (ffprobe JSON: width, height, duration, fps, codec, audio), `makeProxy` (scale to 960 wide, H.264 crf 24, yuv420p, `-movflags +faststart`, AAC), `makePoster` (one JPEG at 480 wide).
+- `POST /media` (multipart field `file`): rejects non-video by MIME/extension, saves the original to `media/originals/`, probes, writes `media/proxies/<stem>.mp4` and `media/thumbs/<stem>.jpg`, inserts a `media_asset` row, returns 201 with URLs. Cleans up on failure. `GET /media`, `GET /media/:id`. Static `/media/*`.
+- CORS on every route via `@fastify/cors` (`origin: true`). `media.test.ts` has the regression guard for the missing-export bug: the media route and the template files both send `Access-Control-Allow-Origin`.
+- `media_asset` table with `insertMediaAsset`, `getMediaAsset`, `listMediaAssets`.
+- App: `MediaPanel` in the editor's right column under the inspector: Upload link (file input), list with poster thumbnail, filename, timecode, dimensions, fps. Selecting a clip is wired to `cc.mediaFill` in M8.
+- `server/fixtures/clip-1280x720-25fps-2s.mp4`: a 2-second FFmpeg test-pattern clip with a 440 Hz tone, used by the probe/proxy/upload tests (real ffmpeg, not mocked).
+- 129 tests across 24 files. Typecheck clean.
+
+**Verified by eye**
+
+- Uploaded the fixture over real HTTP with curl: 201 with 1280x720, 25 fps, 2.0 s; original, proxy and thumb on disk; `GET /media` lists it; the proxy URL answers with `access-control-allow-origin` for the app origin.
+- Editor shows the Footage panel with the clip's poster loaded, `00:02:00 · 1280×720 · 25 fps`.
+
+**Notes**
+
+- Proxy and poster generation run inline in the upload request. Fine for one user; a queue would be the fix if uploads ever overlap.
+
+**Next:** M8, footage and image params.
+
+---
+
 ## 2026-09-11 · M6 Schema-driven inspector · DONE (Josh delegated sign-off). Most of AT-3.
 
 **What exists now**
