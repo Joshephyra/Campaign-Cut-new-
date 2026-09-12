@@ -3,7 +3,7 @@
 Running log of where the build is. Newest entry first.
 
 ---
-## 2026-09-11 · M1 Lottie on screen · built and verified by Claude, awaiting Josh's own check
+## 2026-09-11 · M1 Lottie on screen · DONE (verified by Josh in browser and MP4)
 
 **What exists now**
 

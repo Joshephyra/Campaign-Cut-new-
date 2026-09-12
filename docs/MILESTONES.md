@@ -30,7 +30,7 @@ Get a running skeleton with the module boundary that matters.
 
 ---
 
-## M1 · Lottie on screen · IN PROGRESS
+## M1 · Lottie on screen · DONE
 
 **Build**
 - `<LottieLayer>` in `composition` wrapping `@remotion/lottie`
@@ -46,7 +46,7 @@ Get a running skeleton with the module boundary that matters.
 
 ---
 
-## M2 · The mutation layer · TODO
+## M2 · The mutation layer · IN PROGRESS
 
 The most important pure function in the codebase. See `SPEC.md` section 2.
 
