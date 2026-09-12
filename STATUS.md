@@ -3,6 +3,31 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-11 · M2 The mutation layer · built and verified by Claude, awaiting Josh's own check
+
+**What exists now**
+
+- `composition/src/applyLottieValues.ts`: the pure function from SPEC.md section 2. Deep-clones the Lottie, applies user values by schema, never touches the source, memoized on the values object (WeakMap). Handles text (`t.d.k[*].s.t`, every keyframe), fill and stroke colour (`c.k` as normalised RGBA; animated colours get every keyframe), and image assets (`p`, `u`, `e`). Unknown keys and invalid colours are ignored.
+- `composition/src/schema.ts`: `TemplateParam` and `ParamValues` types. `path` is an RFC 6901 JSON pointer whose target depends on kind (text: the layer; color: the fill/stroke item; image: the asset).
+- `composition/src/jsonPointer.ts` and `hexToRgba.ts`: small pure helpers with their own tests.
+- `templates/standin/schema.json`: hand-written schema for the stand-in (headline, disclaimer, accent, surface). M3 generates this automatically.
+- App: a throwaway harness above the Player with one control per schema param. Typing runs `applyLottieValues` and the Player updates live. M6 replaces it with the generated inspector.
+- `npm run render:standin -- --values file.json --out name.mp4` renders with edits applied, through the same function.
+- 37 tests across 8 files. Typecheck clean.
+
+**Verified by eye**
+
+- Server MP4 with edited values (`m2-edited.mp4`): frame 75 shows the new headline, new disclaimer, cobalt bar and plum panel. The export carries the edits through the same code path as the preview.
+- Browser: set the headline field to "VOTE TUESDAY"; the Player's SVG text changed to match without a reload and the old string was gone.
+
+**Notes**
+
+- The root `render:standin` script now ends in `--` so flags pass through npm to the server workspace.
+
+**Next:** M3, tag reader and schema generator. Not started.
+
+---
+
 ## 2026-09-11 · M1 Lottie on screen · DONE (verified by Josh in browser and MP4)
 
 **What exists now**

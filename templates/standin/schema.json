@@ -1,0 +1,35 @@
+[
+  {
+    "key": "headline",
+    "role": "headline",
+    "kind": "text",
+    "label": "Headline",
+    "default": "STAND-IN HEADLINE",
+    "path": "/layers/1"
+  },
+  {
+    "key": "disclaimer",
+    "role": "safe.disclaimer",
+    "kind": "text",
+    "label": "Disclaimer",
+    "default": "Paid for by Example Committee",
+    "locked": true,
+    "path": "/layers/0"
+  },
+  {
+    "key": "accent",
+    "role": "accent",
+    "kind": "color",
+    "label": "Accent colour",
+    "default": "#F0592A",
+    "path": "/layers/2/shapes/0/it/1"
+  },
+  {
+    "key": "surface",
+    "role": "surface",
+    "kind": "color",
+    "label": "Surface colour",
+    "default": "#0F1729",
+    "path": "/layers/4/shapes/0/it/1"
+  }
+]

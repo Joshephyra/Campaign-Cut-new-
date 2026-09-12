@@ -1,6 +1,11 @@
+export { applyLottieValues } from './applyLottieValues';
 export { compositionConfig, defaultProps, EMPTY_LOTTIE } from './config';
 export type { LottieAnimationData, MainProps } from './config';
+export { hexToRgba, rgbaToHex } from './hexToRgba';
+export type { Rgba } from './hexToRgba';
+export { resolvePointer } from './jsonPointer';
 export { lottieDurationInFrames } from './lottieDuration';
 export { LottieLayer } from './LottieLayer';
 export { Main } from './Main';
 export { RemotionRoot } from './Root';
+export type { ParamKind, ParamValues, TemplateParam } from './schema';
