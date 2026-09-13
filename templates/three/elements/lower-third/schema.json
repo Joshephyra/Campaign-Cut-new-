@@ -8,11 +8,39 @@
     "path": "/layers/0"
   },
   {
+    "key": "subhead.transform",
+    "role": "subhead",
+    "kind": "transform",
+    "label": "Subhead placement",
+    "default": {
+      "x": 0,
+      "y": 0,
+      "scale": 1,
+      "rotation": 0
+    },
+    "path": "/layers/0",
+    "for": "subhead"
+  },
+  {
     "key": "logo",
     "role": "logo",
     "kind": "image",
     "label": "Logo",
     "default": "images/logo.png",
     "path": "/assets/0"
+  },
+  {
+    "key": "logo.transform",
+    "role": "logo",
+    "kind": "transform",
+    "label": "Logo placement",
+    "default": {
+      "x": 0,
+      "y": 0,
+      "scale": 1,
+      "rotation": 0
+    },
+    "path": "/layers/1",
+    "for": "logo"
   }
 ]

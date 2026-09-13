@@ -20,3 +20,4 @@ export { fontFaceCss, fontsFor, TemplateFonts } from './fonts';
 export type { TemplateFont, TemplateFontFile } from './fonts';
 export { chromaFilter, DEFAULT_CHROMA_KEY, isChromaKey } from './chroma';
 export type { ChromaFilter, ChromaKey } from './chroma';
+export { applyTransform, DEFAULT_TRANSFORM, isTransformValue, type TransformValue } from './transform';

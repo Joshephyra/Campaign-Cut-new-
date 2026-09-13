@@ -3,6 +3,32 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-13 · M18 Transform editing · DONE
+
+**Why**
+
+Josh: "I want to be able to actually edit the content." Every tagged layer's position, scale and rotation were already in the Lottie JSON; nothing exposed them. This does, as offsets from what the designer authored, so the animation stays intact.
+
+**What exists now**
+
+- New param kind `transform` (`composition/src/transform.ts`). Value `{ x, y, scale, rotation }`: x and y are fractions of the frame, scale a multiplier, rotation degrees; the identity is the default. `applyLottieValues` offsets `ks.p` (static or every keyframe, start and end values, separate x/y dimensions too), multiplies `ks.s` on x and y, adds to `ks.r`. Same code for both runners.
+- The schema generator adds `<key>.transform` (with `for: <key>`, path = the layer) after every text and image param that is not locked. `cc.safe.*` stays put; colours and footage slots get none. Both templates were re-ingested so their schema files carry the new params; existing projects fall back to the identity until a placement is saved.
+- Inspector: a Placement row under each text and image control: X, Y (percent of frame), Scale (percent), Rotation (degrees), Reset, and a "Drag on monitor" toggle.
+- Monitor: while a placement is being dragged, an invisible pointer surface sits over the Player and the drag moves the layer by the fraction of the monitor travelled; the preview is the only feedback. It draws nothing and is off by default. **This is a deliberate, invisible exception to "nothing ever overlays the monitor" (SPEC section 4). Josh can veto it; the numeric fields do everything the drag does.**
+- Per-layer retiming is not included: element timing already lives on the timeline (M9).
+- Tests: 6 composition (offsets, keyframes, split dimensions, scale, rotation, purity), 4 schema generator, 5 inspector, 2 editor (drag surface). 297 tests green.
+
+**Verified in the browser and in the export**
+
+- Project 3 (Three Part), Open element: typing X 10 and Scale 150 moved and enlarged the headline live at 00:01:16; the accent bar stayed put (it is a colour, not a placement). "Drag on monitor", then a real mouse drag down-left, moved the headline to X -6.1 / Y 32.9 with the fields following. Reload: the placement came back exactly.
+- `npm run parity -- --id 3 --frames 45,89,200` with the moved, scaled headline: all within threshold (mean diff 0.95 to 2.00). Export frame 45 shows the headline where the preview had it.
+
+**Next**
+
+M19 fidelity harness (render vs `reference.mp4`), then M20 footage trim and audio.
+
+---
+
 ## 2026-09-13 · M17 Multi-element templates · DONE
 
 **Why**

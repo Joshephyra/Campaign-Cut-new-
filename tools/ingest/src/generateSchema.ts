@@ -1,4 +1,4 @@
-import { rgbaToHex, type LottieAnimationData, type ParamKind, type TemplateParam } from '@campaigncut/composition';
+import { DEFAULT_TRANSFORM, rgbaToHex, type LottieAnimationData, type ParamKind, type TemplateParam } from '@campaigncut/composition';
 import { keyFor, KNOWN_ROLES, labelFor, ROLES } from './roles';
 import { parseTag } from './tags';
 
@@ -101,6 +101,23 @@ export function generateSchema(lottie: LottieAnimationData): GeneratedSchema {
     if (spec.locked) param.locked = true;
     params.push(param);
     report.push({ layer: tag, status: spec.kind, path: resolved.path });
+
+    // M18: text and images the user may edit can also be moved, scaled and
+    // rotated. The placement param points at the LAYER (an image's own param
+    // points at the asset). Locked roles (cc.safe.*) stay where they are.
+    if ((spec.kind === 'text' || spec.kind === 'image') && !spec.locked) {
+      params.push({
+        key: `${key}.transform`,
+        role,
+        kind: 'transform',
+        label: `${labelFor(role, index)} placement`,
+        default: DEFAULT_TRANSFORM,
+        path: pointer,
+        for: key,
+        _order: roleOrder.get(role)!,
+        _index: index ?? 0,
+      });
+    }
   }
 
   params.sort((a, b) => a._order - b._order || a._index - b._index);
@@ -152,6 +169,8 @@ function resolveTarget(kind: ParamKind, layer: AnyRecord, pointer: string, lotti
       return resolveImage(layer, lottie, tag);
     case 'media':
       return { path: pointer, defaultValue: null };
+    case 'transform':
+      return { error: `Layer "${tag}": placement is derived from text and image tags, not tagged directly` };
   }
 }
 

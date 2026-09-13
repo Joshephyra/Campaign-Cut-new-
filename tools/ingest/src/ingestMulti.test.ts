@@ -89,10 +89,10 @@ describe('ingestTemplate: multi-element handover', () => {
     // each element has its own schema
     const open = JSON.parse(fs.readFileSync(path.join(dir, 'elements', 'open', 'schema.json'), 'utf8')) as { key: string }[];
     const lower = JSON.parse(fs.readFileSync(path.join(dir, 'elements', 'lower-third', 'schema.json'), 'utf8')) as { key: string }[];
-    expect(open.map((p) => p.key).sort()).toEqual(['accent', 'headline', 'mediaFill', 'surface']);
-    expect(lower.map((p) => p.key).sort()).toEqual(['logo', 'subhead']);
+    expect(open.map((p) => p.key).sort()).toEqual(['accent', 'headline', 'headline.transform', 'mediaFill', 'surface']);
+    expect(lower.map((p) => p.key).sort()).toEqual(['logo', 'logo.transform', 'subhead', 'subhead.transform']);
     expect(result.elements.map((e) => e.slug)).toEqual(['open', 'lower-third', 'end-card']);
-    expect(result.elements[1]!.params.map((p) => p.key).sort()).toEqual(['logo', 'subhead']);
+    expect(result.elements[1]!.params.map((p) => p.key).sort()).toEqual(['logo', 'logo.transform', 'subhead', 'subhead.transform']);
   });
 
   it('without a manifest, orders elements alphabetically, lays them end to end, and derives slugs from folder names', async () => {

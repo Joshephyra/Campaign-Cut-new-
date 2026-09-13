@@ -1,13 +1,16 @@
 import {
   DEFAULT_CHROMA_KEY,
+  DEFAULT_TRANSFORM,
   hexToRgba,
   isChromaKey,
   isMediaValue,
+  isTransformValue,
   type ChromaKey,
   type Fit,
   type MediaValue,
   type ParamValues,
   type TemplateParam,
+  type TransformValue,
 } from '@campaigncut/composition';
 import { useEffect, useRef, useState } from 'react';
 import { api, type MediaAsset } from '../api';
@@ -22,6 +25,9 @@ type Props = {
   templateSlug?: string;
   /** Server-relative base of the element's files, e.g. /templates/two/elements/open (M17). */
   elementBaseUrl?: string;
+  /** M18: which placement param is being dragged on the monitor, if any. */
+  dragKey?: string | null;
+  onDragKey?: (key: string | null) => void;
 };
 
 /**
@@ -29,24 +35,126 @@ type Props = {
  * code anywhere: a template with three text roles and one accent colour
  * produces three text fields and a colour picker, automatically.
  */
-export function Inspector({ schema, values, onChange, assets = [], templateSlug = '', elementBaseUrl }: Props) {
+export function Inspector({ schema, values, onChange, assets = [], templateSlug = '', elementBaseUrl, dragKey = null, onDragKey }: Props) {
   const set = (key: string, value: unknown) => onChange({ ...values, [key]: value });
   const imageBase = elementBaseUrl ?? `/templates/${templateSlug}`;
+  // Placement params ride under the text or image control they belong to.
+  const placementFor = (key: string) => schema.find((p) => p.kind === 'transform' && p.for === key);
 
   return (
     <div className="flex flex-col gap-5">
-      {schema.map((param) => (
-        <div key={param.key} data-testid={`param-${param.key}`}>
-          {param.kind === 'text' && <TextControl param={param} value={valueOf(param, values)} onChange={(v) => set(param.key, v)} />}
-          {param.kind === 'color' && <ColorControl param={param} value={valueOf(param, values)} onChange={(v) => set(param.key, v)} />}
-          {param.kind === 'image' && (
-            <ImageControl param={param} value={valueOf(param, values)} imageBase={imageBase} onChange={(v) => set(param.key, v)} />
+      {schema
+        .filter((param) => param.kind !== 'transform')
+        .map((param) => {
+          const placement = placementFor(param.key);
+          return (
+            <div key={param.key} data-testid={`param-${param.key}`}>
+              {param.kind === 'text' && <TextControl param={param} value={valueOf(param, values)} onChange={(v) => set(param.key, v)} />}
+              {param.kind === 'color' && <ColorControl param={param} value={valueOf(param, values)} onChange={(v) => set(param.key, v)} />}
+              {param.kind === 'image' && (
+                <ImageControl param={param} value={valueOf(param, values)} imageBase={imageBase} onChange={(v) => set(param.key, v)} />
+              )}
+              {param.kind === 'media' && (
+                <MediaControl param={param} value={values[param.key]} assets={assets} onChange={(v) => set(param.key, v)} />
+              )}
+              {placement && (
+                <PlacementControl
+                  param={placement}
+                  parentLabel={param.label}
+                  value={isTransformValue(values[placement.key]) ? (values[placement.key] as TransformValue) : DEFAULT_TRANSFORM}
+                  onChange={(v) => set(placement.key, v)}
+                  dragging={dragKey === placement.key}
+                  onDrag={onDragKey ? () => onDragKey(dragKey === placement.key ? null : placement.key) : undefined}
+                />
+              )}
+            </div>
+          );
+        })}
+    </div>
+  );
+}
+
+// ---- placement (M18) ---------------------------------------------------
+
+/** Round for display so 0.1 * 100 does not show as 10.000000000000002. */
+const pct = (fraction: number) => String(Math.round(fraction * 1000) / 10);
+const deg = (n: number) => String(Math.round(n * 10) / 10);
+
+/**
+ * X and Y are offsets from the authored position as a percentage of the
+ * frame (stored as fractions); scale is a percentage of the authored size;
+ * rotation is added degrees. Reset returns to exactly what the designer built.
+ */
+function PlacementControl({
+  param,
+  parentLabel,
+  value,
+  onChange,
+  dragging,
+  onDrag,
+}: {
+  param: TemplateParam;
+  parentLabel: string;
+  value: TransformValue;
+  onChange: (v: TransformValue) => void;
+  dragging: boolean;
+  onDrag?: () => void;
+}) {
+  const field = (label: string, shown: string, apply: (n: number) => TransformValue, unit: string, step: number) => {
+    const id = `${param.key}-${label}`;
+    return (
+      <label htmlFor={id} className="flex items-center gap-1 text-[11px] text-muted">
+        <span className="w-6">{label.replace(/^\w/, (c) => c.toUpperCase())}</span>
+        <input
+          id={id}
+          type="number"
+          step={step}
+          aria-label={`${parentLabel} ${label.length === 1 ? label.toUpperCase() : label}`}
+          value={shown}
+          onChange={(e) => {
+            const n = Number(e.target.value);
+            if (Number.isFinite(n)) onChange(apply(n));
+          }}
+          className="w-16 bg-panel border border-hairline px-1 py-0.5 font-mono text-fg focus:outline-none focus:border-cobalt"
+        />
+        <span>{unit}</span>
+      </label>
+    );
+  };
+  const isIdentity = value.x === 0 && value.y === 0 && value.scale === 1 && value.rotation === 0;
+  return (
+    <div className="mt-2 flex flex-col gap-1" data-testid={`placement-${param.for ?? param.key}`}>
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] uppercase tracking-widest text-muted">Placement</span>
+        <div className="flex items-center gap-2">
+          {onDrag && (
+            <button
+              type="button"
+              aria-label={`Drag ${parentLabel} on monitor`}
+              aria-pressed={dragging}
+              onClick={onDrag}
+              className={`text-[11px] px-1.5 py-0.5 border ${dragging ? 'border-cobalt text-cobalt' : 'border-hairline text-muted hover:text-fg'}`}
+            >
+              {dragging ? 'Dragging… (click to stop)' : 'Drag on monitor'}
+            </button>
           )}
-          {param.kind === 'media' && (
-            <MediaControl param={param} value={values[param.key]} assets={assets} onChange={(v) => set(param.key, v)} />
-          )}
+          <button
+            type="button"
+            aria-label={`Reset ${param.label}`}
+            disabled={isIdentity}
+            onClick={() => onChange({ ...DEFAULT_TRANSFORM })}
+            className="text-[11px] text-muted hover:text-fg disabled:opacity-40"
+          >
+            Reset
+          </button>
         </div>
-      ))}
+      </div>
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+        {field('x', pct(value.x), (n) => ({ ...value, x: n / 100 }), '%', 0.5)}
+        {field('y', pct(value.y), (n) => ({ ...value, y: n / 100 }), '%', 0.5)}
+        {field('scale', pct(value.scale), (n) => ({ ...value, scale: n / 100 }), '%', 1)}
+        {field('rotation', deg(value.rotation), (n) => ({ ...value, rotation: n }), '°', 1)}
+      </div>
     </div>
   );
 }

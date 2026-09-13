@@ -8,6 +8,20 @@
     "path": "/layers/0"
   },
   {
+    "key": "headline.transform",
+    "role": "headline",
+    "kind": "transform",
+    "label": "Headline placement",
+    "default": {
+      "x": 0,
+      "y": 0,
+      "scale": 1,
+      "rotation": 0
+    },
+    "path": "/layers/0",
+    "for": "headline"
+  },
+  {
     "key": "disclaimer",
     "role": "safe.disclaimer",
     "kind": "text",
@@ -23,6 +37,20 @@
     "label": "Logo",
     "default": "images/logo.png",
     "path": "/assets/0"
+  },
+  {
+    "key": "logo.transform",
+    "role": "logo",
+    "kind": "transform",
+    "label": "Logo placement",
+    "default": {
+      "x": 0,
+      "y": 0,
+      "scale": 1,
+      "rotation": 0
+    },
+    "path": "/layers/2",
+    "for": "logo"
   },
   {
     "key": "surface",

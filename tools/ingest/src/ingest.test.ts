@@ -69,7 +69,7 @@ describe('ingestTemplate', () => {
       expect(fs.existsSync(path.join(dir, f)), f).toBe(true);
     }
     const schema = JSON.parse(fs.readFileSync(path.join(dir, 'elements', 'standin', 'schema.json'), 'utf8')) as AnyRecord[];
-    expect(schema.map((p) => p.key).sort()).toEqual(['accent', 'disclaimer', 'headline', 'logo', 'mediaFill', 'surface']);
+    expect(schema.map((p) => p.key).sort()).toEqual(['accent', 'disclaimer', 'headline', 'headline.transform', 'logo', 'logo.transform', 'mediaFill', 'surface']);
 
     const rows = db.listTemplates();
     expect(rows).toHaveLength(1);

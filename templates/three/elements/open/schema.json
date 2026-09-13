@@ -8,6 +8,20 @@
     "path": "/layers/0"
   },
   {
+    "key": "headline.transform",
+    "role": "headline",
+    "kind": "transform",
+    "label": "Headline placement",
+    "default": {
+      "x": 0,
+      "y": 0,
+      "scale": 1,
+      "rotation": 0
+    },
+    "path": "/layers/0",
+    "for": "headline"
+  },
+  {
     "key": "accent",
     "role": "accent",
     "kind": "color",

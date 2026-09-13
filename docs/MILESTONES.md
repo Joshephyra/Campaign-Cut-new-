@@ -351,6 +351,28 @@ Today one Bodymovin export is one element and every element in a project shares 
 
 ---
 
+## M18 · Transform editing · DONE
+
+Josh's concern (2026-09-13): the content feels locked. Every tagged text and image layer already carries its position, scale and rotation in the Lottie JSON; this exposes them, as offsets from what the designer authored, so the animation itself is untouched.
+
+**Build**
+- New param kind `transform`. The schema generator adds a `<key>.transform` param (with `for: <key>`) for every text and image tag that is not locked (`cc.safe.*` stays fixed). Colours, footage slots and untagged layers get none.
+- Value `{ x, y, scale, rotation }`: x and y are fractions of the frame (CLAUDE.md: positions are fractions), scale a multiplier, rotation degrees. Default is the identity.
+- `applyLottieValues` applies a transform to the layer's `ks`: position offset added to the static value or to every keyframe (split x/y dimensions included), scale multiplied, rotation added. Same code in both runners, as always.
+- Inspector: a Placement row under each text and image control with X, Y, Scale, Rotation and Reset.
+- Monitor: a "Drag on monitor" toggle per placement. While on, an invisible capture surface sits over the Player and dragging moves that layer; the preview itself shows the result. It draws nothing (the monitor stays untouched visually) and is off by default. Flagged in STATUS as the one deliberate exception to "nothing overlays the monitor"; Josh can veto it.
+- Element timing already lives on the timeline (M9), so per-layer retiming is not part of this.
+
+**Tests**
+- Composition: static position offset in pixels from fractions; every keyframe (and end value) offset; split-dimension positions; scale multiplied leaving z alone; rotation added; identity is a no-op; source untouched; bad values ignored.
+- Schema generator: transform params for text and image tags, keyed and ordered after their parent, none for locked, colour or media tags; path is the layer.
+- Inspector: placement inputs render under the parent control; editing X reports a fraction; Reset restores the identity.
+- Editor: dragging on the monitor surface moves the layer in the Player's props by the right number of pixels and saves the transform value.
+
+**Done when:** a headline can be nudged and scaled in the browser, the change survives a reload, and the export matches the preview (parity script).
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

@@ -2,10 +2,12 @@ import {
   applyLottieValues,
   compositionConfig,
   compositionDurationWithTransitions,
+  DEFAULT_TRANSFORM,
   EMPTY_LOTTIE,
   fontsFor,
   isChromaKey,
   isMediaValue,
+  isTransformValue,
   Main,
   mediaFillRect,
   mediaSourceFor,
@@ -19,7 +21,7 @@ import {
   type TransitionProps,
 } from '@campaigncut/composition';
 import { Player, type PlayerRef } from '@remotion/player';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { API, api, type MediaAsset, type ProjectDetail, type ProjectElement, type ProjectTransition } from '../api';
 import { ExportPanel } from '../components/ExportPanel';
 import { Inspector } from '../components/Inspector';
@@ -173,6 +175,19 @@ export function Editor({ projectId, onBack }: Props) {
     setValues({ ...values, [selected.id]: next });
   };
 
+  // M18: which placement param is being dragged on the monitor. Dragging
+  // adds the fraction of the monitor travelled to the layer's offset.
+  const [dragKey, setDragKey] = useState<string | null>(null);
+  useEffect(() => setDragKey(null), [selectedId]);
+  const onDrag = (dx: number, dy: number) => {
+    if (!selected || !dragKey) return;
+    setValues((prev) => {
+      const current = prev[selected.id]?.[dragKey];
+      const base = isTransformValue(current) ? current : DEFAULT_TRANSFORM;
+      return { ...prev, [selected.id]: { ...prev[selected.id], [dragKey]: { ...base, x: base.x + dx, y: base.y + dy } } };
+    });
+  };
+
   /** The Footage panel's "use this clip" hands the asset to the first element with a cc.mediaFill slot. */
   const mediaElement = mediaElementOf(elements);
   const mediaParam = mediaElement?.schema.find((p) => p.kind === 'media');
@@ -220,6 +235,8 @@ export function Editor({ projectId, onBack }: Props) {
             onSelect={setSelectedId}
             onElementChange={onElementChange}
             onTransitionChange={onTransitionChange}
+            dragLabel={dragKey ? (selected?.schema.find((p) => p.key === dragKey)?.label ?? dragKey) : null}
+            onDrag={onDrag}
           />
           <aside className="w-80 border-l border-hairline shrink-0 overflow-y-auto">
             <div className="p-6 border-b border-hairline">
@@ -250,6 +267,8 @@ export function Editor({ projectId, onBack }: Props) {
                   assets={assets}
                   templateSlug={loaded.detail.template.slug}
                   elementBaseUrl={selected.lottieUrl.replace(/\/template\.json$/, '')}
+                  dragKey={dragKey}
+                  onDragKey={setDragKey}
                 />
               )}
             </div>
@@ -296,6 +315,8 @@ function Monitor({
   onSelect,
   onElementChange,
   onTransitionChange,
+  dragLabel,
+  onDrag,
 }: {
   loaded: Loaded;
   values: ValuesByElement;
@@ -306,8 +327,34 @@ function Monitor({
   onSelect: (id: number) => void;
   onElementChange: (id: number, patch: ElementPatch) => void;
   onTransitionChange: (afterElementId: number, t: { preset: TransitionPreset; durationInFrames: number }) => void;
+  /** M18: the placement being dragged on the monitor (its label), or null when dragging is off. */
+  dragLabel: string | null;
+  /** Fractions of the monitor the pointer moved since the last call. */
+  onDrag: (dx: number, dy: number) => void;
 }) {
   const { detail, lotties } = loaded;
+
+  // M18 drag surface. It draws NOTHING: the preview underneath is the feedback.
+  const lastPointer = useRef<{ x: number; y: number } | null>(null);
+  const onSurfaceDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    lastPointer.current = { x: e.clientX, y: e.clientY };
+    try {
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+    } catch {
+      /* jsdom or a synthetic pointer id */
+    }
+    e.preventDefault();
+  };
+  const onSurfaceMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!lastPointer.current || !(e.buttons & 1)) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    onDrag((e.clientX - lastPointer.current.x) / rect.width, (e.clientY - lastPointer.current.y) / rect.height);
+    lastPointer.current = { x: e.clientX, y: e.clientY };
+  };
+  const onSurfaceUp = () => {
+    lastPointer.current = null;
+  };
   const slug = detail.template.slug;
 
   const renderedValues = useDebounced(values, RENDER_DEBOUNCE_MS);
@@ -382,20 +429,36 @@ function Monitor({
   }, [loaded]);
 
   return (
-    // Program monitor. Nothing ever overlays this.
+    // Program monitor. Nothing ever overlays this visually. The M18 drag
+    // surface is the one exception: an invisible pointer catcher, present only
+    // while "Drag on monitor" is on, so the preview itself is the feedback.
     <section className="flex-1 p-8 min-w-0 overflow-y-auto">
-      <Player
-        ref={playerRef}
-        component={Main}
-        inputProps={inputProps}
-        durationInFrames={durationInFrames}
-        fps={compositionConfig.fps}
-        compositionWidth={compositionConfig.width}
-        compositionHeight={compositionConfig.height}
-        controls
-        loop
-        style={{ width: '100%' }}
-      />
+      <div className="relative">
+        <Player
+          ref={playerRef}
+          component={Main}
+          inputProps={inputProps}
+          durationInFrames={durationInFrames}
+          fps={compositionConfig.fps}
+          compositionWidth={compositionConfig.width}
+          compositionHeight={compositionConfig.height}
+          controls
+          loop
+          style={{ width: '100%' }}
+        />
+        {dragLabel && (
+          <div
+            data-testid="drag-surface"
+            role="presentation"
+            aria-label={`Drag to move ${dragLabel}`}
+            className="absolute inset-0 cursor-move select-none touch-none"
+            onPointerDown={onSurfaceDown}
+            onPointerMove={onSurfaceMove}
+            onPointerUp={onSurfaceUp}
+            onPointerCancel={onSurfaceUp}
+          />
+        )}
+      </div>
       <p className="font-mono text-xs text-muted mt-3">
         {compositionConfig.width}×{compositionConfig.height} · {compositionConfig.fps} fps · {durationInFrames} frames
         {media ? ' · footage: proxy' : ''}

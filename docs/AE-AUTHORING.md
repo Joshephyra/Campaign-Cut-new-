@@ -77,6 +77,8 @@ cc.<role>.<n>      a repeated slot         cc.stat.1, cc.stat.2, cc.stat.3
 | `cc.mediaFill` | Shape or solid | Where the user's footage shows through |
 | `cc.safe.disclaimer` | Text | A text field. Position and size are locked. |
 
+Every text and image tag except `cc.safe.*` also gets a **Placement** control: the user can nudge, scale and rotate that layer away from where you put it. Your animation on the layer is kept; the offset rides on top of it. If something must not move, leave it untagged; the disclaimer's `cc.safe.disclaimer` is the one editable-but-fixed role.
+
 ### Rules that will bite you
 
 - **Tags are case-sensitive.** `cc.Headline` will not match. It will be treated as an unknown tag and the ingest will reject the template and tell you which layer.

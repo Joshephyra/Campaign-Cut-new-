@@ -89,20 +89,25 @@ describe('generateSchema: every role', () => {
   });
 
   it('emits one param per tagged layer and none for untagged layers', () => {
+    // M18: text and image params each carry a placement param right after them.
     expect(out.params.map((p) => p.key)).toEqual([
       'headline',
+      'headline.transform',
       'subhead',
+      'subhead.transform',
       'body',
+      'body.transform',
       'accent',
       'surface',
       'logo',
+      'logo.transform',
       'mediaFill',
       'disclaimer',
     ]);
   });
 
   it('maps roles to kinds per SPEC 1.1', () => {
-    const kinds = Object.fromEntries(out.params.map((p) => [p.key, p.kind]));
+    const kinds = Object.fromEntries(out.params.filter((p) => p.kind !== 'transform').map((p) => [p.key, p.kind]));
     expect(kinds).toEqual({
       headline: 'text',
       subhead: 'text',
@@ -165,7 +170,7 @@ describe('generateSchema: repeated slots', () => {
       lottie([textLayer('cc.stat.3', 'C'), textLayer('cc.stat.1', 'A'), textLayer('cc.stat.2', 'B')]),
     );
     expect(out.errors).toEqual([]);
-    expect(out.params.map((p) => [p.key, p.role, p.default, p.label])).toEqual([
+    expect(out.params.filter((p) => p.kind !== 'transform').map((p) => [p.key, p.role, p.default, p.label])).toEqual([
       ['stat.1', 'stat', 'A', 'Stat 1'],
       ['stat.2', 'stat', 'B', 'Stat 2'],
       ['stat.3', 'stat', 'C', 'Stat 3'],
@@ -241,9 +246,10 @@ describe('generateSchema: stroke, pre-comps, maxChars', () => {
     });
     const out = generateSchema(source);
     expect(out.errors).toEqual([]);
-    expect(out.params).toHaveLength(1);
+    expect(out.params).toHaveLength(2); // the param and its placement
     expect(out.params[0]!.key).toBe('subhead');
     expect(out.params[0]!.path).toBe('/assets/0/layers/0');
+    expect(out.params[1]).toMatchObject({ key: 'subhead.transform', path: '/assets/0/layers/0' });
     expect(out.params[0]!.default).toBe('Inside precomp');
   });
 

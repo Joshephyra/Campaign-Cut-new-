@@ -2,6 +2,7 @@ import type { LottieAnimationData } from './config';
 import { hexToRgba } from './hexToRgba';
 import { resolvePointer } from './jsonPointer';
 import type { ParamValues, TemplateParam } from './schema';
+import { applyTransform, isTransformValue } from './transform';
 
 type AnyRecord = Record<string, unknown>;
 
@@ -35,7 +36,7 @@ export function applyLottieValues(
     if (!param) continue;
     const node = resolvePointer(result, param.path);
     if (node === null || typeof node !== 'object') continue;
-    applyOne(param, node as AnyRecord, value);
+    applyOne(param, node as AnyRecord, value, result);
   }
 
   memo.set(values, { source, schema, result });
@@ -44,7 +45,7 @@ export function applyLottieValues(
 
 const memo = new WeakMap<ParamValues, { source: LottieAnimationData; schema: TemplateParam[]; result: LottieAnimationData }>();
 
-function applyOne(param: TemplateParam, node: AnyRecord, value: unknown): void {
+function applyOne(param: TemplateParam, node: AnyRecord, value: unknown, root: LottieAnimationData): void {
   switch (param.kind) {
     case 'text':
       applyText(node, value);
@@ -57,6 +58,10 @@ function applyOne(param: TemplateParam, node: AnyRecord, value: unknown): void {
       return;
     case 'media':
       applyMedia(node, value);
+      return;
+    case 'transform':
+      // Offsets are fractions of the frame; the Lottie works in its own pixels.
+      if (isTransformValue(value)) applyTransform(node, value, Number(root.w), Number(root.h));
       return;
   }
 }
