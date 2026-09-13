@@ -26,6 +26,7 @@ import { Player, type PlayerRef } from '@remotion/player';
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { API, api, type MediaAsset, type ProjectAudio, type ProjectDetail, type ProjectElement, type ProjectTransition } from '../api';
 import { AudioPanel } from '../components/AudioPanel';
+import { ExportHistory } from '../components/ExportHistory';
 import { ExportPanel } from '../components/ExportPanel';
 import { Inspector } from '../components/Inspector';
 import { MediaPanel } from '../components/MediaPanel';
@@ -73,6 +74,8 @@ export function Editor({ projectId, onBack }: Props) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [assets, setAssets] = useState<MediaAsset[]>([]);
+  /** M25: bumped when an export finishes so the history list reloads. */
+  const [exportsTick, setExportsTick] = useState(0);
 
   // M23: undo history over everything the user edits. Each change names the
   // control it came from so fast repeats (typing, dragging) fold into one step.
@@ -260,13 +263,26 @@ export function Editor({ projectId, onBack }: Props) {
   };
   const undoRef = useRef({ undo, redo });
   undoRef.current = { undo, redo };
+  // M25: arrow keys nudge the placement being dragged (half a percent of the frame, 2% with Shift).
+  const nudgeRef = useRef<((dx: number, dy: number) => void) | null>(null);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (isTextEntry(e.target)) return;
       const action = undoRedoFor(e);
-      if (!action || isTextEntry(e.target)) return;
+      if (action) {
+        e.preventDefault();
+        if (action === 'undo') undoRef.current.undo();
+        else undoRef.current.redo();
+        return;
+      }
+      const nudge = nudgeRef.current;
+      if (!nudge) return;
+      const step = e.shiftKey ? 0.02 : 0.005;
+      const delta: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+      const d = delta[e.key];
+      if (!d) return;
       e.preventDefault();
-      if (action === 'undo') undoRef.current.undo();
-      else undoRef.current.redo();
+      nudge(d[0], d[1]);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -296,6 +312,7 @@ export function Editor({ projectId, onBack }: Props) {
       return { ...prev, [selected.id]: { ...prev[selected.id], [dragKey]: { ...base, x: base.x + dx, y: base.y + dy } } };
     });
   };
+  nudgeRef.current = dragKey ? onDrag : null;
 
   /**
    * The Footage panel's "use this clip" goes to the SELECTED element when it
@@ -351,7 +368,7 @@ export function Editor({ projectId, onBack }: Props) {
           )}
           <SaveIndicator state={saveState} />
           <span>{loaded ? loaded.detail.template.slug : `project ${projectId}`}</span>
-          {loaded && <ExportPanel projectId={projectId} />}
+          {loaded && <ExportPanel projectId={projectId} onFinished={() => setExportsTick((t) => t + 1)} />}
         </div>
       </header>
 
@@ -410,8 +427,11 @@ export function Editor({ projectId, onBack }: Props) {
             <div className="p-6 border-b border-hairline">
               <MediaPanel onSelect={selectFootage} selectedId={selectedAssetId} onChange={setAssets} />
             </div>
-            <div className="p-6">
+            <div className="p-6 border-b border-hairline">
               <AudioPanel assets={assets} audio={audio} onChange={onAudioChange} />
+            </div>
+            <div className="p-6">
+              <ExportHistory projectId={projectId} refreshKey={exportsTick} />
             </div>
           </aside>
         </div>

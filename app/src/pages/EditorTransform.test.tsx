@@ -111,3 +111,25 @@ describe('Editor: drag on monitor', () => {
     expect(screen.queryByTestId('drag-surface')).toBeNull();
   });
 });
+
+describe('Editor: arrow keys nudge the dragged placement (M25)', () => {
+  it('moves by half a percent, 2% with Shift, only while dragging is on and not inside a text field', async () => {
+    mockApi();
+    mockMonitorSize();
+    render(<Editor projectId={7} onBack={() => {}} />);
+    await waitFor(() => expect(screen.getByLabelText('Headline')).toBeTruthy());
+
+    fireEvent.keyDown(document.body, { key: 'ArrowRight' });
+    await new Promise((r) => setTimeout(r, 100));
+    expect(playerPosition()).toEqual([100, 200, 0]); // drag mode off: nothing
+
+    fireEvent.click(screen.getByLabelText('Drag Headline on monitor'));
+    fireEvent.keyDown(document.body, { key: 'ArrowRight' });
+    fireEvent.keyDown(document.body, { key: 'ArrowDown', shiftKey: true });
+    await waitFor(() => expect(playerPosition()).toEqual([100 + 0.005 * 1920, 200 + 0.02 * 1080, 0]));
+
+    fireEvent.keyDown(screen.getByLabelText('Headline'), { key: 'ArrowLeft' });
+    await new Promise((r) => setTimeout(r, 100));
+    expect(playerPosition()).toEqual([100 + 0.005 * 1920, 200 + 0.02 * 1080, 0]);
+  });
+});

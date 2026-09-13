@@ -4,16 +4,20 @@ import { api, type RenderJob } from '../api';
 type Props = {
   projectId: number;
   pollIntervalMs?: number;
+  /** M25: fired when a render ends (done or failed) so the export history can reload. */
+  onFinished?: () => void;
 };
 
 /**
  * Export: queue a server-side render of THE composition with the original
  * footage, poll until it is done, then offer the MP4. AT-5 is watching it.
  */
-export function ExportPanel({ projectId, pollIntervalMs = 1000 }: Props) {
+export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished }: Props) {
   const [job, setJob] = useState<RenderJob | null>(null);
   const [error, setError] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const finished = useRef(onFinished);
+  finished.current = onFinished;
 
   const start = async () => {
     setError(null);
@@ -26,7 +30,11 @@ export function ExportPanel({ projectId, pollIntervalMs = 1000 }: Props) {
   };
 
   useEffect(() => {
-    if (!job || job.status === 'done' || job.status === 'failed') return;
+    if (!job) return;
+    if (job.status === 'done' || job.status === 'failed') {
+      finished.current?.();
+      return;
+    }
     timer.current = setTimeout(async () => {
       try {
         setJob(await api.renderStatus(job.id));

@@ -57,6 +57,16 @@ export function Inspector({ schema, values, onChange, assets = [], templateSlug 
               {param.kind === 'media' && (
                 <MediaControl param={param} value={values[param.key]} assets={assets} onChange={(v) => set(param.key, v)} />
               )}
+              {(param.kind === 'text' || param.kind === 'color' || param.kind === 'image') && values[param.key] !== undefined && values[param.key] !== param.default && (
+                <button
+                  type="button"
+                  aria-label={`Reset ${param.label} to authored`}
+                  onClick={() => set(param.key, param.default)}
+                  className="mt-1 font-mono text-[10px] text-muted hover:text-fg"
+                >
+                  Reset to authored
+                </button>
+              )}
               {placement && (
                 <PlacementControl
                   param={placement}

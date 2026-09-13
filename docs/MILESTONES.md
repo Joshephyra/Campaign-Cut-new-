@@ -492,6 +492,26 @@ AT-1 is "one command". Josh does not like terminals, and neither will the person
 
 ---
 
+## M25 · Editor polish · DONE
+
+Four small things a staffer hits within the first hour, bundled because each is a morning's work, not a milestone: past exports, a crash that does not blank the page, a way back to what the designer authored, and nudging by keyboard.
+
+**Build**
+- Export history: the export panel lists this project's earlier renders (time, download link, or the error) and refreshes when a new one finishes.
+- Error boundary around the editor: a thrown error shows what happened and a way back to the library instead of a blank page.
+- "Reset to authored" beside any text, colour or image control whose value differs from the designer's default.
+- Arrow keys nudge the placement being dragged on the monitor by half a percent of the frame (2% with Shift), outside text fields.
+
+**Tests**
+- Export panel lists earlier renders from the API and adds the one just finished.
+- The boundary renders its fallback with the message when a child throws, and the fallback's button calls back.
+- Reset appears only when the value differs and restores the default.
+- Arrow keys move the dragged placement; Shift multiplies; nothing happens with no drag active or inside a text field.
+
+**Done when:** each of the four works in the browser.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

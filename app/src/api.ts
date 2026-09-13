@@ -54,6 +54,8 @@ export type RenderJob = {
   progress: number;
   outputUrl: string | null;
   error: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type ProjectTransition = { afterElementId: number; preset: TransitionPreset; durationInFrames: number };
@@ -158,6 +160,9 @@ export const api = {
     }).then((r) => json<RenderJob>(r)),
 
   renderStatus: (id: number) => fetch(`${API}/render/${id}`).then((r) => json<RenderJob>(r)),
+
+  /** M25: every render of a project, newest first. */
+  renders: (projectId: number) => fetch(`${API}/renders?projectId=${projectId}`).then((r) => json<RenderJob[]>(r)),
 
   media: () => fetch(`${API}/media`).then((r) => json<MediaAsset[]>(r)),
 

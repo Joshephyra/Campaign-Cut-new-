@@ -3,6 +3,30 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-13 · M25 Editor polish · DONE
+
+**Why**
+
+Four small things a staffer hits in the first hour, bundled because each is a morning's work.
+
+**What exists now**
+
+- Export history: an Exports section in the inspector column lists the project's earlier renders newest first (time and a Download link, or the error), reloading when an export finishes. It lives in the column, not as a dropdown from the header, so nothing hangs over the monitor.
+- Error boundary: `app/src/components/ErrorBoundary.tsx` wraps the editor. A thrown render error shows the message, a Reload button and "Back to library" instead of a blank page (the crash seen during a hot reload on 2026-09-13 would now be visible).
+- "Reset to authored" beside any text, colour or image control whose value differs from the designer's default.
+- Arrow keys nudge the placement being dragged on the monitor by 0.5% of the frame (2% with Shift), outside text fields.
+- Tests: 2 export history, 2 boundary, 2 reset, 1 nudge. 358 tests green.
+
+**Verified in the browser**
+
+- Project 3 shows Exports with the earlier `project-3-2.mp4` download link. The rest rest on the tests; the in-app pane still cannot take screenshots.
+
+**Next**
+
+Nothing queued. Every further step (real template and AT-2, After Effects panel, own renderer) needs Josh.
+
+---
+
 ## 2026-09-13 · M24 Ingest from the browser · DONE
 
 **Why**

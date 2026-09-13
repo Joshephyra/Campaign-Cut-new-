@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Editor } from './pages/Editor';
 import { Library } from './pages/Library';
 
@@ -26,7 +27,11 @@ export function App() {
   };
 
   if (route.name === 'editor') {
-    return <Editor projectId={route.projectId} onBack={() => navigate('/')} />;
+    return (
+      <ErrorBoundary key={route.projectId} escapeLabel="Back to library" onEscape={() => navigate('/')}>
+        <Editor projectId={route.projectId} onBack={() => navigate('/')} />
+      </ErrorBoundary>
+    );
   }
   return <Library onOpenProject={(id) => navigate(`/projects/${id}`)} />;
 }
