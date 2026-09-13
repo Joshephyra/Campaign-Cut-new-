@@ -50,15 +50,23 @@ export type ProjectDetail = {
   meta?: { fonts?: string[]; fontFiles?: TemplateFontFile[] } | null;
   elements: ProjectElement[];
   transitions?: ProjectTransition[];
+  /** The music bed, or null (M20). */
+  audio?: ProjectAudio | null;
   values: ProjectValue[];
 };
 
+/** M20: a project's music bed. */
+export type ProjectAudio = { assetId: number; volume: number; inS: number };
+
 export type MediaAsset = {
   id: number;
+  /** 'video' footage, or an 'audio' track (M20). */
+  kind: 'video' | 'audio';
   originalName: string;
   originalUrl: string;
   proxyUrl: string;
-  thumbUrl: string;
+  /** Null for audio. */
+  thumbUrl: string | null;
   width: number;
   height: number;
   durationS: number;
@@ -102,6 +110,14 @@ export const api = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(t),
     }).then((r) => json<{ transitions: ProjectTransition[] }>(r)),
+
+  /** M20: set the music bed, or clear it with null. */
+  saveAudio: (projectId: number, audio: ProjectAudio | null) =>
+    fetch(`${API}/projects/${projectId}/audio`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(audio ?? { assetId: null }),
+    }).then((r) => json<ProjectAudio | null>(r)),
 
   startRender: (projectId: number) =>
     fetch(`${API}/render`, {

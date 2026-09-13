@@ -3,6 +3,31 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-13 · M20 Footage trim and audio · DONE
+
+**Why**
+
+Ads have sound and a staffer's clip is rarely the right length. Both had to go through the one composition so the export carries exactly what the preview played.
+
+**What exists now**
+
+- Footage trim and mute: the footage value gains `inS`, `outS`, `muted`. `mediaTiming` (composition) turns seconds into clip frames in one place; `Main` hands `OffthreadVideo` `startFrom`, `endAt` and `muted`. Inspector: Start and End (seconds) and "Mute footage sound" under the footage control, with the clip length shown.
+- Music bed: audio uploads (mp3, wav, m4a, aac, ogg, flac) go through the same `POST /media`; they are probed with ffprobe, stored as media assets of kind `audio` (no proxy, no poster; both runners play the original) and listed in the Footage panel with a ♪ tile. `project_audio` holds one track per project with volume and start; `PUT /projects/:id/audio` sets or clears it, `GET /projects/:id` returns it. `Main` renders it with Remotion's `Audio`. New Audio panel under Footage: track, volume, start. Clicking an audio row in the Footage panel picks it as the bed; the footage slot only offers video.
+- `media_asset` gained `kind` (migration adds it to existing databases).
+- Tests: 2 composition (mediaTiming), 2 (Main video trim and Audio), 5 server (audio upload with an ffmpeg-made wav, rejection, music-bed round trip and validation, export runner props), 4 inspector, 3 audio panel, 2 editor. 324 tests green.
+
+**Verified in the browser and in the export**
+
+- Uploaded a 10 s wav made with ffmpeg; it appears in the Footage panel as audio. Chose it as the music bed, volume 39%. Set the green-screen clip to start 0.5 s, end 1.5 s, muted. All of it saved (checked via the API).
+- Exported project 3 through the real render queue (Export MP4 path, `POST /render`): the MP4 has an h264 video stream and an AAC audio stream of 8.04 s; ffmpeg volumedetect reports mean -41.9 dB, max -35.3 dB (silence would read about -91 dB). The trim itself is asserted through the export runner's props; the green-screen fixture is too uniform to show a visible difference between 0.5 s and 0 s by eye. Josh should listen to `media/renders/project-3-2.mp4` once.
+- Not done: ducking, fades, more than one track, per-element footage. Volume is Remotion's linear `volume`; if 39% sounds quieter than expected, that is where to look.
+
+**Next**
+
+The agreed roadmap (M16 to M20) is complete. What remains needs a real After Effects template: run `npm run fidelity` on it, then decide on the own-renderer question and the After Effects panel.
+
+---
+
 ## 2026-09-13 · M19 Fidelity harness · DONE
 
 **Why**

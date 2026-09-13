@@ -99,6 +99,23 @@ export async function probe(file: string): Promise<ProbeInfo> {
   };
 }
 
+export type AudioProbeInfo = { durationS: number; codec: string };
+
+/** M20: ffprobe for an audio-only file. Rejects naming the file when it has no audio stream. */
+export async function probeAudio(file: string): Promise<AudioProbeInfo> {
+  let out: string;
+  try {
+    ({ stdout: out } = await run('ffprobe', ['-v', 'error', '-print_format', 'json', '-show_streams', '-show_format', file]));
+  } catch (err) {
+    throw new Error(`Could not read ${path.basename(file)} as media: ${(err as Error).message}`);
+  }
+  const data = JSON.parse(out) as { streams?: { codec_type?: string; codec_name?: string; duration?: string }[]; format?: { duration?: string } };
+  const audio = data.streams?.find((s) => s.codec_type === 'audio');
+  if (!audio) throw new Error(`${path.basename(file)} has no audio stream`);
+  const duration = Number(data.format?.duration ?? audio.duration ?? 0);
+  return { durationS: Number.isFinite(duration) ? duration : 0, codec: audio.codec_name ?? '' };
+}
+
 /** SPEC.md section 5: ~960x540, H.264, faststart, moderate bitrate. Height follows the aspect ratio. */
 export async function makeProxy(input: string, output: string): Promise<void> {
   fs.mkdirSync(path.dirname(output), { recursive: true });

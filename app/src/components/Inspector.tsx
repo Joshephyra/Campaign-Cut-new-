@@ -343,15 +343,17 @@ function MediaControl({
         className="w-full bg-panel border border-hairline px-2 py-1.5 text-sm text-fg focus:outline-none focus:border-cobalt"
       >
         <option value="">None (authored slot)</option>
-        {assets.map((a) => (
-          <option key={a.id} value={String(a.id)}>
-            {a.originalName}
-          </option>
-        ))}
+        {assets
+          .filter((a) => a.kind !== 'audio')
+          .map((a) => (
+            <option key={a.id} value={String(a.id)}>
+              {a.originalName}
+            </option>
+          ))}
       </select>
       {current && (
         <div className="flex items-center gap-2 mt-2">
-          {chosen && <img src={api.fileUrl(chosen.thumbUrl)} alt="" className="w-16 aspect-video object-cover bg-black block" />}
+          {chosen?.thumbUrl && <img src={api.fileUrl(chosen.thumbUrl)} alt="" className="w-16 aspect-video object-cover bg-black block" />}
           <div className="flex border border-hairline font-mono text-[10px]">
             {(['cover', 'contain'] as const).map((f) => (
               <button
@@ -366,8 +368,63 @@ function MediaControl({
           </div>
         </div>
       )}
+      {current && <TrimControls value={current} clipLengthS={chosen?.durationS} onChange={onChange} />}
       {current && <ChromaControls value={current} onChange={onChange} />}
       <p className="font-mono text-[10px] text-muted mt-1">Upload clips in the Footage panel below.</p>
+    </div>
+  );
+}
+
+/** M20: where in the clip to start and stop, in seconds, and whether its own sound plays. Stored inside the footage value. */
+function TrimControls({ value, clipLengthS, onChange }: { value: MediaValue; clipLengthS?: number; onChange: (v: MediaValue) => void }) {
+  const num = (raw: string): number | undefined => {
+    if (raw.trim() === '') return undefined;
+    const n = Number(raw);
+    return Number.isFinite(n) && n >= 0 ? n : undefined;
+  };
+  const setTime = (key: 'inS' | 'outS', raw: string) => {
+    const next = { ...value };
+    const n = num(raw);
+    if (n === undefined) delete next[key];
+    else next[key] = n;
+    onChange(next);
+  };
+  return (
+    <div className="mt-2 flex flex-col gap-1 font-mono text-[10px]">
+      <div className="flex items-center gap-2">
+        <label className="flex items-center gap-1 text-muted">
+          <span>Start</span>
+          <input
+            type="number"
+            min={0}
+            step={0.1}
+            aria-label="Footage start"
+            value={value.inS ?? 0}
+            onChange={(e) => setTime('inS', e.target.value)}
+            className="w-14 bg-panel border border-hairline px-1 py-0.5 text-fg focus:outline-none focus:border-cobalt"
+          />
+          <span>s</span>
+        </label>
+        <label className="flex items-center gap-1 text-muted">
+          <span>End</span>
+          <input
+            type="number"
+            min={0}
+            step={0.1}
+            aria-label="Footage end"
+            placeholder="end"
+            value={value.outS ?? ''}
+            onChange={(e) => setTime('outS', e.target.value)}
+            className="w-14 bg-panel border border-hairline px-1 py-0.5 text-fg focus:outline-none focus:border-cobalt"
+          />
+          <span>s</span>
+        </label>
+      </div>
+      {clipLengthS !== undefined && <span className="text-muted">clip is {clipLengthS.toFixed(1)} s long; leave End empty to play to the end</span>}
+      <label className="flex items-center gap-2 text-muted">
+        <input type="checkbox" aria-label="Mute footage sound" checked={value.muted === true} onChange={(e) => onChange({ ...value, muted: e.target.checked })} className="accent-cobalt" />
+        Mute footage sound
+      </label>
     </div>
   );
 }

@@ -1,10 +1,12 @@
 import {
   applyLottieValues,
+  compositionConfig,
   fontsFor,
   isChromaKey,
   isMediaValue,
   mediaFillRect,
   mediaSourceFor,
+  mediaTiming,
   resolveLottieAssets,
   withBaseUrl,
   type MainProps,
@@ -62,8 +64,25 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase, run
     const rect = mediaFillRect(source, mediaParam.path);
     if (!asset || !rect) continue;
     const src = mediaSourceFor({ proxyUrl: `/media/${asset.proxyPath}`, originalUrl: `/media/${asset.originalPath}` }, runner);
-    media = { src: `${serverBase}${src}`, rect, fit: mediaValue.fit, key: isChromaKey(mediaValue.key) ? mediaValue.key : null };
+    media = {
+      src: `${serverBase}${src}`,
+      rect,
+      fit: mediaValue.fit,
+      key: isChromaKey(mediaValue.key) ? mediaValue.key : null,
+      ...mediaTiming(mediaValue, compositionConfig.fps),
+      muted: mediaValue.muted === true,
+    };
     break;
+  }
+
+  // M20: the music bed. Both runners play the original file.
+  let audio: MainProps['audio'] = null;
+  const bed = db.getProjectAudio(projectId);
+  if (bed) {
+    const asset = db.getMediaAsset(bed.assetId);
+    if (asset) {
+      audio = { src: `${serverBase}/media/${asset.originalPath}`, volume: bed.volume, ...(bed.inS > 0 ? { startFrom: Math.round(bed.inS * compositionConfig.fps) } : {}) };
+    }
   }
 
   const elements = rows.map((e) => {
@@ -80,7 +99,7 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase, run
     durationInFrames: t.durationInFrames,
   }));
 
-  return { background: '#000000', media, elements, transitions, fonts };
+  return { background: '#000000', media, audio, elements, transitions, fonts };
 }
 
 /**

@@ -78,7 +78,11 @@ export type RenderRow = {
 
 export type RenderPatch = Partial<Pick<RenderRow, 'status' | 'progress' | 'outputPath' | 'error'>>;
 
+export type MediaAssetKind = 'video' | 'audio';
+
 export type MediaAssetInput = {
+  /** M20: 'video' (default) or 'audio'. Audio has no proxy or poster; width, height and fps are 0. */
+  kind?: MediaAssetKind;
   originalName: string;
   /** Paths relative to the media directory. */
   originalPath: string;
@@ -90,7 +94,10 @@ export type MediaAssetInput = {
   fps: number;
 };
 
-export type MediaAssetRow = MediaAssetInput & { id: number; createdAt: string };
+export type MediaAssetRow = Omit<MediaAssetInput, 'kind'> & { id: number; kind: MediaAssetKind; createdAt: string };
+
+/** M20: a project's music bed. */
+export type ProjectAudio = { assetId: number; volume: number; inS: number };
 
 export type Db = Database.Database & {
   insertRender(projectId: number): { id: number };
@@ -100,6 +107,9 @@ export type Db = Database.Database & {
   insertMediaAsset(a: MediaAssetInput): { id: number };
   getMediaAsset(id: number): MediaAssetRow | undefined;
   listMediaAssets(): MediaAssetRow[];
+  getProjectAudio(projectId: number): ProjectAudio | null;
+  /** null clears the music bed. */
+  setProjectAudio(projectId: number, audio: ProjectAudio | null): void;
   upsertTemplate(t: TemplateInput): { id: number };
   listTemplates(): TemplateRow[];
   getTemplateBySlug(slug: string): TemplateRow | undefined;
@@ -197,8 +207,16 @@ CREATE TABLE IF NOT EXISTS render (
   updated_at   TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS project_audio (
+  project_id  INTEGER PRIMARY KEY REFERENCES project(id) ON DELETE CASCADE,
+  asset_id    INTEGER NOT NULL REFERENCES media_asset(id),
+  volume      REAL    NOT NULL DEFAULT 1,
+  in_s        REAL    NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS media_asset (
   id             INTEGER PRIMARY KEY,
+  kind           TEXT    NOT NULL DEFAULT 'video',
   original_name  TEXT    NOT NULL,
   original_path  TEXT    NOT NULL,
   proxy_path     TEXT    NOT NULL,
@@ -225,6 +243,9 @@ export function openDb(file: string): Db {
   // M17: elements gained a display name. Add the column to databases created before it.
   const elementColumns = (db.prepare(`PRAGMA table_info(template_element)`).all() as { name: string }[]).map((c) => c.name);
   if (!elementColumns.includes('name')) db.exec(`ALTER TABLE template_element ADD COLUMN name TEXT NOT NULL DEFAULT ''`);
+  // M20: media assets gained a kind (video or audio).
+  const mediaColumns = (db.prepare(`PRAGMA table_info(media_asset)`).all() as { name: string }[]).map((c) => c.name);
+  if (!mediaColumns.includes('kind')) db.exec(`ALTER TABLE media_asset ADD COLUMN kind TEXT NOT NULL DEFAULT 'video'`);
 
   const seed = db.prepare(`INSERT OR IGNORE INTO ad_type (name, sort) VALUES (?, ?)`);
   AD_TYPES.forEach((name, i) => seed.run(name, i + 1));
@@ -253,7 +274,28 @@ export function openDb(file: string): Db {
     insertMediaAsset: (a: MediaAssetInput) => insertMediaAsset(db, a),
     getMediaAsset: (id: number) => getMediaAsset(db, id),
     listMediaAssets: () => listMediaAssets(db),
+    getProjectAudio: (projectId: number) => getProjectAudio(db, projectId),
+    setProjectAudio: (projectId: number, audio: ProjectAudio | null) => setProjectAudio(db, projectId, audio),
   });
+}
+
+// ---- music bed (M20) ---------------------------------------------------
+
+function getProjectAudio(db: Database.Database, projectId: number): ProjectAudio | null {
+  const row = db.prepare(`SELECT asset_id AS assetId, volume, in_s AS inS FROM project_audio WHERE project_id = ?`).get(projectId) as ProjectAudio | undefined;
+  return row ?? null;
+}
+
+function setProjectAudio(db: Database.Database, projectId: number, audio: ProjectAudio | null): void {
+  if (!audio) {
+    db.prepare(`DELETE FROM project_audio WHERE project_id = ?`).run(projectId);
+  } else {
+    db.prepare(
+      `INSERT INTO project_audio (project_id, asset_id, volume, in_s) VALUES (?, ?, ?, ?)
+       ON CONFLICT(project_id) DO UPDATE SET asset_id = excluded.asset_id, volume = excluded.volume, in_s = excluded.in_s`,
+    ).run(projectId, audio.assetId, audio.volume, audio.inS);
+  }
+  db.prepare(`UPDATE project SET updated_at = datetime('now') WHERE id = ?`).run(projectId);
 }
 
 // ---- project timeline --------------------------------------------------
@@ -367,17 +409,17 @@ function listRenders(db: Database.Database, projectId?: number): RenderRow[] {
 // ---- media -------------------------------------------------------------
 
 const MEDIA_SELECT = `
-  SELECT id, original_name AS originalName, original_path AS originalPath, proxy_path AS proxyPath,
+  SELECT id, kind, original_name AS originalName, original_path AS originalPath, proxy_path AS proxyPath,
          thumb_path AS thumbPath, width, height, duration_s AS durationS, fps, created_at AS createdAt
   FROM media_asset`;
 
 function insertMediaAsset(db: Database.Database, a: MediaAssetInput): { id: number } {
   const info = db
     .prepare(
-      `INSERT INTO media_asset (original_name, original_path, proxy_path, thumb_path, width, height, duration_s, fps)
-       VALUES (@originalName, @originalPath, @proxyPath, @thumbPath, @width, @height, @durationS, @fps)`,
+      `INSERT INTO media_asset (kind, original_name, original_path, proxy_path, thumb_path, width, height, duration_s, fps)
+       VALUES (@kind, @originalName, @originalPath, @proxyPath, @thumbPath, @width, @height, @durationS, @fps)`,
     )
-    .run(a);
+    .run({ ...a, kind: a.kind ?? 'video' });
   return { id: Number(info.lastInsertRowid) };
 }
 

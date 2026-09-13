@@ -14,10 +14,33 @@ export type Rect = { x: number; y: number; w: number; h: number };
 export type MediaProps = { src: string; rect: Rect; fit: Fit };
 
 /** What is stored in project_value for a cc.mediaFill param. */
-export type MediaValue = { assetId: number; fit: Fit; key?: ChromaKey | null };
+export type MediaValue = {
+  assetId: number;
+  fit: Fit;
+  key?: ChromaKey | null;
+  /** M20 trim: seconds into the clip to start from. */
+  inS?: number;
+  /** M20 trim: seconds into the clip to stop at. */
+  outS?: number;
+  /** M20: silence the clip's own sound. */
+  muted?: boolean;
+};
 
 export function isMediaValue(v: unknown): v is MediaValue {
   return !!v && typeof v === 'object' && typeof (v as MediaValue).assetId === 'number';
+}
+
+/**
+ * Trim seconds -> the composition's clip frames. The one place that does
+ * this, so both runners agree. Empty, zero, negative or backwards values
+ * are ignored rather than producing a broken clip.
+ */
+export function mediaTiming(value: { inS?: number; outS?: number }, fps: number): { startFrom?: number; endAt?: number } {
+  const out: { startFrom?: number; endAt?: number } = {};
+  const inS = typeof value.inS === 'number' && Number.isFinite(value.inS) && value.inS > 0 ? value.inS : 0;
+  if (inS > 0) out.startFrom = Math.round(inS * fps);
+  if (typeof value.outS === 'number' && Number.isFinite(value.outS) && value.outS > inS) out.endAt = Math.round(value.outS * fps);
+  return out;
 }
 
 /**

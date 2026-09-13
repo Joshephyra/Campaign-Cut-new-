@@ -63,6 +63,22 @@ export type MainMedia = {
   fit: 'cover' | 'contain';
   /** Chroma key applied to the footage, or none. Same filter in both runners. */
   key?: ChromaKey | null;
+  /** M20 trim: first frame of the clip to play, in the clip's frames. See mediaTiming(). */
+  startFrom?: number;
+  /** M20 trim: stop the clip at this frame of the clip. */
+  endAt?: number;
+  /** M20: silence the clip's own sound. */
+  muted?: boolean;
+};
+
+/** M20: the project's music bed. */
+export type MainAudio = {
+  /** Original file URL; both runners play the same file. */
+  src: string;
+  /** 0..1 */
+  volume: number;
+  /** Frame of the track to start at. */
+  startFrom?: number;
 };
 
 export type MainProps = {
@@ -70,6 +86,8 @@ export type MainProps = {
   background: string;
   /** User footage shown through the cc.mediaFill slot, or null. */
   media: MainMedia | null;
+  /** The music bed, or none. */
+  audio?: MainAudio | null;
   /** The timeline: every element with its Lottie and in/out points. */
   elements: ElementProps[];
   /** Transitions per element boundary. Absent or empty means every boundary is a cut. */

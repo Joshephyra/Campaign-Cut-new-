@@ -396,6 +396,29 @@ AT-2 is Germain's call: does the app's render hold up against the After Effects 
 
 ---
 
+## M20 · Footage trim and audio · DONE
+
+Ads have sound, and a staffer's clip is rarely the right length. Both go through the same composition so the export carries exactly what the preview played.
+
+**Build**
+- Footage value gains `inS`, `outS` and `muted`. The composition plays the clip from `inS`, stops it at `outS`, and mutes its own sound when asked; `mediaTiming` turns seconds into frames in one place for both runners.
+- A music bed per project: upload an audio file (mp3, wav, m4a, aac, ogg, flac) through the same upload; it is probed, stored as a media asset of kind `audio` (no proxy, no poster), and both runners use the original. `project_audio` holds the chosen track, its volume and where in the track to start. The composition renders it with Remotion's `Audio`.
+- API: `GET /projects/:id` carries `audio`; `PUT /projects/:id/audio` sets or clears it. Media assets carry `kind`.
+- Inspector: under the footage control, Start and End in seconds and a "Mute footage sound" tick. A new Audio panel: pick a track, volume, start offset, or none. The Footage panel accepts audio uploads and lists them.
+- Export: the MP4 carries the mixed sound because the composition does.
+
+**Tests**
+- `mediaTiming`: seconds to frames, ignores empty or backwards values.
+- The composition hands OffthreadVideo `startFrom`, `endAt` and `muted`, and renders `Audio` with the track, volume and start.
+- Upload of an ffmpeg-made wav becomes an asset of kind `audio` with its duration and no proxy; a video upload stays kind `video`; junk is still rejected.
+- `project_audio` round trip through the API, validation of asset kind, clearing.
+- The export runner carries trim frames on the footage and the audio track at an absolute URL.
+- Inspector trim fields and mute report the right value shape; the Audio panel reports track, volume and start; the editor hands the Player an `audio` prop and saves it.
+
+**Done when:** a trimmed clip starts where the user set it in both preview and export, and a music bed is audible in the exported MP4 (ffprobe shows the audio stream; a human listens).
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

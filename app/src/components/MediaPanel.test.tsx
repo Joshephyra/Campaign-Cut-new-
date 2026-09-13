@@ -10,6 +10,7 @@ afterEach(() => {
 const assets = [
   {
     id: 1,
+    kind: 'video' as const,
     originalName: 'rally.mp4',
     originalUrl: '/media/originals/1-rally.mp4',
     proxyUrl: '/media/proxies/1.mp4',

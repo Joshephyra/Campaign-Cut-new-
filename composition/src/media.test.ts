@@ -1,3 +1,4 @@
+import { mediaTiming } from './media';
 import { describe, expect, it } from 'vitest';
 import { applyLottieValues } from './applyLottieValues';
 import type { LottieAnimationData } from './config';
@@ -111,5 +112,18 @@ describe('resolveLottieAssets', () => {
   it('returns the same object when there are no assets', () => {
     const lottie = base([]);
     expect(resolveLottieAssets(lottie, '/x')).toBe(lottie);
+  });
+});
+
+describe('mediaTiming (M20)', () => {
+  it('turns in and out seconds into frames for the composition', () => {
+    expect(mediaTiming({ inS: 1.5, outS: 4 }, 30)).toEqual({ startFrom: 45, endAt: 120 });
+    expect(mediaTiming({ inS: 2 }, 25)).toEqual({ startFrom: 50 });
+  });
+  it('ignores empty, zero, negative and backwards values', () => {
+    expect(mediaTiming({}, 30)).toEqual({});
+    expect(mediaTiming({ inS: 0, outS: 0 }, 30)).toEqual({});
+    expect(mediaTiming({ inS: -3 }, 30)).toEqual({});
+    expect(mediaTiming({ inS: 5, outS: 2 }, 30)).toEqual({ startFrom: 150 });
   });
 });

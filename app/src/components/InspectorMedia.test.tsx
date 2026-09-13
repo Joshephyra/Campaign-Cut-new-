@@ -14,7 +14,7 @@ const schema: TemplateParam[] = [
 ];
 
 const assets = [
-  { id: 4, originalName: 'rally.mp4', originalUrl: '/media/originals/4.mp4', proxyUrl: '/media/proxies/4.mp4', thumbUrl: '/media/thumbs/4.jpg', width: 1920, height: 1080, durationS: 5, fps: 30 },
+  { id: 4, kind: 'video' as const, originalName: 'rally.mp4', originalUrl: '/media/originals/4.mp4', proxyUrl: '/media/proxies/4.mp4', thumbUrl: '/media/thumbs/4.jpg', width: 1920, height: 1080, durationS: 5, fps: 30 },
 ];
 
 describe('Inspector: image and media params', () => {

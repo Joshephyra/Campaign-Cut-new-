@@ -11,6 +11,7 @@ import {
   Main,
   mediaFillRect,
   mediaSourceFor,
+  mediaTiming,
   resolveLottieAssets,
   withBaseUrl,
   type ElementProps,
@@ -22,7 +23,8 @@ import {
 } from '@campaigncut/composition';
 import { Player, type PlayerRef } from '@remotion/player';
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import { API, api, type MediaAsset, type ProjectDetail, type ProjectElement, type ProjectTransition } from '../api';
+import { API, api, type MediaAsset, type ProjectAudio, type ProjectDetail, type ProjectElement, type ProjectTransition } from '../api';
+import { AudioPanel } from '../components/AudioPanel';
 import { ExportPanel } from '../components/ExportPanel';
 import { Inspector } from '../components/Inspector';
 import { MediaPanel } from '../components/MediaPanel';
@@ -63,6 +65,7 @@ export function Editor({ projectId, onBack }: Props) {
   const [values, setValues] = useState<ValuesByElement>({});
   const [elements, setElements] = useState<ProjectElement[]>([]);
   const [transitions, setTransitions] = useState<ProjectTransition[]>([]);
+  const [audio, setAudio] = useState<ProjectAudio | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [assets, setAssets] = useState<MediaAsset[]>([]);
@@ -82,6 +85,7 @@ export function Editor({ projectId, onBack }: Props) {
         setValues(initial);
         setElements(detail.elements.map((e) => ({ ...e, enabled: e.enabled ?? true })));
         setTransitions(detail.transitions ?? []);
+        setAudio(detail.audio ?? null);
         setSelectedId(inStartOrder(detail.elements)[0]?.id ?? null);
         setLoaded({ detail, lotties });
       })
@@ -169,6 +173,18 @@ export function Editor({ projectId, onBack }: Props) {
     }
   };
 
+  /** M20: the music bed. Saved immediately; null clears it. */
+  const onAudioChange = async (next: ProjectAudio | null) => {
+    setAudio(next);
+    setSaveState('saving');
+    try {
+      await api.saveAudio(projectId, next);
+      setSaveState('saved');
+    } catch {
+      setSaveState('error');
+    }
+  };
+
   const selected = elements.find((e) => e.id === selectedId) ?? inStartOrder(elements)[0];
   const setSelectedValues = (next: ParamValues) => {
     if (!selected) return;
@@ -192,6 +208,11 @@ export function Editor({ projectId, onBack }: Props) {
   const mediaElement = mediaElementOf(elements);
   const mediaParam = mediaElement?.schema.find((p) => p.kind === 'media');
   const selectFootage = (asset: MediaAsset) => {
+    // M20: an audio row in the Footage panel picks the music bed, not the slot.
+    if (asset.kind === 'audio') {
+      void onAudioChange({ assetId: asset.id, volume: audio?.volume ?? 1, inS: audio?.inS ?? 0 });
+      return;
+    }
     if (!mediaElement || !mediaParam) return;
     const current = values[mediaElement.id]?.[mediaParam.key];
     setValues({
@@ -230,6 +251,7 @@ export function Editor({ projectId, onBack }: Props) {
             values={values}
             elements={elements}
             transitions={transitions}
+            audio={audio}
             assets={assets}
             selectedId={selected?.id}
             onSelect={setSelectedId}
@@ -272,8 +294,11 @@ export function Editor({ projectId, onBack }: Props) {
                 />
               )}
             </div>
-            <div className="p-6">
+            <div className="p-6 border-b border-hairline">
               <MediaPanel onSelect={selectFootage} selectedId={selectedAssetId} onChange={setAssets} />
+            </div>
+            <div className="p-6">
+              <AudioPanel assets={assets} audio={audio} onChange={onAudioChange} />
             </div>
           </aside>
         </div>
@@ -310,6 +335,7 @@ function Monitor({
   values,
   elements,
   transitions,
+  audio,
   assets,
   selectedId,
   onSelect,
@@ -322,6 +348,8 @@ function Monitor({
   values: ValuesByElement;
   elements: ProjectElement[];
   transitions: ProjectTransition[];
+  /** M20: the music bed, or null. */
+  audio: ProjectAudio | null;
   assets: MediaAsset[];
   selectedId: number | undefined;
   onSelect: (id: number) => void;
@@ -381,10 +409,25 @@ function Monitor({
       const source = lotties[e.id];
       const rect = source ? mediaFillRect(source, mediaParam.path) : null;
       if (!asset || !rect) continue;
-      return { src: api.fileUrl(mediaSourceFor(asset, 'preview')), rect, fit: v.fit, key: isChromaKey(v.key) ? v.key : null };
+      return {
+        src: api.fileUrl(mediaSourceFor(asset, 'preview')),
+        rect,
+        fit: v.fit,
+        key: isChromaKey(v.key) ? v.key : null,
+        ...mediaTiming(v, compositionConfig.fps),
+        muted: v.muted === true,
+      };
     }
     return null;
   }, [elements, renderedValues, assets, lotties]);
+
+  // M20: the music bed. Both runners play the original file; the server does the same with its absolute base.
+  const audioProps = useMemo<MainProps['audio']>(() => {
+    if (!audio) return null;
+    const asset = assets.find((a) => a.id === audio.assetId);
+    if (!asset) return null;
+    return { src: api.fileUrl(asset.originalUrl), volume: audio.volume, ...(audio.inS > 0 ? { startFrom: Math.round(audio.inS * compositionConfig.fps) } : {}) };
+  }, [audio, assets]);
 
   const transitionProps = useMemo<TransitionProps[]>(
     () => transitions.map((t) => ({ afterElementId: String(t.afterElementId), preset: t.preset, durationInFrames: t.durationInFrames })),
@@ -392,8 +435,8 @@ function Monitor({
   );
   const fonts = useMemo(() => fontsFor(detail.meta?.fontFiles, slug, API), [detail.meta, slug]);
   const inputProps = useMemo<MainProps>(
-    () => ({ background: BACKGROUND, media, elements: elementProps, transitions: transitionProps, fonts }),
-    [media, elementProps, transitionProps, fonts],
+    () => ({ background: BACKGROUND, media, audio: audioProps, elements: elementProps, transitions: transitionProps, fonts }),
+    [media, audioProps, elementProps, transitionProps, fonts],
   );
   const durationInFrames = compositionDurationWithTransitions(elementProps, transitionProps);
 

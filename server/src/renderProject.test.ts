@@ -59,6 +59,7 @@ describe('buildProjectProps (server-side runner)', () => {
       rect: { x: 0.5, y: 0, w: 0.5, h: 1 },
       fit: 'contain',
       key: null,
+      muted: false,
     });
     const lottie = props.elements[0]!.lottie;
     const asset = (lottie.assets as { p: string }[])[0]!;

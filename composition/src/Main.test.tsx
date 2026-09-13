@@ -8,8 +8,11 @@ vi.mock('remotion', async (importOriginal) => {
   const actual = await importOriginal<typeof import('remotion')>();
   return {
     ...actual,
-    OffthreadVideo: (props: { src: string; style?: React.CSSProperties }) => (
-      <video data-testid="video" src={props.src} style={props.style} />
+    OffthreadVideo: (props: { src: string; style?: React.CSSProperties; startFrom?: number; endAt?: number; muted?: boolean }) => (
+      <video data-testid="video" src={props.src} style={props.style} data-start-from={props.startFrom} data-end-at={props.endAt} data-muted={props.muted} />
+    ),
+    Audio: (props: { src: string; volume?: number; startFrom?: number }) => (
+      <audio data-testid="audio" src={props.src} data-volume={props.volume} data-start-from={props.startFrom} />
     ),
     // Sequence needs a registered composition; timing is covered by elements.render.test.ts.
     Sequence: (props: { children?: React.ReactNode }) => <>{props.children}</>,
@@ -50,5 +53,26 @@ describe('Main with footage', () => {
   it('renders no video when there is no footage', () => {
     render(<Main background="#000" elements={[{ id: 'e', lottie: EMPTY_LOTTIE, startFrame: 0, endFrame: 1, zIndex: 0, enabled: true }]} media={null} />);
     expect(screen.queryByTestId('video')).toBeNull();
+  });
+});
+
+describe('Main footage trim and audio (M20)', () => {
+  const elements = [{ id: 'e', lottie: EMPTY_LOTTIE, startFrame: 0, endFrame: 1, zIndex: 0, enabled: true }];
+  it('hands the video its start, end and mute', () => {
+    render(<Main background="#000" elements={elements} media={{ src: 'x.mp4', rect, fit: 'cover', startFrom: 45, endAt: 120, muted: true }} />);
+    const video = screen.getByTestId('video');
+    expect(video.getAttribute('data-start-from')).toBe('45');
+    expect(video.getAttribute('data-end-at')).toBe('120');
+    expect(video.getAttribute('data-muted')).toBe('true');
+  });
+  it('renders the music bed with its source, volume and start, and nothing without one', () => {
+    render(<Main background="#000" elements={elements} media={null} audio={{ src: 'http://x/media/originals/bed.mp3', volume: 0.4, startFrom: 30 }} />);
+    const audio = screen.getByTestId('audio');
+    expect(audio.getAttribute('src')).toBe('http://x/media/originals/bed.mp3');
+    expect(audio.getAttribute('data-volume')).toBe('0.4');
+    expect(audio.getAttribute('data-start-from')).toBe('30');
+    cleanup();
+    render(<Main background="#000" elements={elements} media={null} audio={null} />);
+    expect(screen.queryByTestId('audio')).toBeNull();
   });
 });

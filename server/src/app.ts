@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { openDb, type Db, type MediaAssetRow } from './db/index';
-import { makePoster, makeProxy, probe } from './media/ffmpeg';
+import { makePoster, makeProxy, probe, probeAudio } from './media/ffmpeg';
 import { paths } from './paths';
 import { renderComposition } from './render';
 import { RenderQueue, type RenderFn } from './renderQueue';
@@ -39,6 +39,8 @@ function readJson<T>(file: string): T | undefined {
 }
 
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.mov', '.m4v', '.webm', '.mkv', '.avi', '.mxf', '.mts', '.m2ts']);
+/** M20: music beds. */
+const AUDIO_EXTENSIONS = new Set(['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac', '.aif', '.aiff']);
 
 /** Builds the Fastify app without listening, so tests can inject requests. */
 export function buildApp(options: AppOptions = {}) {
@@ -147,6 +149,7 @@ export function buildApp(options: AppOptions = {}) {
       meta: readJson(path.join(dir, 'meta.json')) ?? null,
       elements: db.getProjectElements(project.id).map((e) => withElementFiles(t.slug, e)),
       transitions: db.getProjectTransitions(project.id),
+      audio: db.getProjectAudio(project.id),
       values,
     };
   });
@@ -214,6 +217,27 @@ export function buildApp(options: AppOptions = {}) {
     },
   );
 
+  /** M20: set or clear the project's music bed. { assetId: null } clears it. */
+  app.put<{ Params: { id: string }; Body: { assetId?: number | null; volume?: number; inS?: number } }>('/projects/:id/audio', async (req, reply) => {
+    const id = Number(req.params.id);
+    if (!db.getProject(id)) return reply.code(404).send({ error: `No project ${id}` });
+    const body = req.body ?? {};
+    if (body.assetId === null || body.assetId === undefined) {
+      db.setProjectAudio(id, null);
+      return reply.send(null);
+    }
+    const asset = db.getMediaAsset(Number(body.assetId));
+    if (!asset) return reply.code(404).send({ error: `No media asset ${String(body.assetId)}` });
+    if (asset.kind !== 'audio') return reply.code(400).send({ error: `${asset.originalName} is footage, not an audio track` });
+    const volume = body.volume === undefined ? 1 : Number(body.volume);
+    const inS = body.inS === undefined ? 0 : Number(body.inS);
+    if (!Number.isFinite(volume) || volume < 0 || volume > 1) return reply.code(400).send({ error: 'volume must be between 0 and 1' });
+    if (!Number.isFinite(inS) || inS < 0) return reply.code(400).send({ error: 'inS must be zero or more seconds' });
+    const audio = { assetId: asset.id, volume, inS };
+    db.setProjectAudio(id, audio);
+    return audio;
+  });
+
   // ---- media -----------------------------------------------------------
 
   for (const sub of ['originals', 'proxies', 'thumbs']) fs.mkdirSync(path.join(mediaDir, sub), { recursive: true });
@@ -221,10 +245,11 @@ export function buildApp(options: AppOptions = {}) {
 
   const assetJson = (a: MediaAssetRow) => ({
     id: a.id,
+    kind: a.kind,
     originalName: a.originalName,
     originalUrl: `/media/${a.originalPath}`,
     proxyUrl: `/media/${a.proxyPath}`,
-    thumbUrl: `/media/${a.thumbPath}`,
+    thumbUrl: a.thumbPath ? `/media/${a.thumbPath}` : null,
     width: a.width,
     height: a.height,
     durationS: a.durationS,
@@ -250,13 +275,15 @@ export function buildApp(options: AppOptions = {}) {
     if (!part) return reply.code(400).send({ error: 'Send one file in a multipart field named "file"' });
 
     const ext = path.extname(part.filename).toLowerCase();
-    if (!part.mimetype.startsWith('video/') && !VIDEO_EXTENSIONS.has(ext)) {
+    const isVideo = part.mimetype.startsWith('video/') || VIDEO_EXTENSIONS.has(ext);
+    const isAudio = !isVideo && (part.mimetype.startsWith('audio/') || AUDIO_EXTENSIONS.has(ext));
+    if (!isVideo && !isAudio) {
       part.file.resume();
-      return reply.code(400).send({ error: `${part.filename} is not a video file` });
+      return reply.code(400).send({ error: `${part.filename} is not a video or audio file` });
     }
 
     const stem = `${Date.now()}-${part.filename.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]+/g, '-').slice(0, 60) || 'clip'}`;
-    const originalPath = `originals/${stem}${ext || '.mp4'}`;
+    const originalPath = `originals/${stem}${ext || (isAudio ? '.mp3' : '.mp4')}`;
     const proxyPath = `proxies/${stem}.mp4`;
     const thumbPath = `thumbs/${stem}.jpg`;
     const originalFile = path.join(mediaDir, originalPath);
@@ -268,6 +295,22 @@ export function buildApp(options: AppOptions = {}) {
     }
 
     try {
+      if (isAudio) {
+        // M20: a music bed. No proxy, no poster; both runners play the original.
+        const info = await probeAudio(originalFile);
+        const { id } = db.insertMediaAsset({
+          kind: 'audio',
+          originalName: part.filename,
+          originalPath,
+          proxyPath: originalPath,
+          thumbPath: '',
+          width: 0,
+          height: 0,
+          durationS: info.durationS,
+          fps: 0,
+        });
+        return reply.code(201).send(assetJson(db.getMediaAsset(id)!));
+      }
       const info = await probe(originalFile);
       await makeProxy(originalFile, path.join(mediaDir, proxyPath));
       await makePoster(originalFile, path.join(mediaDir, thumbPath), Math.min(1, info.durationS / 2));

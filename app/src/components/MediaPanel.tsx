@@ -55,7 +55,7 @@ export function MediaPanel({ onSelect, selectedId, onChange }: Props) {
           <input
             ref={fileInput}
             type="file"
-            accept="video/*,.mp4,.mov,.m4v,.webm,.mxf"
+            accept="video/*,audio/*,.mp4,.mov,.m4v,.webm,.mxf,.mp3,.wav,.m4a,.aac,.ogg,.flac"
             className="sr-only"
             data-testid="media-file-input"
             onChange={(e) => void onFile(e.target.files?.[0])}
@@ -78,15 +78,30 @@ export function MediaPanel({ onSelect, selectedId, onChange }: Props) {
                 onClick={() => onSelect?.(a)}
                 className={`w-full text-left flex gap-3 p-2 hover:bg-panel focus:outline-none ${selected ? 'border-l-2 border-cobalt' : ''}`}
               >
-                <img src={api.fileUrl(a.thumbUrl)} alt="" className="w-20 aspect-video object-cover bg-black block shrink-0" />
+                {a.thumbUrl ? (
+                  <img src={api.fileUrl(a.thumbUrl)} alt="" className="w-20 aspect-video object-cover bg-black block shrink-0" />
+                ) : (
+                  <div aria-hidden="true" className="w-20 aspect-video bg-panel border border-hairline shrink-0 flex items-center justify-center font-mono text-xs text-muted">
+                    ♪
+                  </div>
+                )}
                 <div className="min-w-0">
                   <div className="text-xs truncate">{a.originalName}</div>
                   <div className="font-mono text-[10px] text-muted mt-1 flex gap-2">
-                    <span>{formatTimecode(Math.round(a.durationS * a.fps), fps)}</span>
-                    <span>
-                      {a.width}×{a.height}
-                    </span>
-                    <span>{Math.round(a.fps * 100) / 100} fps</span>
+                    {a.kind === 'audio' ? (
+                      <>
+                        <span>{a.durationS.toFixed(1)} s</span>
+                        <span>audio</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>{formatTimecode(Math.round(a.durationS * a.fps), fps)}</span>
+                        <span>
+                          {a.width}×{a.height}
+                        </span>
+                        <span>{Math.round(a.fps * 100) / 100} fps</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </button>

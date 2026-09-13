@@ -2,7 +2,7 @@ import { linearTiming, TransitionSeries, type TransitionPresentation } from '@re
 import { fade } from '@remotion/transitions/fade';
 import { slide } from '@remotion/transitions/slide';
 import { wipe } from '@remotion/transitions/wipe';
-import { AbsoluteFill, OffthreadVideo, Sequence } from 'remotion';
+import { AbsoluteFill, Audio, OffthreadVideo, Sequence } from 'remotion';
 import { chromaFilter } from './chroma';
 import { PREMOUNT_FRAMES, type MainProps } from './config';
 import type { ElementProps } from './elements';
@@ -37,7 +37,7 @@ function presentationFor(preset: TransitionPreset): AnyPresentation {
  * either one element in a Sequence at its in/out points, or several
  * elements joined by transitions, rendered with TransitionSeries.
  */
-export function Main({ background, media, elements, transitions = [], fonts = [] }: MainProps) {
+export function Main({ background, media, audio = null, elements, transitions = [], fonts = [] }: MainProps) {
   const byId = new Map(elements.map((e) => [e.id, e] as const));
   const { chains } = effectiveTimeline(elements, transitions);
   const key = media?.key ? chromaFilter(media.key) : null;
@@ -45,6 +45,7 @@ export function Main({ background, media, elements, transitions = [], fonts = []
   return (
     <AbsoluteFill style={{ backgroundColor: background }}>
       <TemplateFonts key={fonts.map((f) => f.url).join('|')} fonts={fonts} />
+      {audio && <Audio src={audio.src} volume={audio.volume} startFrom={audio.startFrom} />}
       {media && (
         <div
           data-testid="media-slot"
@@ -71,7 +72,13 @@ export function Main({ background, media, elements, transitions = [], fonts = []
             </svg>
           )}
           <div data-testid="media-key" style={{ width: '100%', height: '100%', filter: key ? `url(#${key.id})` : undefined }}>
-            <OffthreadVideo src={media.src} style={{ width: '100%', height: '100%', objectFit: media.fit }} />
+            <OffthreadVideo
+              src={media.src}
+              style={{ width: '100%', height: '100%', objectFit: media.fit }}
+              startFrom={media.startFrom}
+              endAt={media.endAt}
+              muted={media.muted ?? false}
+            />
           </div>
         </div>
       )}
