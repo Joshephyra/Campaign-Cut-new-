@@ -419,6 +419,26 @@ Ads have sound, and a staffer's clip is rarely the right length. Both go through
 
 ---
 
+## M21 · Footage per element · DONE
+
+Since M17 a template has several elements, but footage was still one slot per project, taken from the first element that had one. A real spot has different footage under the open, the middle and the end card. Josh said keep going; this is the limit STATUS has flagged twice.
+
+**Build**
+- The footage slot moves from the composition's props to each element: `ElementProps.media`. The composition renders an element's footage inside that element's own Sequence, under its Lottie, so it starts and stops with the element and its trim is relative to the element's in point. Chains with transitions carry it the same way.
+- The export runner builds each element's footage from that element's own `cc.mediaFill` value. No more "first element wins".
+- The editor: the Footage panel's "use this clip" goes to the selected element when it has a slot, else to the first element that does; each element's inspector shows its own clip, trim, fit and key.
+- Nothing changes in the database: footage values were already stored per element.
+
+**Tests**
+- The composition renders one video per element that has footage, each in its own slot rectangle, and none for elements without.
+- The export runner gives each element its own clip and leaves the others empty; preview and export differ only in proxy versus original.
+- Editor: choosing a clip with the end card selected puts it on the end card, not the open.
+- Existing render, parity and fidelity checks keep passing with the prop moved.
+
+**Done when:** the three-part project plays the green-screen clip under the open and the test pattern under the end card, in preview and in the export (parity script).
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

@@ -1,6 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EMPTY_LOTTIE } from './config';
+import type { ElementProps } from './elements';
 import { Main } from './Main';
 
 vi.mock('@remotion/lottie', () => ({ Lottie: () => <div data-testid="lottie-stub" /> }));
@@ -23,21 +24,23 @@ afterEach(cleanup);
 
 const rect = { x: 0.5, y: 0, w: 0.5, h: 1 };
 
+const element = (id: string, media: ElementProps['media']): ElementProps => ({ id, lottie: EMPTY_LOTTIE, startFrame: 0, endFrame: 1, zIndex: 0, enabled: true, media });
+
 // THE two-runners test: the same component, two props. Nothing inside
-// Main may know which runner it is in.
+// Main may know which runner it is in. Since M21 footage belongs to an element.
 describe('Main with footage', () => {
   it('renders the proxy when handed proxy props', () => {
-    render(<Main background="#000" elements={[{ id: 'e', lottie: EMPTY_LOTTIE, startFrame: 0, endFrame: 1, zIndex: 0, enabled: true }]} media={{ src: '/media/proxies/1.mp4', rect, fit: 'cover' }} />);
+    render(<Main background="#000" elements={[element('e', { src: '/media/proxies/1.mp4', rect, fit: 'cover' })]} />);
     expect(screen.getByTestId('video').getAttribute('src')).toBe('/media/proxies/1.mp4');
   });
 
   it('renders the original when handed original props', () => {
-    render(<Main background="#000" elements={[{ id: 'e', lottie: EMPTY_LOTTIE, startFrame: 0, endFrame: 1, zIndex: 0, enabled: true }]} media={{ src: 'http://127.0.0.1:3001/media/originals/1.mp4', rect, fit: 'cover' }} />);
+    render(<Main background="#000" elements={[element('e', { src: 'http://127.0.0.1:3001/media/originals/1.mp4', rect, fit: 'cover' })]} />);
     expect(screen.getByTestId('video').getAttribute('src')).toBe('http://127.0.0.1:3001/media/originals/1.mp4');
   });
 
-  it('places the footage in the slot rectangle as fractions of the frame, under the Lottie', () => {
-    render(<Main background="#000" elements={[{ id: 'e', lottie: EMPTY_LOTTIE, startFrame: 0, endFrame: 1, zIndex: 0, enabled: true }]} media={{ src: 'x.mp4', rect, fit: 'contain' }} />);
+  it('places the footage in the slot rectangle as fractions of the frame, under the element\'s Lottie', () => {
+    render(<Main background="#000" elements={[element('e', { src: 'x.mp4', rect, fit: 'contain' })]} />);
     const slot = screen.getByTestId('media-slot');
     expect(slot.style.left).toBe('50%');
     expect(slot.style.top).toBe('0%');
@@ -50,29 +53,46 @@ describe('Main with footage', () => {
     expect(video.compareDocumentPosition(lottie) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('renders no video when there is no footage', () => {
-    render(<Main background="#000" elements={[{ id: 'e', lottie: EMPTY_LOTTIE, startFrame: 0, endFrame: 1, zIndex: 0, enabled: true }]} media={null} />);
+  it('renders no video for an element without footage', () => {
+    render(<Main background="#000" elements={[element('e', null)]} />);
     expect(screen.queryByTestId('video')).toBeNull();
+  });
+
+  it('renders one video per element that has footage, each in its own slot (M21)', () => {
+    render(
+      <Main
+        background="#000"
+        elements={[
+          element('open', { src: 'open.mp4', rect: { x: 0, y: 0, w: 0.5, h: 1 }, fit: 'cover' }),
+          element('mid', null),
+          element('end', { src: 'end.mp4', rect: { x: 0.5, y: 0, w: 0.5, h: 1 }, fit: 'contain' }),
+        ]}
+      />,
+    );
+    const videos = screen.getAllByTestId('video');
+    expect(videos.map((v) => v.getAttribute('src'))).toEqual(['open.mp4', 'end.mp4']);
+    const slots = screen.getAllByTestId('media-slot');
+    expect(slots.map((s) => s.style.left)).toEqual(['0%', '50%']);
+    expect(screen.getAllByTestId('lottie-wrapper')).toHaveLength(3);
   });
 });
 
 describe('Main footage trim and audio (M20)', () => {
-  const elements = [{ id: 'e', lottie: EMPTY_LOTTIE, startFrame: 0, endFrame: 1, zIndex: 0, enabled: true }];
   it('hands the video its start, end and mute', () => {
-    render(<Main background="#000" elements={elements} media={{ src: 'x.mp4', rect, fit: 'cover', startFrom: 45, endAt: 120, muted: true }} />);
+    render(<Main background="#000" elements={[element('e', { src: 'x.mp4', rect, fit: 'cover', startFrom: 45, endAt: 120, muted: true })]} />);
     const video = screen.getByTestId('video');
     expect(video.getAttribute('data-start-from')).toBe('45');
     expect(video.getAttribute('data-end-at')).toBe('120');
     expect(video.getAttribute('data-muted')).toBe('true');
   });
   it('renders the music bed with its source, volume and start, and nothing without one', () => {
-    render(<Main background="#000" elements={elements} media={null} audio={{ src: 'http://x/media/originals/bed.mp3', volume: 0.4, startFrom: 30 }} />);
+    render(<Main background="#000" elements={[element('e', null)]} audio={{ src: 'http://x/media/originals/bed.mp3', volume: 0.4, startFrom: 30 }} />);
     const audio = screen.getByTestId('audio');
     expect(audio.getAttribute('src')).toBe('http://x/media/originals/bed.mp3');
     expect(audio.getAttribute('data-volume')).toBe('0.4');
     expect(audio.getAttribute('data-start-from')).toBe('30');
     cleanup();
-    render(<Main background="#000" elements={elements} media={null} audio={null} />);
+    render(<Main background="#000" elements={[element('e', null)]} audio={null} />);
     expect(screen.queryByTestId('audio')).toBeNull();
   });
 });

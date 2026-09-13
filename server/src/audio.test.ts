@@ -134,11 +134,11 @@ describe('audio uploads and the music bed (M20)', () => {
     await app.inject({ method: 'PUT', url: `/projects/${projectId}/audio`, payload: { assetId: a.id, volume: 0.4, inS: 1 } });
 
     const props = buildProjectProps({ db, templatesDir: path.join(tmp, 'templates'), projectId, serverBase: 'http://x' });
-    expect(props.media).toMatchObject({ src: 'http://x/media/originals/v.mp4', startFrom: 45, endAt: 120, muted: true });
+    expect(props.elements[0]!.media).toMatchObject({ src: 'http://x/media/originals/v.mp4', startFrom: 45, endAt: 120, muted: true });
     expect(props.audio).toEqual({ src: `http://x${a.originalUrl}`, volume: 0.4, startFrom: 30 });
 
     const preview = buildProjectProps({ db, templatesDir: path.join(tmp, 'templates'), projectId, serverBase: 'http://x', runner: 'preview' });
-    expect(preview.media).toMatchObject({ src: 'http://x/media/proxies/v.mp4', startFrom: 45 });
+    expect(preview.elements[0]!.media).toMatchObject({ src: 'http://x/media/proxies/v.mp4', startFrom: 45 });
     expect(preview.audio?.src).toBe(`http://x${a.originalUrl}`);
   });
 });

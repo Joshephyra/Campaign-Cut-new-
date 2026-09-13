@@ -59,7 +59,6 @@ async function samples(props: MainProps, frame: number, points: [number, number]
 
 const props = (preset: TransitionPreset): MainProps => ({
   background: '#000000',
-  media: null,
   elements: [
     { id: 'red', lottie: RED, startFrame: 0, endFrame: 60, zIndex: 0, enabled: true },
     { id: 'blue', lottie: BLUE, startFrame: 60, endFrame: 120, zIndex: 1, enabled: true },

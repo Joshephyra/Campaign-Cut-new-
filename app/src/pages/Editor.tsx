@@ -16,6 +16,7 @@ import {
   withBaseUrl,
   type ElementProps,
   type LottieAnimationData,
+  type MainMedia,
   type MainProps,
   type ParamValues,
   type TransitionPreset,
@@ -204,8 +205,11 @@ export function Editor({ projectId, onBack }: Props) {
     });
   };
 
-  /** The Footage panel's "use this clip" hands the asset to the first element with a cc.mediaFill slot. */
-  const mediaElement = mediaElementOf(elements);
+  /**
+   * The Footage panel's "use this clip" goes to the SELECTED element when it
+   * has a cc.mediaFill slot, else to the first element that does (M21).
+   */
+  const mediaElement = selected?.schema.some((p) => p.kind === 'media') ? selected : mediaElementOf(elements);
   const mediaParam = mediaElement?.schema.find((p) => p.kind === 'media');
   const selectFootage = (asset: MediaAsset) => {
     // M20: an audio row in the Footage panel picks the music bed, not the slot.
@@ -387,28 +391,16 @@ function Monitor({
 
   const renderedValues = useDebounced(values, RENDER_DEBOUNCE_MS);
 
-  const elementProps = useMemo<ElementProps[]>(
-    () =>
-      elements.map((e) => {
-        const source = lotties[e.id];
-        const base = `${API}${e.lottieUrl.replace(/\/template\.json$/, '')}`;
-        const resolvedSource = source ? resolveLottieAssets(source, base) : EMPTY_LOTTIE;
-        const resolvedValues = withBaseUrl(renderedValues[e.id] ?? {}, e.schema, API);
-        const lottie = applyLottieValues(resolvedSource, resolvedValues, e.schema);
-        return { id: String(e.id), lottie, startFrame: e.startFrame, endFrame: e.endFrame, zIndex: e.zIndex, enabled: e.enabled };
-      }),
-    [elements, lotties, renderedValues],
-  );
-
-  const media = useMemo<MainProps['media']>(() => {
-    for (const e of inStartOrder(elements)) {
+  /** M21: an element's own footage for its slot, from its own value, at the PREVIEW runner's proxy URL. */
+  const mediaFor = useCallback(
+    (e: ProjectElement): MainMedia | null => {
       const mediaParam = e.schema.find((p) => p.kind === 'media');
       const v = mediaParam ? renderedValues[e.id]?.[mediaParam.key] : null;
-      if (!mediaParam || !isMediaValue(v)) continue;
+      if (!mediaParam || !isMediaValue(v)) return null;
       const asset = assets.find((a) => a.id === v.assetId);
       const source = lotties[e.id];
       const rect = source ? mediaFillRect(source, mediaParam.path) : null;
-      if (!asset || !rect) continue;
+      if (!asset || !rect) return null;
       return {
         src: api.fileUrl(mediaSourceFor(asset, 'preview')),
         rect,
@@ -417,9 +409,23 @@ function Monitor({
         ...mediaTiming(v, compositionConfig.fps),
         muted: v.muted === true,
       };
-    }
-    return null;
-  }, [elements, renderedValues, assets, lotties]);
+    },
+    [renderedValues, assets, lotties],
+  );
+
+  const elementProps = useMemo<ElementProps[]>(
+    () =>
+      elements.map((e) => {
+        const source = lotties[e.id];
+        const base = `${API}${e.lottieUrl.replace(/\/template\.json$/, '')}`;
+        const resolvedSource = source ? resolveLottieAssets(source, base) : EMPTY_LOTTIE;
+        const resolvedValues = withBaseUrl(renderedValues[e.id] ?? {}, e.schema, API);
+        const lottie = applyLottieValues(resolvedSource, resolvedValues, e.schema);
+        return { id: String(e.id), lottie, startFrame: e.startFrame, endFrame: e.endFrame, zIndex: e.zIndex, enabled: e.enabled, media: mediaFor(e) };
+      }),
+    [elements, lotties, renderedValues, mediaFor],
+  );
+  const hasFootage = elementProps.some((e) => e.media);
 
   // M20: the music bed. Both runners play the original file; the server does the same with its absolute base.
   const audioProps = useMemo<MainProps['audio']>(() => {
@@ -435,8 +441,8 @@ function Monitor({
   );
   const fonts = useMemo(() => fontsFor(detail.meta?.fontFiles, slug, API), [detail.meta, slug]);
   const inputProps = useMemo<MainProps>(
-    () => ({ background: BACKGROUND, media, audio: audioProps, elements: elementProps, transitions: transitionProps, fonts }),
-    [media, audioProps, elementProps, transitionProps, fonts],
+    () => ({ background: BACKGROUND, audio: audioProps, elements: elementProps, transitions: transitionProps, fonts }),
+    [audioProps, elementProps, transitionProps, fonts],
   );
   const durationInFrames = compositionDurationWithTransitions(elementProps, transitionProps);
 
@@ -504,7 +510,7 @@ function Monitor({
       </div>
       <p className="font-mono text-xs text-muted mt-3">
         {compositionConfig.width}×{compositionConfig.height} · {compositionConfig.fps} fps · {durationInFrames} frames
-        {media ? ' · footage: proxy' : ''}
+        {hasFootage ? ' · footage: proxy' : ''}
         {perf && (
           <span data-testid="perf-result" className={perf.meetsTarget ? ' text-emerald-400' : ' text-danger'}>
             {' · measured '}{perf.fps.toFixed(1)} fps over {perf.seconds.toFixed(1)} s, {perf.droppedFrames} dropped, worst gap {Math.round(perf.worstGapMs)} ms

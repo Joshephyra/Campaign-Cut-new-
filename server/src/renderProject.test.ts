@@ -54,7 +54,7 @@ describe('buildProjectProps (server-side runner)', () => {
 
   it('resolves footage to the ORIGINAL at an absolute server URL, and the logo likewise', () => {
     const props = buildProjectProps({ db, templatesDir: path.join(tmp, 'templates'), projectId, serverBase: 'http://127.0.0.1:3001' });
-    expect(props.media).toEqual({
+    expect(props.elements[0]!.media).toEqual({
       src: 'http://127.0.0.1:3001/media/originals/1-r.mp4',
       rect: { x: 0.5, y: 0, w: 0.5, h: 1 },
       fit: 'contain',
@@ -74,7 +74,7 @@ describe('buildProjectProps (server-side runner)', () => {
   it('has no media when the project has no footage assigned', () => {
     db.setProjectValues(projectId, [{ elementId, key: 'mediaFill', value: null }]);
     const props = buildProjectProps({ db, templatesDir: path.join(tmp, 'templates'), projectId, serverBase: 'http://x' });
-    expect(props.media).toBeNull();
+    expect(props.elements[0]!.media).toBeNull();
   });
 
   it('throws naming the project when it does not exist', () => {
@@ -142,7 +142,7 @@ describe('buildProjectProps: chroma key travels to the export runner', () => {
       values: [{ elementId, key: 'mediaFill', value: { assetId: asset.id, fit: 'cover', key: { color: 'green', threshold: 0.6, spill: 0.2 } } }],
     }).id;
     const props = buildProjectProps({ db, templatesDir: tmp, projectId, serverBase: 'http://x' });
-    expect(props.media?.key).toEqual({ color: 'green', threshold: 0.6, spill: 0.2 });
+    expect(props.elements[0]!.media?.key).toEqual({ color: 'green', threshold: 0.6, spill: 0.2 });
     db.close();
     fs.rmSync(tmp, { recursive: true, force: true });
   });
@@ -221,9 +221,10 @@ describe('buildProjectProps: multi-element templates (M17)', () => {
     expect(`${asset.u}${asset.p}`).toBe('http://x/templates/two/elements/end-card/images/logo.png');
   });
 
-  it('takes the footage from the element that has a media slot and a clip chosen', () => {
+  it('gives each element its own footage: the end card has a clip, the open has none (M21)', () => {
     const props = buildProjectProps({ db, templatesDir: tmp, projectId, serverBase: 'http://x' });
-    expect(props.media).toMatchObject({ src: 'http://x/media/originals/r.mp4', rect: { x: 0.5, y: 0, w: 0.5, h: 1 }, fit: 'cover' });
+    expect(props.elements[0]!.media).toBeNull();
+    expect(props.elements[1]!.media).toMatchObject({ src: 'http://x/media/originals/r.mp4', rect: { x: 0.5, y: 0, w: 0.5, h: 1 }, fit: 'cover' });
     // the slot layer in THAT element is made transparent
     expect((props.elements[1]!.lottie.layers[2] as { ks: { o: { k: number } } }).ks.o.k).toBe(0);
   });
@@ -250,7 +251,7 @@ describe('buildTemplateDefaultProps: the template as authored, no project (M19)'
       ['open', 0, 90, 'AUTHORED OPEN'],
       ['end-card', 90, 180, 'AUTHORED END'],
     ]);
-    expect(props.media).toBeNull();
+    expect(props.elements.every((e) => e.media === null)).toBe(true);
     expect(() => buildTemplateDefaultProps({ db, templatesDir: tmp, slug: 'nope', serverBase: 'http://x' })).toThrow(/nope/);
     db.close();
     fs.rmSync(tmp, { recursive: true, force: true });

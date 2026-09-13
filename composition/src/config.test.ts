@@ -19,6 +19,5 @@ describe('compositionConfig', () => {
   it('ships default props with a background colour and no elements', () => {
     expect(defaultProps.background).toMatch(/^#[0-9a-fA-F]{6}$/);
     expect(defaultProps.elements).toEqual([]);
-    expect(defaultProps.media).toBeNull();
   });
 });

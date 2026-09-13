@@ -50,7 +50,6 @@ async function centrePixel(props: MainProps, frame: number): Promise<[number, nu
 
 const props = (startFrame: number, enabled: boolean): MainProps => ({
   background: '#000000',
-  media: null,
   elements: [{ id: 'red', lottie: RED_FULL_FRAME, startFrame, endFrame: startFrame + 60, zIndex: 0, enabled }],
 });
 
@@ -70,7 +69,6 @@ describe('elements in the rendered output', () => {
     // affected by it), one full-frame red is toggled off. Frame 5 is inside both.
     const p: MainProps = {
       background: '#000000',
-      media: null,
       elements: [
         { id: 'keeper', lottie: { ...RED_FULL_FRAME, layers: [] }, startFrame: 0, endFrame: 60, zIndex: 0, enabled: true },
         { id: 'red', lottie: RED_FULL_FRAME, startFrame: 0, endFrame: 60, zIndex: 1, enabled: false },

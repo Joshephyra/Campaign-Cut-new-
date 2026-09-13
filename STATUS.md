@@ -3,6 +3,29 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-13 · M21 Footage per element · DONE
+
+**Why**
+
+Josh said keep going. Since M17 a template has several elements, but footage was one slot per project, taken from the first element that had one; STATUS had flagged that twice. A real spot has different footage under the open and the end card.
+
+**What exists now**
+
+- The footage slot moved from the composition's props to each element: `ElementProps.media` (`MainProps.media` is gone). `Main` renders an element's footage inside that element's own Sequence, under its Lottie, through a shared `ElementView`, so it starts and stops with the element, its trim is relative to the element's in point, and chains with transitions carry it the same way.
+- The export runner builds each element's footage from that element's own `cc.mediaFill` value; the template-as-authored props carry none.
+- Editor: "use this clip" in the Footage panel goes to the selected element when it has a slot, else to the first element that does. Each element's inspector shows its own clip, trim, fit and key. No database change: footage values were already stored per element.
+- The three-part fixture's end card gained a `cc.mediaFill` slot so two elements can carry different clips. Tests: composition (one video per element with footage, each in its own slot), export runner (end card has a clip, open has none), editor (chosen clip lands on the selected element and the Player gets one clip per element); render, parity and fidelity checks updated for the moved prop. 326 tests green.
+
+**Verified in the export**
+
+- Project 3: green-screen clip (trimmed, muted) on the open, test pattern (contain) on the end card. `npm run parity -- --id 3 --frames 45,200`: both within threshold (mean 0.50 and 3.73). Export frame 200 shows the end card with the letterboxed test pattern in its slot; frame 45 the open with the green screen. The in-app browser pane stopped painting reliably during this milestone (tiny, zoomed captures), so the preview side rests on the editor tests and parity rather than a screenshot; Josh should open project 3 and scrub to 6 s once.
+
+**Next**
+
+M22 projects in the library: list, reopen, rename, duplicate, delete. Today a project can only be reached by its URL.
+
+---
+
 ## 2026-09-13 · M20 Footage trim and audio · DONE
 
 **Why**

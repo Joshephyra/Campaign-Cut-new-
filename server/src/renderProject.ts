@@ -9,9 +9,12 @@ import {
   mediaTiming,
   resolveLottieAssets,
   withBaseUrl,
+  type LottieAnimationData,
+  type MainMedia,
   type MainProps,
   type ParamValues,
   type TemplateFontFile,
+  type TemplateParam,
   type TransitionPreset,
 } from '@campaigncut/composition';
 import fs from 'node:fs';
@@ -54,17 +57,16 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase, run
     return raw;
   };
 
-  let media: MainProps['media'] = null;
-  for (const e of [...rows].sort((a, b) => a.startFrame - b.startFrame || a.zIndex - b.zIndex)) {
-    const { lottie: source, schema } = files.get(e.id)!;
+  /** M21: each element's own footage, from its own cc.mediaFill value, or null. */
+  const mediaFor = (elementId: number, source: LottieAnimationData, schema: TemplateParam[]): MainMedia | null => {
     const mediaParam = schema.find((p) => p.kind === 'media');
-    const mediaValue = mediaParam ? valuesFor(e.id)[mediaParam.key] : null;
-    if (!mediaParam || !isMediaValue(mediaValue)) continue;
+    const mediaValue = mediaParam ? valuesFor(elementId)[mediaParam.key] : null;
+    if (!mediaParam || !isMediaValue(mediaValue)) return null;
     const asset = db.getMediaAsset(mediaValue.assetId);
     const rect = mediaFillRect(source, mediaParam.path);
-    if (!asset || !rect) continue;
+    if (!asset || !rect) return null;
     const src = mediaSourceFor({ proxyUrl: `/media/${asset.proxyPath}`, originalUrl: `/media/${asset.originalPath}` }, runner);
-    media = {
+    return {
       src: `${serverBase}${src}`,
       rect,
       fit: mediaValue.fit,
@@ -72,8 +74,7 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase, run
       ...mediaTiming(mediaValue, compositionConfig.fps),
       muted: mediaValue.muted === true,
     };
-    break;
-  }
+  };
 
   // M20: the music bed. Both runners play the original file.
   let audio: MainProps['audio'] = null;
@@ -90,7 +91,7 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase, run
     const resolvedSource = resolveLottieAssets(source, `${serverBase}${elementBaseUrl(templatesDir, project.templateSlug, e.slug)}`);
     const values = withBaseUrl(valuesFor(e.id), schema, serverBase);
     const lottie = applyLottieValues(resolvedSource, values, schema);
-    return { id: String(e.id), lottie, startFrame: e.startFrame, endFrame: e.endFrame, zIndex: e.zIndex, enabled: e.enabled };
+    return { id: String(e.id), lottie, startFrame: e.startFrame, endFrame: e.endFrame, zIndex: e.zIndex, enabled: e.enabled, media: mediaFor(e.id, source, schema) };
   });
 
   const transitions = db.getProjectTransitions(projectId).map((t) => ({
@@ -99,7 +100,7 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase, run
     durationInFrames: t.durationInFrames,
   }));
 
-  return { background: '#000000', media, audio, elements, transitions, fonts };
+  return { background: '#000000', audio, elements, transitions, fonts };
 }
 
 /**
@@ -120,8 +121,8 @@ export function buildTemplateDefaultProps({ db, templatesDir, slug, serverBase }
     for (const p of schema) defaults[p.key] = p.default;
     const resolvedSource = resolveLottieAssets(source, `${serverBase}${elementBaseUrl(templatesDir, slug, e.slug)}`);
     const lottie = applyLottieValues(resolvedSource, withBaseUrl(defaults, schema, serverBase), schema);
-    return { id: e.slug, lottie, startFrame: e.startFrame, endFrame: e.endFrame, zIndex: e.zIndex, enabled: true };
+    return { id: e.slug, lottie, startFrame: e.startFrame, endFrame: e.endFrame, zIndex: e.zIndex, enabled: true, media: null };
   });
 
-  return { background: '#000000', media: null, elements, transitions: [], fonts };
+  return { background: '#000000', elements, transitions: [], fonts };
 }

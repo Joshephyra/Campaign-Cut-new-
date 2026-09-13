@@ -33,7 +33,7 @@ fs.mkdirSync(outDir, { recursive: true });
 const outputPath = path.join(outDir, argValue('--out') ?? `project-${id}.mp4`);
 
 console.log(`[render] project ${id}`);
-console.log(`[render] footage: ${props.media ? props.media.src : '(none)'}`);
+console.log(`[render] footage: ${props.elements.map((e) => e.media?.src ?? '(none)').join(', ')}`);
 console.log('[render] bundling and rendering…');
 const started = Date.now();
 let lastShown = -1;

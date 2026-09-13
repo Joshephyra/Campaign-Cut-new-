@@ -59,5 +59,13 @@
     "label": "Surface colour",
     "default": "#0F1729",
     "path": "/layers/3/shapes/0/it/1"
+  },
+  {
+    "key": "mediaFill",
+    "role": "mediaFill",
+    "kind": "media",
+    "label": "Footage",
+    "default": null,
+    "path": "/layers/4"
   }
 ]

@@ -46,7 +46,7 @@ try {
     fontsDir: paths.fonts,
     db,
     renderThumbnail: ({ elements, outputPath, frame, fonts }) =>
-      renderThumbnail({ outputPath, inputProps: { background: '#000000', media: null, elements, fonts }, frame }).then(() => undefined),
+      renderThumbnail({ outputPath, inputProps: { background: '#000000', elements, fonts }, frame }).then(() => undefined),
     log: (line) => console.log(`  ${line}`),
   });
 

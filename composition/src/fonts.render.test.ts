@@ -80,7 +80,6 @@ async function textRow(props: MainProps, tag: string): Promise<{ row: string; in
 
 const props = (withFont: boolean): MainProps => ({
   background: '#000000',
-  media: null,
   elements: [{ id: 't', lottie: TEXT, startFrame: 0, endFrame: 30, zIndex: 0, enabled: true }],
   fonts: withFont ? [{ family: 'IBM Plex Sans', url: fontUrl }] : [],
 });

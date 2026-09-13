@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { PNG } from 'pngjs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { compositionConfig, type MainProps } from './config';
+import type { ChromaKey } from './chroma';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const entry = path.resolve(here, 'entry.ts');
@@ -67,10 +68,19 @@ async function sample(props: MainProps, points: [number, number][]): Promise<Rgb
 }
 
 // Full-frame footage over a dark blue background, so keyed-out pixels show blue.
-const props = (key: MainProps['media'] extends infer M ? (M extends { key?: infer K } ? K : never) : never): MainProps => ({
+const props = (key: ChromaKey | null): MainProps => ({
   background: '#0000AA',
-  media: { src: videoUrl, rect: { x: 0, y: 0, w: 1, h: 1 }, fit: 'cover', key },
-  elements: [{ id: 'e', lottie: { fr: 30, ip: 0, op: 60, w: 1920, h: 1080, layers: [] }, startFrame: 0, endFrame: 60, zIndex: 0, enabled: true }],
+  elements: [
+    {
+      id: 'e',
+      lottie: { fr: 30, ip: 0, op: 60, w: 1920, h: 1080, layers: [] },
+      startFrame: 0,
+      endFrame: 60,
+      zIndex: 0,
+      enabled: true,
+      media: { src: videoUrl, rect: { x: 0, y: 0, w: 1, h: 1 }, fit: 'cover', key },
+    },
+  ],
 });
 
 const GREEN_AREA: [number, number] = [0.08, 0.5]; // left edge: green screen

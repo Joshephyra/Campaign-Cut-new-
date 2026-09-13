@@ -84,8 +84,6 @@ export type MainAudio = {
 export type MainProps = {
   /** Solid background colour as a #rrggbb hex string. */
   background: string;
-  /** User footage shown through the cc.mediaFill slot, or null. */
-  media: MainMedia | null;
   /** The music bed, or none. */
   audio?: MainAudio | null;
   /** The timeline: every element with its Lottie and in/out points. */
@@ -112,6 +110,5 @@ export const EMPTY_LOTTIE: LottieAnimationData = {
 
 export const defaultProps: MainProps = {
   background: '#0F4C5C',
-  media: null,
   elements: [],
 };
