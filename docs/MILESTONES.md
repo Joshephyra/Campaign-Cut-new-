@@ -296,6 +296,36 @@ Spike. Timeboxed. Cut this before cutting anything else.
 
 ---
 
+## M16 · After Effects project dump script · IN PROGRESS
+
+The pre-flight script (M15) answers "will this tag work". This answers "what is actually in this project", so a real template can be analysed against what Lottie carries before any ingest work is guessed at.
+
+**Build**
+- `tools/ae-preflight/dump.jsx`, run from After Effects via File > Scripts > Run Script File
+- Walks the whole project: every comp, footage item, solid and folder
+- For every layer: type, index, parent, in/out/start, stretch, blend mode, 3D, track matte, enabled/solo/shy/guide flags
+- For every property: match name, value, every keyframe (time, value, in/out interpolation, temporal ease), expression text and whether it is enabled
+- Text layers: font, size, text, box text, tracking, leading, and every text animator
+- Shape layers: groups, paths (vertex counts), fills, strokes, gradients, trim paths, repeaters, merge paths
+- Masks: mode, feather, expansion, vertex count
+- Effects: name, match name, every parameter value
+- Per-comp summary: keyframe, expression, effect and mask counts, plus every expression's source listed by layer and property
+- Writes `dump-<project>.txt` (readable tree) and `dump-<project>.json` (hand-serialised, no JSON object in ExtendScript) next to the project file
+
+**Tests** (`tools/ingest/src/dump.test.ts`, walker exercised in Node against a fake project)
+- Source is ES3-safe and never renders, saves or changes the project
+- Project items: comps with settings, footage with path and dimensions, solids with colour, folders
+- Layer flags and timing come through, including parent and track matte
+- Property tree: static values, keyframes with interpolation and ease, expressions with enabled flag
+- Text document and animators
+- Shape contents, masks, effects with parameters
+- Summary counts and the expression list
+- The JSON writer escapes quotes, newlines and non-ASCII and round-trips through `JSON.parse`
+
+**Done when:** running it on a real project produces files that name every layer, keyframe, expression and effect. Manual run in After Effects by Josh, as with M15.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

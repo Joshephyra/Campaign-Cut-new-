@@ -109,6 +109,12 @@ It writes a text report named `preflight-<comp name>.txt` next to your project f
 
 Fix everything it flags before exporting. The script does not export anything and does not change your project.
 
+Then run the project dump:
+
+**After Effects:** File > Scripts > Run Script File, then pick `tools/ae-preflight/dump.jsx`
+
+It writes `dump-<project>.txt` and `dump-<project>.json` next to your project file. They list every comp, layer, keyframe, expression, effect and mask in the project. Nothing in them is a verdict; they are the developer's map of what you built, so anything Bodymovin drops on export can be found by name instead of by guesswork. Hand both files over with the export. The script exports nothing and changes nothing.
+
 ---
 
 ## Exporting
@@ -133,6 +139,7 @@ Give the developer, or the ingest command, a folder containing:
   fonts/             every font file the comp uses
   reference.mp4      an After Effects render of the comp at full quality
   preflight-<comp>.txt   the pre-flight report
+  dump-<project>.txt     the project dump, plus its .json twin
 ```
 
 `reference.mp4` matters. It is what the app's output gets compared against when Germain makes the fidelity call. Without it there is nothing to judge against.

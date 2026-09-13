@@ -3,6 +3,34 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-13 · M16 After Effects project dump script · IN PROGRESS: written and unit-tested; needs one manual run inside After Effects
+
+**Why**
+
+Josh asked for the build to become more sophisticated and for a way to hand over a real After Effects project for analysis. A `.aep` is binary, so the only complete view of a project is what After Effects tells a script. The pre-flight script (M15) judges tags; this one records everything.
+
+**What exists now**
+
+- `tools/ae-preflight/dump.jsx`: ES3 ExtendScript, run via File > Scripts > Run Script File. Walks every project item and every comp and writes `dump-<project>.txt` (readable tree) and `dump-<project>.json` (machine-readable, every property included) next to the project file, Desktop if unsaved. Exports nothing, changes nothing.
+- Per item: kind (comp, footage, solid, folder), folder, size, duration, frame rate, background or solid colour, footage file path and audio flag.
+- Per layer: kind (text, shape, footage, precomp, solid, null, camera, light), in/out/start, stretch, parent, source, blend mode, 3D, motion blur, time remap, adjustment layer, track matte, hidden/solo/shy/locked/guide.
+- Per property: match name, value, every keyframe with time, value, in/out interpolation and temporal ease, expression text and enabled flag. Text documents carry font, size, text, box/point, tracking, leading, justification. Shape paths and mask paths are recorded as vertex counts. Colours print as hex in the text.
+- Per comp: summary counts (layers, keyframes, expressions, effects, masks) and flag counts (3D, blend modes, time remap, motion blur, adjustment layers, cameras/lights, track mattes, precomps), then every expression by layer and property path, and every effect by layer with its match name.
+- The text view omits unmodified static properties so a real project stays readable; the JSON keeps them all.
+- `tools/ingest/src/dump.test.ts` (10 tests): ES3-safety and no-write checks on the source, a JSON-writer round trip with escaping, and the walker over a fake two-comp project covering items, layer flags, keyframes with ease, expressions, text animators, shapes, masks, effects and the summary.
+- `docs/AE-AUTHORING.md`: the dump step added after pre-flight, and the two dump files added to the hand-off list.
+
+**Verified**
+
+- Node: all 10 tests green; the readable output printed and read through by eye.
+- Not yet verified inside After Effects. That is Josh's run, same as M15.
+
+**Next**
+
+M17: multi-element templates. Then M18 transform editing, M19 fidelity harness, M20 footage trim and audio, as agreed on 2026-09-13.
+
+---
+
 ## Where things stand after the 2026-09-11 build session
 
 Milestones M0 to M15 are built. Every one has red-then-green tests, a browser or rendered-frame check by Claude, and is pushed to GitHub (github.com/Joshephyra/Campaign-Cut-new-, branch main). Test count: 244 across 48 files, plus one skipped check that waits for a visible-tab performance run.
