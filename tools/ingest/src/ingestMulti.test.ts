@@ -226,3 +226,21 @@ describe('thumbnailFrame', () => {
     expect(thumbnailFrame([{ startFrame: 0, endFrame: 30 }, { startFrame: 200, endFrame: 240 }], 240)).toBe(200);
   });
 });
+
+describe('ingestTemplate: reference render (M19)', () => {
+  it('copies reference.mp4 from the handover into the template directory when present', async () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-ref-'));
+    const templatesDir = path.join(tmp, 'templates');
+    const fontsDir = path.join(tmp, 'fonts');
+    fs.mkdirSync(fontsDir, { recursive: true });
+    fs.writeFileSync(path.join(fontsDir, 'IBMPlexSans-Regular.ttf'), 'plex');
+    const db = openDb(':memory:');
+    const input = copyFixture(tmp, (dir) => fs.writeFileSync(path.join(dir, 'reference.mp4'), 'mp4-bytes'));
+    await ingestTemplate({ input, adType: 'Contrast', name: 'Three Part', slug: 'three', templatesDir, fontsDir, db, renderThumbnail: fakeThumbnail });
+    expect(fs.readFileSync(path.join(templatesDir, 'three', 'reference.mp4'), 'utf8')).toBe('mp4-bytes');
+    const meta = JSON.parse(fs.readFileSync(path.join(templatesDir, 'three', 'meta.json'), 'utf8')) as { reference?: string };
+    expect(meta.reference).toBe('reference.mp4');
+    db.close();
+    fs.rmSync(tmp, { recursive: true, force: true });
+  });
+});

@@ -3,6 +3,31 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-13 · M19 Fidelity harness · DONE
+
+**Why**
+
+AT-2 is Germain's call on whether a template survived the trip from After Effects. Until now there was nothing to give him but two videos. This gives him side-by-side frames, a difference map and a report that says where they differ, and gives us something every later change is checked against.
+
+**What exists now**
+
+- `npm run fidelity -- --template <slug> [--project <id>] [--reference ref.mp4] [--render out.mp4] [--samples 12] [--threshold 6]` (`server/src/cli-fidelity.ts`, `server/src/fidelity.ts`). Renders the template as authored (new `buildTemplateDefaultProps`, no project needed) or a project, then samples the reference and the render at the same points in time (so a reference at another frame rate lines up), scales the reference to the composition size, and compares each pair with the parity comparison.
+- Per sample it writes the reference frame, our frame, a difference map (black where equal, brighter where not) and a strip (reference | render | difference) to `media/fidelity/<slug>-<time>/`, plus `report.txt` and `report.json`. Each line has the time, mean and max difference, share of differing pixels, and the region of the differences as fractions of the frame. Verdict names the worst sample and its region. Exit 1 on differences.
+- Ingest copies a handed-over `reference.mp4` into the template dir and records it in `meta.json`; the CLI finds it there by default.
+- `docs/AE-AUTHORING.md`: what the reference must be and what happens to it.
+- Tests: 9 (sample times, difference map and region on synthetic frames, report text and JSON, end to end on two ffmpeg-made clips where one has a box drawn on it, template default props, reference copy at ingest). 306 tests green.
+
+**Verified by eye**
+
+- Stand-in reference: the export of project 3 (moved, scaled headline, green-screen footage). `--template three` (as authored) against it: 8 of 8 samples over threshold, region named, and the strip at 1.5s shows exactly why: both headline positions and the footage slot light up in the difference map. `--project 3` against the same file: 6 of 6 samples at mean 0.00, WITHIN THRESHOLD.
+- No real After Effects reference exists yet, so this is a check of the harness, not of fidelity. The moment Josh or Germain hands over a template with `reference.mp4`, the command above is the AT-2 evidence.
+
+**Next**
+
+M20 footage trim and audio.
+
+---
+
 ## 2026-09-13 · M18 Transform editing · DONE
 
 **Why**

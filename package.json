@@ -20,7 +20,8 @@
     "schema": "npm run schema -w tools/ingest --",
     "ingest": "npm run ingest -w tools/ingest --",
     "render:project": "npm run render:project -w server --",
-    "parity": "npm run parity -w server --"
+    "parity": "npm run parity -w server --",
+    "fidelity": "npm run fidelity -w server --"
   },
   "devDependencies": {
     "concurrently": "10.0.5",

@@ -11,7 +11,8 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "render:project": "tsx src/render-project.ts",
-    "parity": "tsx src/cli-parity.ts"
+    "parity": "tsx src/cli-parity.ts",
+    "fidelity": "tsx src/cli-fidelity.ts"
   },
   "dependencies": {
     "@campaigncut/composition": "0.0.1",

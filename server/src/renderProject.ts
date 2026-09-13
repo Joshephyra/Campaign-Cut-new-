@@ -82,3 +82,27 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase, run
 
   return { background: '#000000', media, elements, transitions, fonts };
 }
+
+/**
+ * The template exactly as the designer authored it, no project: every
+ * element with its schema defaults, no footage. What the fidelity harness
+ * (M19) renders to hold against the After Effects reference.
+ */
+export function buildTemplateDefaultProps({ db, templatesDir, slug, serverBase }: { db: Db; templatesDir: string; slug: string; serverBase: string }): MainProps {
+  const template = db.getTemplateBySlug(slug);
+  if (!template) throw new Error(`No template with slug "${slug}"`);
+  const metaFile = path.join(templatesDir, slug, 'meta.json');
+  const meta = fs.existsSync(metaFile) ? (JSON.parse(fs.readFileSync(metaFile, 'utf8')) as { fontFiles?: TemplateFontFile[] }) : {};
+  const fonts = fontsFor(meta.fontFiles, slug, serverBase);
+
+  const elements = db.listTemplateElements(template.id).map((e) => {
+    const { lottie: source, schema } = loadElementFiles(templatesDir, slug, e.slug);
+    const defaults: ParamValues = {};
+    for (const p of schema) defaults[p.key] = p.default;
+    const resolvedSource = resolveLottieAssets(source, `${serverBase}${elementBaseUrl(templatesDir, slug, e.slug)}`);
+    const lottie = applyLottieValues(resolvedSource, withBaseUrl(defaults, schema, serverBase), schema);
+    return { id: e.slug, lottie, startFrame: e.startFrame, endFrame: e.endFrame, zIndex: e.zIndex, enabled: true };
+  });
+
+  return { background: '#000000', media: null, elements, transitions: [], fonts };
+}

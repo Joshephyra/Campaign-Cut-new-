@@ -144,7 +144,7 @@ Give the developer, or the ingest command, a folder containing:
   dump-<project>.txt     the project dump, plus its .json twin
 ```
 
-`reference.mp4` matters. It is what the app's output gets compared against when Germain makes the fidelity call. Without it there is nothing to judge against.
+`reference.mp4` matters. It is what the app's output gets compared against when Germain makes the fidelity call. Without it there is nothing to judge against. Render it from the same comp you exported, at the comp's size and frame rate, with nothing added. The ingest copies it in, and `npm run fidelity -- --template <slug>` then renders the template as you authored it, samples both videos at the same moments, and writes side-by-side strips (reference, our render, the difference) with a report saying where they differ.
 
 ### A spot with several elements
 

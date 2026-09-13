@@ -373,6 +373,29 @@ Josh's concern (2026-09-13): the content feels locked. Every tagged text and ima
 
 ---
 
+## M19 · Fidelity harness · DONE
+
+AT-2 is Germain's call: does the app's render hold up against the After Effects reference? Until now there was nothing to put in front of him but two videos. This puts numbers, side-by-side frames and a difference map in front of him, and turns fidelity into something every later change is checked against.
+
+**Build**
+- `reference.mp4` in a handover folder is copied into `templates/<slug>/reference.mp4` at ingest.
+- `npm run fidelity -- --template <slug> [--project <id>] [--reference <mp4>] [--render <mp4>] [--samples 12] [--threshold 6]`: renders the template with its authored defaults (or a project) through the export runner, samples both videos at the same points in time (not frame indexes, so a reference at another frame rate still lines up), scales the reference to the composition size, and compares each pair with the parity comparison.
+- For every sample: the reference frame, the render frame, a difference heat map, and a side-by-side strip (reference | render | difference) written to `media/fidelity/<slug>-<time>/`, plus `report.txt` and `report.json`. Each line names the time, the mean and max difference, the share of differing pixels, and the region (as fractions of the frame) where the differences are.
+- Verdict per run: within threshold on every sample, or the worst sample named with its region. Exit 1 on differences, so it can gate later work.
+- `buildTemplateDefaultProps` in the export runner: the template as authored, no project needed.
+
+**Tests**
+- Sample times are evenly spaced and never hit the very end.
+- The difference map of identical frames is black with no region; a drawn box shows up as a region at the right fractions and the right share of pixels.
+- The report names the worst sample and its region and round-trips as JSON.
+- End to end with ffmpeg-made videos (a solid clip and the same clip with a box drawn on it): the harness flags the box's region on every sample and writes every file.
+- Template default props carry every element with its authored values.
+- Ingest copies `reference.mp4` when it is there.
+
+**Done when:** the harness runs on a template with a reference, the strips open and show what differs, and the report says where. Verified here against a reference made from the moved-headline export of the three-part project: the open's frames flag the headline region, the end card passes.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

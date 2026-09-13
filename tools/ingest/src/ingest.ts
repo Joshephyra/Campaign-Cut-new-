@@ -82,6 +82,8 @@ export type TemplateMeta = {
   /** The font file shipped for each family under templates/<slug>/fonts/. */
   fontFiles: { family: string; file: string }[];
   elements: ElementMeta[];
+  /** The After Effects reference render, relative to the template dir, when one was handed over (M19). */
+  reference?: string;
 };
 
 export type ElementIngestResult = ElementMeta & {
@@ -282,6 +284,14 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
     meta.fontFiles.push({ family, file });
   }
   if (fontSources.length > 0) log(`Shipped ${fontSources.length} font file(s) -> ${path.join(dir, 'fonts')}`);
+  // M19: the After Effects reference render travels with the template for the fidelity harness.
+  const referenceSource = path.join(handoverDir, 'reference.mp4');
+  fs.rmSync(path.join(dir, 'reference.mp4'), { force: true });
+  if (fs.existsSync(referenceSource)) {
+    fs.copyFileSync(referenceSource, path.join(dir, 'reference.mp4'));
+    meta.reference = 'reference.mp4';
+    log(`Copied reference.mp4`);
+  }
   fs.writeFileSync(path.join(dir, 'meta.json'), JSON.stringify(meta, null, 2) + '\n');
   log(`Wrote meta.json -> ${dir}`);
 

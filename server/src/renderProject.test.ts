@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from './app';
 import { openDb, type Db } from './db/index';
-import { buildProjectProps } from './renderProject';
+import { buildProjectProps, buildTemplateDefaultProps } from './renderProject';
 
 const lottie = {
   fr: 30, ip: 0, op: 30, w: 1920, h: 1080,
@@ -225,5 +225,33 @@ describe('buildProjectProps: multi-element templates (M17)', () => {
     expect(props.media).toMatchObject({ src: 'http://x/media/originals/r.mp4', rect: { x: 0.5, y: 0, w: 0.5, h: 1 }, fit: 'cover' });
     // the slot layer in THAT element is made transparent
     expect((props.elements[1]!.lottie.layers[2] as { ks: { o: { k: number } } }).ks.o.k).toBe(0);
+  });
+});
+
+describe('buildTemplateDefaultProps: the template as authored, no project (M19)', () => {
+  it('carries every element with its schema defaults applied', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-tdp-'));
+    const textLayer = (name: string, text: string) => ({ ty: 5, nm: name, t: { d: { k: [{ s: { t: text, f: 'X', s: 10 }, t: 0 }] } } });
+    for (const [slug, text] of [['open', 'AUTHORED OPEN'], ['end-card', 'AUTHORED END']] as const) {
+      const dir = path.join(tmp, 'two', 'elements', slug);
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'template.json'), JSON.stringify({ fr: 30, ip: 0, op: 90, w: 1920, h: 1080, layers: [textLayer('cc.headline', 'placeholder')] }));
+      fs.writeFileSync(path.join(dir, 'schema.json'), JSON.stringify([{ key: 'headline', role: 'headline', kind: 'text', label: 'Headline', default: text, path: '/layers/0' }]));
+    }
+    const db = openDb(':memory:');
+    const t = db.upsertTemplate({ slug: 'two', name: 'Two', adType: 'Bio', durationFrames: 180, fps: 30, width: 1920, height: 1080, thumbPath: '' });
+    db.upsertTemplateElement({ templateId: t.id, slug: 'open', name: 'Open', zIndex: 0, startFrame: 0, endFrame: 90 });
+    db.upsertTemplateElement({ templateId: t.id, slug: 'end-card', name: 'End card', zIndex: 0, startFrame: 90, endFrame: 180 });
+
+    const props = buildTemplateDefaultProps({ db, templatesDir: tmp, slug: 'two', serverBase: 'http://x' });
+    const headlineOf = (lottie: { layers: unknown[] }) => (lottie.layers[0] as { t: { d: { k: { s: { t: string } }[] } } }).t.d.k[0]!.s.t;
+    expect(props.elements.map((e) => [e.id, e.startFrame, e.endFrame, headlineOf(e.lottie)])).toEqual([
+      ['open', 0, 90, 'AUTHORED OPEN'],
+      ['end-card', 90, 180, 'AUTHORED END'],
+    ]);
+    expect(props.media).toBeNull();
+    expect(() => buildTemplateDefaultProps({ db, templatesDir: tmp, slug: 'nope', serverBase: 'http://x' })).toThrow(/nope/);
+    db.close();
+    fs.rmSync(tmp, { recursive: true, force: true });
   });
 });
