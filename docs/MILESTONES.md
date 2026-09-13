@@ -475,6 +475,23 @@ An editor without undo punishes every experiment. Josh said keep going; this is 
 
 ---
 
+## M24 · Ingest from the browser · DONE
+
+AT-1 is "one command". Josh does not like terminals, and neither will the person who gets the next template from Germain. The command stays; the browser gets a way to run it.
+
+**Build**
+- Library: an "Add template" form. Pick the handover folder (the browser sends every file with its path inside the folder), give it a name and an ad type, press Ingest. Progress while it runs; on success the library refreshes and the tag report is shown; on failure every problem the ingest found, naming the element, layer or font, exactly as the command prints them.
+- Server: `POST /templates/ingest` takes the files, stages them under a temporary folder with their relative paths (anything trying to escape the folder is refused), and runs the same ingest command as a child process, so there is one ingest, not two. Its output comes back verbatim.
+- No zip handling, no drag and drop: a folder picker is enough and needs no new dependency.
+
+**Tests**
+- Server: files land at their relative paths with the picked folder's own name stripped; the command is run with the right folder, name, ad type and slug; a failing command becomes a 400 carrying its problems; missing name or ad type, no files, and a path with `..` are refused.
+- Form: chosen files are sent with their relative paths and the fields; a failure shows the problems; a success reports the slug and refreshes the library.
+
+**Done when:** the three-part fixture folder ingests from the library page in the browser and appears as a template without touching a terminal.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

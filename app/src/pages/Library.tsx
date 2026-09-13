@@ -1,6 +1,7 @@
 import { formatTimecode } from '@campaigncut/composition';
 import { useEffect, useState, type KeyboardEvent } from 'react';
 import { api, type LibraryGroup, type ProjectRow, type TemplateSummary } from '../api';
+import { AddTemplate } from '../components/AddTemplate';
 
 type Props = {
   onOpenProject: (projectId: number) => void;
@@ -24,20 +25,15 @@ export function Library({ onOpenProject }: Props) {
       .then(setProjects)
       .catch(() => setProjects([]));
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadGroups = () =>
     api
       .library()
-      .then((g) => {
-        if (!cancelled) setGroups(g);
-      })
-      .catch((e: Error) => {
-        if (!cancelled) setError(e.message);
-      });
+      .then(setGroups)
+      .catch((e: Error) => setError(e.message));
+
+  useEffect(() => {
+    void loadGroups();
     void loadProjects();
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   const open = async (t: TemplateSummary) => {
@@ -64,6 +60,8 @@ export function Library({ onOpenProject }: Props) {
         {groups?.length === 0 && (
           <p className="font-mono text-xs text-muted">No templates yet. Run npm run ingest on a Bodymovin export.</p>
         )}
+
+        <AddTemplate onIngested={() => void loadGroups()} />
 
         {projects.length > 0 && (
           <ProjectList

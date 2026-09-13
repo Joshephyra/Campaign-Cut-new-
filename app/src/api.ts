@@ -19,6 +19,9 @@ export type LibraryGroup = { adType: string; sort: number; templates: TemplateSu
 
 export type ProjectValue = { elementId: number; key: string; value: unknown };
 
+/** M24: what POST /templates/ingest answers. */
+export type IngestAnswer = { ok: true; slug: string; output: string } | { ok: false; output: string; problems: string[] };
+
 /** A project as listed in the library (M22). */
 export type ProjectRow = {
   id: number;
@@ -172,6 +175,24 @@ export const api = {
 
   /** An element's Lottie, at the server-relative lottieUrl the project detail gave for it. */
   elementLottie: (lottieUrl: string) => fetch(`${API}${lottieUrl}`).then((r) => json<LottieAnimationData>(r)),
+
+  /**
+   * M24: ingest a handover folder from the browser. Each file is sent with
+   * its path inside the picked folder. Resolves with the server's answer
+   * whether it succeeded (ok true) or the ingest rejected it (ok false with
+   * the problems); throws only when the request itself fails.
+   */
+  ingestTemplate: async (files: { path: string; file: File }[], meta: { name: string; adType: string; slug?: string }) => {
+    const body = new FormData();
+    body.append('name', meta.name);
+    body.append('adType', meta.adType);
+    if (meta.slug) body.append('slug', meta.slug);
+    for (const f of files) body.append('file', f.file, f.path);
+    const res = await fetch(`${API}/templates/ingest`, { method: 'POST', body });
+    const answer = (await res.json()) as IngestAnswer | { error: string };
+    if ('error' in answer) throw new Error(answer.error);
+    return answer;
+  },
 
   /** Absolute URL for a server-relative file path such as /templates/x/thumb.png. */
   fileUrl: (serverPath: string) => `${API}${serverPath}`,

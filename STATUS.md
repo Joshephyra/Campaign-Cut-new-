@@ -3,6 +3,29 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-13 · M24 Ingest from the browser · DONE
+
+**Why**
+
+AT-1 is "one command", and Josh does not like terminals; neither will whoever receives the next template. The command stays; the browser now runs it.
+
+**What exists now**
+
+- Library: an "Add template" form (collapsed until opened). Pick the handover folder with the browser's folder picker (every file travels with its path inside the folder), give a name and an ad type, press Ingest. Progress while it runs; on success the library reloads and the full output is available; on failure every problem the ingest found is listed verbatim.
+- Server: `POST /templates/ingest` (multipart: `name`, `adType`, optional `slug`, and each file with its relative path as the filename). Files are staged under a temporary folder with the picked folder's own name stripped; any path that is absolute or climbs out is refused. Then the SAME ingest command (`tools/ingest`) runs as a child process through tsx, so there is one ingest, not two; its output comes back verbatim and the `  - ` problem lines are picked out on 400. The staging folder is removed afterwards. `runIngest` is injectable for tests. The multipart plugin now keeps directory paths (`preservePath`) and allows many files per request.
+- Tests: 4 route (staging and stripping, slug from name, failing command to 400 with problems, refusals), 3 form (files with paths and fields sent, problems shown, button gating). 351 tests green.
+
+**Verified**
+
+- Live server: the three-part fixture posted through the route exactly as the form sends it (curl multipart with relative filenames) came back HTTP 200 and rewrote `templates/three` (meta and thumbnail timestamps) through the real command, thumbnail render included.
+- Browser: the library shows "Add template"; opening it shows the folder picker, name, ad type and Ingest. The native folder dialog cannot be driven from the in-app pane, so the click-through with a real folder is Josh's to do once.
+
+**Next**
+
+Nothing queued. The After Effects panel, an own renderer and the real template remain Josh's calls.
+
+---
+
 ## 2026-09-13 · M23 Undo and redo · DONE
 
 **Why**

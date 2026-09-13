@@ -12,6 +12,9 @@ import { paths } from './paths';
 import { renderComposition } from './render';
 import { RenderQueue, type RenderFn } from './renderQueue';
 import { elementLottieUrl, loadElementSchema } from './templateFiles';
+import { defaultUploadsDir, makeStagingDir, problemsFrom, runIngestCommand, stagedRelativePath, type RunIngest } from './ingestUpload';
+
+export type { RunIngest } from './ingestUpload';
 
 export type AppOptions = {
   db?: Db;
@@ -21,6 +24,10 @@ export type AppOptions = {
   serverBase?: string;
   /** The render function; tests inject a fast stand-in. Defaults to renderMedia. */
   render?: RenderFn;
+  /** M24: runs the ingest command on a staged folder; tests inject a stand-in. */
+  runIngest?: RunIngest;
+  /** M24: where uploaded handover folders are staged before ingest. */
+  uploadsDir?: string;
 };
 
 declare module 'fastify' {
@@ -53,7 +60,8 @@ export function buildApp(options: AppOptions = {}) {
   // over HTTP from a different origin; a missing header here was the
   // missing-export bug (CLAUDE.md). media.test.ts guards it.
   app.register(fastifyCors, { origin: true });
-  app.register(fastifyMultipart, { limits: { fileSize: 8 * 1024 * 1024 * 1024, files: 1 } });
+  // M24 raised files from 1: a handover folder arrives as many parts.
+  app.register(fastifyMultipart, { limits: { fileSize: 8 * 1024 * 1024 * 1024, files: 500 }, preservePath: true });
 
   app.get('/health', async () => ({ status: 'ok' }));
 
@@ -104,6 +112,53 @@ export function buildApp(options: AppOptions = {}) {
       meta: readJson(path.join(dir, 'meta.json')) ?? null,
       elements: db.listTemplateElements(t.id).map((e) => withElementFiles(t.slug, e)),
     };
+  });
+
+  // ---- ingest from the browser (M24) -----------------------------------
+
+  const runIngest = options.runIngest ?? runIngestCommand;
+  const uploadsDir = options.uploadsDir ?? defaultUploadsDir();
+
+  /**
+   * A handover folder as multipart: fields name, adType, optional slug, and
+   * every file with its path inside the picked folder as the filename. The
+   * files are staged under a temporary folder and the ingest COMMAND runs on
+   * it; its output comes back verbatim, with the problems picked out on 400.
+   */
+  app.post('/templates/ingest', async (req, reply) => {
+    const fields: Record<string, string> = {};
+    const staged: string[] = [];
+    const dir = makeStagingDir(uploadsDir);
+    try {
+      for await (const part of req.parts()) {
+        if (part.type === 'field') {
+          fields[part.fieldname] = String(part.value ?? '').trim();
+          continue;
+        }
+        const rel = stagedRelativePath(part.filename);
+        if (rel === null) {
+          part.file.resume();
+          return reply.code(400).send({ error: `Refused file path "${part.filename}": paths must stay inside the picked folder` });
+        }
+        const target = path.join(dir, ...rel.split('/'));
+        fs.mkdirSync(path.dirname(target), { recursive: true });
+        await pipeline(part.file, fs.createWriteStream(target));
+        staged.push(rel);
+      }
+      const name = fields.name ?? '';
+      const adType = fields.adType ?? '';
+      if (!name) return reply.code(400).send({ error: 'A template name is required' });
+      if (!adType) return reply.code(400).send({ error: 'An ad type is required' });
+      if (staged.length === 0) return reply.code(400).send({ error: 'No files were sent; pick the handover folder' });
+      const slug = (fields.slug || name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      if (!slug) return reply.code(400).send({ error: 'The name produces an empty slug' });
+
+      const result = await runIngest({ dir, name, adType, slug });
+      if (result.code !== 0) return reply.code(400).send({ ok: false, output: result.output, problems: problemsFrom(result.output) });
+      return { ok: true, slug, output: result.output };
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   // ---- projects --------------------------------------------------------
