@@ -3,6 +3,29 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-13 · M23 Undo and redo · DONE
+
+**Why**
+
+An editor without undo punishes every experiment. Josh said keep going; this is the next thing a staffer reaches for.
+
+**What exists now**
+
+- `app/src/history.ts`: a pure history (past, present, future) over one snapshot of everything the user edits: values, timeline overrides, transitions, music bed. Fast successive changes to the same control within 800 ms fold into one step (typing a word, one drag); 100 steps are kept; a new change clears redo.
+- Editor: every change names its control (`<element>:<param>`, `element:<id>`, `transition:<id>`, `audio`) before setting state; an effect pushes the snapshot. Undo and Redo buttons in the header (disabled when empty) and Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y anywhere except inside a text field, select or textarea, where the browser's own text undo stays in charge.
+- Restoring a snapshot saves what differs: values through the existing debounced value save (it diffs against what was last saved), element moves and toggles, transitions (a removed one is saved as a cut) and the music bed through their own calls. History is per editor session.
+- Tests: 6 history, 4 editor (buttons start disabled; text edit undone in the field and the Player and saved, then redone; a timeline toggle undone and saved; Ctrl+Z from the page undoes while Ctrl+Z inside the text field does not). 344 tests green.
+
+**Verified in the browser**
+
+- Project 3: typed "UNDO TEST" into the headline, the preview showed it; clicked Undo, the preview showed "OPEN HEADLINE" again and the server holds "OPEN HEADLINE" (checked via the API). The in-app pane still cannot take screenshots, so this was checked through the page's accessibility tree and the API.
+
+**Next**
+
+Nothing queued. Candidates needing Josh's call: the real template (AT-2), the After Effects panel, an own Lottie renderer.
+
+---
+
 ## 2026-09-13 · M22 Projects in the library · DONE
 
 **Why**

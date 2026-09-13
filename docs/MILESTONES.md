@@ -457,6 +457,24 @@ Every click on a template made a new project, and the only way back to one was i
 
 ---
 
+## M23 · Undo and redo · DONE
+
+An editor without undo punishes every experiment. Josh said keep going; this is the next thing a staffer reaches for.
+
+**Build**
+- One history of editor snapshots (values, timeline overrides, transitions, music bed). Every change pushes a snapshot; fast successive changes to the same control (typing, dragging) coalesce into one step so undo goes back a word, not a keystroke.
+- Undo and Redo buttons in the header, plus Ctrl+Z and Ctrl+Shift+Z or Ctrl+Y anywhere except inside a text field, where the browser's own text undo stays in charge.
+- Undoing saves like any other change: values through the existing debounced save, element moves, transitions and the music bed through their own calls, only for what differs.
+- History is per editor session; a reload starts fresh.
+
+**Tests**
+- History: push, undo, redo, redo cleared by a new push, coalescing within the window for the same key and not across keys, capped length.
+- Editor: type into a field, undo restores the earlier text in the field and the Player and saves it; redo brings the new text back; undo of a timeline move saves the old in/out points; buttons disable when there is nothing to undo or redo; Ctrl+Z from the page body undoes, Ctrl+Z inside the text field does not.
+
+**Done when:** in the browser, a wrong edit is one Ctrl+Z away and the preview follows.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

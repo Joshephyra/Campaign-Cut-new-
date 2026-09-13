@@ -30,6 +30,7 @@ import { ExportPanel } from '../components/ExportPanel';
 import { Inspector } from '../components/Inspector';
 import { MediaPanel } from '../components/MediaPanel';
 import { Timeline, type ElementPatch } from '../components/Timeline';
+import { canRedo, canUndo, createHistory, isTextEntry, pushHistory, redoHistory, undoHistory, undoRedoFor, type History } from '../history';
 import { measurePlayback, type PlaybackSummary } from '../perf';
 
 const BACKGROUND = '#000000';
@@ -49,6 +50,8 @@ type Lotties = Record<number, LottieAnimationData>;
 type ValuesByElement = Record<number, ParamValues>;
 type Loaded = { detail: ProjectDetail; lotties: Lotties };
 type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
+/** M23: everything undo can bring back. */
+type Snapshot = { values: ValuesByElement; elements: ProjectElement[]; transitions: ProjectTransition[]; audio: ProjectAudio | null };
 
 /** Elements as they play: earliest first, then bottom of the stack first. */
 function inStartOrder<T extends { startFrame: number; zIndex: number }>(elements: T[]): T[] {
@@ -70,6 +73,29 @@ export function Editor({ projectId, onBack }: Props) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [assets, setAssets] = useState<MediaAsset[]>([]);
+
+  // M23: undo history over everything the user edits. Each change names the
+  // control it came from so fast repeats (typing, dragging) fold into one step.
+  const history = useRef<History<Snapshot> | null>(null);
+  const changeKey = useRef<string | null>(null);
+  const restoring = useRef(false);
+  const [historyTick, setHistoryTick] = useState(0);
+  useEffect(() => {
+    if (!loaded) return;
+    const snapshot: Snapshot = { values, elements, transitions, audio };
+    if (history.current === null) {
+      history.current = createHistory(snapshot);
+      return;
+    }
+    if (restoring.current) {
+      restoring.current = false;
+      return;
+    }
+    const p = history.current.present;
+    if (p.values === values && p.elements === elements && p.transitions === transitions && p.audio === audio) return;
+    history.current = pushHistory(history.current, snapshot, changeKey.current, Date.now());
+    setHistoryTick((t) => t + 1);
+  }, [loaded, values, elements, transitions, audio]);
 
   useEffect(() => {
     let cancelled = false;
@@ -142,6 +168,7 @@ export function Editor({ projectId, onBack }: Props) {
   const pendingPatches = useRef(new Map<number, ElementPatch>());
   const patchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onElementChange = (id: number, patch: ElementPatch) => {
+    changeKey.current = `element:${id}`;
     setElements((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
     pendingPatches.current.set(id, { ...pendingPatches.current.get(id), ...patch });
     setSaveState('dirty');
@@ -161,6 +188,7 @@ export function Editor({ projectId, onBack }: Props) {
 
   /** Choose the transition after an element. Saved immediately; a cut removes the row. */
   const onTransitionChange = async (afterElementId: number, t: { preset: TransitionPreset; durationInFrames: number }) => {
+    changeKey.current = `transition:${afterElementId}`;
     setTransitions((prev) => {
       const rest = prev.filter((x) => x.afterElementId !== afterElementId);
       return t.preset === 'cut' ? rest : [...rest, { afterElementId, ...t }];
@@ -176,6 +204,7 @@ export function Editor({ projectId, onBack }: Props) {
 
   /** M20: the music bed. Saved immediately; null clears it. */
   const onAudioChange = async (next: ProjectAudio | null) => {
+    changeKey.current = 'audio';
     setAudio(next);
     setSaveState('saving');
     try {
@@ -186,9 +215,71 @@ export function Editor({ projectId, onBack }: Props) {
     }
   };
 
+  /**
+   * M23: bring a snapshot back and save what differs. Values go through the
+   * debounced value save (it diffs against what was last saved); elements,
+   * transitions and the music bed are saved here, only where they changed.
+   */
+  const restore = async (snapshot: Snapshot) => {
+    const before: Snapshot = { values, elements, transitions, audio };
+    restoring.current = true;
+    setValues(snapshot.values);
+    setElements(snapshot.elements);
+    setTransitions(snapshot.transitions);
+    setAudio(snapshot.audio);
+    setHistoryTick((t) => t + 1);
+    setSaveState('saving');
+    try {
+      for (const e of snapshot.elements) {
+        const was = before.elements.find((x) => x.id === e.id);
+        if (!was || (was.startFrame === e.startFrame && was.endFrame === e.endFrame && was.enabled === e.enabled)) continue;
+        await api.saveElement(projectId, e.id, { startFrame: e.startFrame, endFrame: e.endFrame, enabled: e.enabled });
+      }
+      const ids = new Set([...before.transitions, ...snapshot.transitions].map((t) => t.afterElementId));
+      for (const id of ids) {
+        const was = before.transitions.find((t) => t.afterElementId === id);
+        const now = snapshot.transitions.find((t) => t.afterElementId === id);
+        if (was?.preset === now?.preset && was?.durationInFrames === now?.durationInFrames) continue;
+        await api.saveTransition(projectId, id, now ? { preset: now.preset, durationInFrames: now.durationInFrames } : { preset: 'cut', durationInFrames: 0 });
+      }
+      if (JSON.stringify(before.audio) !== JSON.stringify(snapshot.audio)) await api.saveAudio(projectId, snapshot.audio);
+      setSaveState('saved');
+    } catch {
+      setSaveState('error');
+    }
+  };
+  const undo = () => {
+    if (!history.current || !canUndo(history.current)) return;
+    history.current = undoHistory(history.current);
+    void restore(history.current.present);
+  };
+  const redo = () => {
+    if (!history.current || !canRedo(history.current)) return;
+    history.current = redoHistory(history.current);
+    void restore(history.current.present);
+  };
+  const undoRef = useRef({ undo, redo });
+  undoRef.current = { undo, redo };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const action = undoRedoFor(e);
+      if (!action || isTextEntry(e.target)) return;
+      e.preventDefault();
+      if (action === 'undo') undoRef.current.undo();
+      else undoRef.current.redo();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  const undoAvailable = historyTick >= 0 && history.current !== null && canUndo(history.current);
+  const redoAvailable = historyTick >= 0 && history.current !== null && canRedo(history.current);
+
   const selected = elements.find((e) => e.id === selectedId) ?? inStartOrder(elements)[0];
   const setSelectedValues = (next: ParamValues) => {
     if (!selected) return;
+    const current = values[selected.id] ?? {};
+    const changed = Object.keys(next).find((k) => next[k] !== current[k]) ?? null;
+    changeKey.current = changed ? `${selected.id}:${changed}` : null;
     setValues({ ...values, [selected.id]: next });
   };
 
@@ -198,6 +289,7 @@ export function Editor({ projectId, onBack }: Props) {
   useEffect(() => setDragKey(null), [selectedId]);
   const onDrag = (dx: number, dy: number) => {
     if (!selected || !dragKey) return;
+    changeKey.current = `${selected.id}:${dragKey}`;
     setValues((prev) => {
       const current = prev[selected.id]?.[dragKey];
       const base = isTransformValue(current) ? current : DEFAULT_TRANSFORM;
@@ -219,6 +311,7 @@ export function Editor({ projectId, onBack }: Props) {
     }
     if (!mediaElement || !mediaParam) return;
     const current = values[mediaElement.id]?.[mediaParam.key];
+    changeKey.current = `${mediaElement.id}:${mediaParam.key}`;
     setValues({
       ...values,
       [mediaElement.id]: { ...values[mediaElement.id], [mediaParam.key]: { assetId: asset.id, fit: isMediaValue(current) ? current.fit : 'cover' } },
@@ -246,6 +339,16 @@ export function Editor({ projectId, onBack }: Props) {
           />
         </div>
         <div className="font-mono text-xs text-muted flex items-center gap-4">
+          {loaded && (
+            <span className="flex gap-2">
+              <button type="button" aria-label="Undo" title="Undo (Ctrl+Z)" onClick={undo} disabled={!undoAvailable} className="hover:text-fg disabled:opacity-40">
+                Undo
+              </button>
+              <button type="button" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" onClick={redo} disabled={!redoAvailable} className="hover:text-fg disabled:opacity-40">
+                Redo
+              </button>
+            </span>
+          )}
           <SaveIndicator state={saveState} />
           <span>{loaded ? loaded.detail.template.slug : `project ${projectId}`}</span>
           {loaded && <ExportPanel projectId={projectId} />}
