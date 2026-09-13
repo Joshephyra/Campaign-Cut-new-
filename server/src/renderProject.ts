@@ -7,16 +7,15 @@ import {
   mediaSourceFor,
   resolveLottieAssets,
   withBaseUrl,
-  type LottieAnimationData,
   type MainProps,
   type ParamValues,
   type TemplateFontFile,
-  type TemplateParam,
   type TransitionPreset,
 } from '@campaigncut/composition';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Db } from './db/index';
+import { elementBaseUrl, loadElementFiles } from './templateFiles';
 
 export type BuildProjectPropsOptions = {
   db: Db;
@@ -32,47 +31,48 @@ export type BuildProjectPropsOptions = {
  * The SERVER-SIDE RUNNER's props for a project: the same composition the
  * Player shows, handed the ORIGINAL footage and absolute URLs. The browser
  * does the same thing with 'preview' and its /api base (see Editor.tsx).
+ *
+ * Every element is built from its own Lottie, schema and values (M17).
+ * Footage comes from the first element, in start order, that has a media
+ * slot and a clip chosen.
  */
 export function buildProjectProps({ db, templatesDir, projectId, serverBase, runner = 'export' }: BuildProjectPropsOptions): MainProps {
   const project = db.getProject(projectId);
   if (!project) throw new Error(`No project ${projectId}`);
 
-  const dir = path.join(templatesDir, project.templateSlug);
-  const source = JSON.parse(fs.readFileSync(path.join(dir, 'template.json'), 'utf8')) as LottieAnimationData;
-  const schema = JSON.parse(fs.readFileSync(path.join(dir, 'schema.json'), 'utf8')) as TemplateParam[];
-  const metaFile = path.join(dir, 'meta.json');
+  const metaFile = path.join(templatesDir, project.templateSlug, 'meta.json');
   const meta = fs.existsSync(metaFile) ? (JSON.parse(fs.readFileSync(metaFile, 'utf8')) as { fontFiles?: TemplateFontFile[] }) : {};
   const fonts = fontsFor(meta.fontFiles, project.templateSlug, serverBase);
 
-  const raw: ParamValues = {};
-  for (const v of project.values) raw[v.key] = v.value;
+  const rows = db.getProjectElements(projectId);
+  const files = new Map(rows.map((e) => [e.id, loadElementFiles(templatesDir, project.templateSlug, e.slug)] as const));
+  const valuesFor = (elementId: number): ParamValues => {
+    const raw: ParamValues = {};
+    for (const v of project.values) if (v.elementId === elementId) raw[v.key] = v.value;
+    return raw;
+  };
 
   let media: MainProps['media'] = null;
-  const mediaParam = schema.find((p) => p.kind === 'media');
-  const mediaValue = mediaParam ? raw[mediaParam.key] : null;
-  if (mediaParam && isMediaValue(mediaValue)) {
+  for (const e of [...rows].sort((a, b) => a.startFrame - b.startFrame || a.zIndex - b.zIndex)) {
+    const { lottie: source, schema } = files.get(e.id)!;
+    const mediaParam = schema.find((p) => p.kind === 'media');
+    const mediaValue = mediaParam ? valuesFor(e.id)[mediaParam.key] : null;
+    if (!mediaParam || !isMediaValue(mediaValue)) continue;
     const asset = db.getMediaAsset(mediaValue.assetId);
     const rect = mediaFillRect(source, mediaParam.path);
-    if (asset && rect) {
-      const src = mediaSourceFor({ proxyUrl: `/media/${asset.proxyPath}`, originalUrl: `/media/${asset.originalPath}` }, runner);
-      media = { src: `${serverBase}${src}`, rect, fit: mediaValue.fit, key: isChromaKey(mediaValue.key) ? mediaValue.key : null };
-    }
+    if (!asset || !rect) continue;
+    const src = mediaSourceFor({ proxyUrl: `/media/${asset.proxyPath}`, originalUrl: `/media/${asset.originalPath}` }, runner);
+    media = { src: `${serverBase}${src}`, rect, fit: mediaValue.fit, key: isChromaKey(mediaValue.key) ? mediaValue.key : null };
+    break;
   }
 
-  const resolvedSource = resolveLottieAssets(source, `${serverBase}/templates/${project.templateSlug}`);
-  const values = withBaseUrl(raw, schema, serverBase);
-  const lottie = applyLottieValues(resolvedSource, values, schema);
-
-  // One Bodymovin export is one element today, so every element shares the
-  // template's Lottie. Per-element Lotties arrive with multi-element ingest.
-  const elements = db.getProjectElements(projectId).map((e) => ({
-    id: String(e.id),
-    lottie,
-    startFrame: e.startFrame,
-    endFrame: e.endFrame,
-    zIndex: e.zIndex,
-    enabled: e.enabled,
-  }));
+  const elements = rows.map((e) => {
+    const { lottie: source, schema } = files.get(e.id)!;
+    const resolvedSource = resolveLottieAssets(source, `${serverBase}${elementBaseUrl(templatesDir, project.templateSlug, e.slug)}`);
+    const values = withBaseUrl(valuesFor(e.id), schema, serverBase);
+    const lottie = applyLottieValues(resolvedSource, values, schema);
+    return { id: String(e.id), lottie, startFrame: e.startFrame, endFrame: e.endFrame, zIndex: e.zIndex, enabled: e.enabled };
+  });
 
   const transitions = db.getProjectTransitions(projectId).map((t) => ({
     afterElementId: String(t.afterElementId),

@@ -19,7 +19,19 @@ export type LibraryGroup = { adType: string; sort: number; templates: TemplateSu
 
 export type ProjectValue = { elementId: number; key: string; value: unknown };
 
-export type ProjectElement = { id: number; slug: string; zIndex: number; startFrame: number; endFrame: number; enabled: boolean };
+/** One element of a project: its own Lottie (at lottieUrl), its own schema, and this project's in/out and toggle. */
+export type ProjectElement = {
+  id: number;
+  slug: string;
+  name: string;
+  zIndex: number;
+  startFrame: number;
+  endFrame: number;
+  enabled: boolean;
+  schema: TemplateParam[];
+  /** Server-relative, e.g. /templates/two/elements/open/template.json. */
+  lottieUrl: string;
+};
 
 export type RenderJob = {
   id: number;
@@ -36,7 +48,6 @@ export type ProjectDetail = {
   project: { id: number; name: string; templateId: number; templateSlug: string; templateName: string };
   template: TemplateSummary;
   meta?: { fonts?: string[]; fontFiles?: TemplateFontFile[] } | null;
-  schema: TemplateParam[];
   elements: ProjectElement[];
   transitions?: ProjectTransition[];
   values: ProjectValue[];
@@ -115,7 +126,8 @@ export const api = {
     return fetch(`${API}/images`, { method: 'POST', body }).then((r) => json<{ url: string }>(r));
   },
 
-  templateLottie: (slug: string) => fetch(`${API}/templates/${slug}/template.json`).then((r) => json<LottieAnimationData>(r)),
+  /** An element's Lottie, at the server-relative lottieUrl the project detail gave for it. */
+  elementLottie: (lottieUrl: string) => fetch(`${API}${lottieUrl}`).then((r) => json<LottieAnimationData>(r)),
 
   /** Absolute URL for a server-relative file path such as /templates/x/thumb.png. */
   fileUrl: (serverPath: string) => `${API}${serverPath}`,

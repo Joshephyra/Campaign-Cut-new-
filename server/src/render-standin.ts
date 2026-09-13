@@ -21,8 +21,8 @@ const argValue = (flag: string) => {
   return i >= 0 ? args[i + 1] : undefined;
 };
 
-const source = JSON.parse(fs.readFileSync(path.join(standinDir, 'template.json'), 'utf8')) as LottieAnimationData;
-const schema = JSON.parse(fs.readFileSync(path.join(standinDir, 'schema.json'), 'utf8')) as TemplateParam[];
+const source = JSON.parse(fs.readFileSync(path.join(standinDir, 'elements', 'standin', 'template.json'), 'utf8')) as LottieAnimationData;
+const schema = JSON.parse(fs.readFileSync(path.join(standinDir, 'elements', 'standin', 'schema.json'), 'utf8')) as TemplateParam[];
 
 const valuesPath = argValue('--values');
 const values: ParamValues = valuesPath ? (JSON.parse(fs.readFileSync(path.resolve(valuesPath), 'utf8')) as ParamValues) : {};

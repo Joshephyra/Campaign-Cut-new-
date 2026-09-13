@@ -11,7 +11,7 @@ import { lottieDurationInFrames } from './lottieDuration';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const entry = path.resolve(here, 'entry.ts');
-const fixturePath = path.resolve(here, '..', '..', 'templates', 'standin', 'template.json');
+const fixturePath = path.resolve(here, '..', '..', 'templates', 'standin', 'elements', 'standin', 'template.json');
 
 // Slow: bundle the package exactly the way the server does. Downloads
 // Remotion's headless Chrome on the first run.

@@ -2,6 +2,7 @@ import {
   applyLottieValues,
   compositionConfig,
   compositionDurationWithTransitions,
+  EMPTY_LOTTIE,
   fontsFor,
   isChromaKey,
   isMediaValue,
@@ -37,15 +38,30 @@ type Props = {
   onBack: () => void;
 };
 
-type Loaded = { detail: ProjectDetail; lottie: LottieAnimationData };
+/** Each element's Lottie, by element id (M17). */
+type Lotties = Record<number, LottieAnimationData>;
+/** Each element's values, by element id. */
+type ValuesByElement = Record<number, ParamValues>;
+type Loaded = { detail: ProjectDetail; lotties: Lotties };
 type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
+
+/** Elements as they play: earliest first, then bottom of the stack first. */
+function inStartOrder<T extends { startFrame: number; zIndex: number }>(elements: T[]): T[] {
+  return [...elements].sort((a, b) => a.startFrame - b.startFrame || a.zIndex - b.zIndex);
+}
+
+/** The element whose media slot the Footage panel drives: the first, in start order, that has one. */
+function mediaElementOf(elements: ProjectElement[]): ProjectElement | undefined {
+  return inStartOrder(elements).find((e) => e.schema.some((p) => p.kind === 'media'));
+}
 
 export function Editor({ projectId, onBack }: Props) {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [values, setValues] = useState<ParamValues>({});
+  const [values, setValues] = useState<ValuesByElement>({});
   const [elements, setElements] = useState<ProjectElement[]>([]);
   const [transitions, setTransitions] = useState<ProjectTransition[]>([]);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [assets, setAssets] = useState<MediaAsset[]>([]);
 
@@ -54,14 +70,18 @@ export function Editor({ projectId, onBack }: Props) {
     api
       .project(projectId)
       .then(async (detail) => {
-        const lottie = await api.templateLottie(detail.template.slug);
+        const loadedLotties = await Promise.all(detail.elements.map(async (e) => [e.id, await api.elementLottie(e.lottieUrl)] as const));
         if (cancelled) return;
-        const initial: ParamValues = {};
-        for (const v of detail.values) initial[v.key] = v.value;
+        const lotties: Lotties = {};
+        for (const [id, lottie] of loadedLotties) lotties[id] = lottie;
+        const initial: ValuesByElement = {};
+        for (const e of detail.elements) initial[e.id] = {};
+        for (const v of detail.values) (initial[v.elementId] ??= {})[v.key] = v.value;
         setValues(initial);
         setElements(detail.elements.map((e) => ({ ...e, enabled: e.enabled ?? true })));
         setTransitions(detail.transitions ?? []);
-        setLoaded({ detail, lottie });
+        setSelectedId(inStartOrder(detail.elements)[0]?.id ?? null);
+        setLoaded({ detail, lotties });
       })
       .catch((e: Error) => {
         if (!cancelled) setError(e.message);
@@ -79,8 +99,8 @@ export function Editor({ projectId, onBack }: Props) {
   }, []);
   useEffect(refreshAssets, [refreshAssets]);
 
-  // Persist changed values, debounced. Only the keys that changed are sent.
-  const lastSaved = useRef<ParamValues | null>(null);
+  // Persist changed values, debounced. Only the keys that changed are sent, each with its element.
+  const lastSaved = useRef<ValuesByElement | null>(null);
   useEffect(() => {
     if (!loaded) return;
     if (lastSaved.current === null) {
@@ -91,11 +111,13 @@ export function Editor({ projectId, onBack }: Props) {
     setSaveState('dirty');
     const timer = setTimeout(async () => {
       const previous = lastSaved.current ?? {};
-      const elementId = loaded.detail.elements[0]?.id;
-      if (elementId === undefined) return;
-      const changed = Object.entries(values)
-        .filter(([key, value]) => previous[key] !== value)
-        .map(([key, value]) => ({ elementId, key, value }));
+      const changed = Object.entries(values).flatMap(([id, elementValues]) => {
+        const elementId = Number(id);
+        const before = previous[elementId] ?? {};
+        return Object.entries(elementValues)
+          .filter(([key, value]) => before[key] !== value)
+          .map(([key, value]) => ({ elementId, key, value }));
+      });
       if (changed.length === 0) return;
       setSaveState('saving');
       try {
@@ -145,17 +167,26 @@ export function Editor({ projectId, onBack }: Props) {
     }
   };
 
-  /** The Footage panel's "use this clip" hands the asset to the first cc.mediaFill param. */
+  const selected = elements.find((e) => e.id === selectedId) ?? inStartOrder(elements)[0];
+  const setSelectedValues = (next: ParamValues) => {
+    if (!selected) return;
+    setValues({ ...values, [selected.id]: next });
+  };
+
+  /** The Footage panel's "use this clip" hands the asset to the first element with a cc.mediaFill slot. */
+  const mediaElement = mediaElementOf(elements);
+  const mediaParam = mediaElement?.schema.find((p) => p.kind === 'media');
   const selectFootage = (asset: MediaAsset) => {
-    const mediaParam = loaded?.detail.schema.find((p) => p.kind === 'media');
-    if (!mediaParam) return;
-    const current = values[mediaParam.key];
-    setValues({ ...values, [mediaParam.key]: { assetId: asset.id, fit: isMediaValue(current) ? current.fit : 'cover' } });
+    if (!mediaElement || !mediaParam) return;
+    const current = values[mediaElement.id]?.[mediaParam.key];
+    setValues({
+      ...values,
+      [mediaElement.id]: { ...values[mediaElement.id], [mediaParam.key]: { assetId: asset.id, fit: isMediaValue(current) ? current.fit : 'cover' } },
+    });
   };
 
   const selectedAssetId = (() => {
-    const mediaParam = loaded?.detail.schema.find((p) => p.kind === 'media');
-    const v = mediaParam ? values[mediaParam.key] : null;
+    const v = mediaElement && mediaParam ? values[mediaElement.id]?.[mediaParam.key] : null;
     return isMediaValue(v) ? v.assetId : undefined;
   })();
 
@@ -185,19 +216,42 @@ export function Editor({ projectId, onBack }: Props) {
             elements={elements}
             transitions={transitions}
             assets={assets}
+            selectedId={selected?.id}
+            onSelect={setSelectedId}
             onElementChange={onElementChange}
             onTransitionChange={onTransitionChange}
           />
           <aside className="w-80 border-l border-hairline shrink-0 overflow-y-auto">
             <div className="p-6 border-b border-hairline">
-              <h2 className="text-xs uppercase tracking-widest text-muted mb-4">Inspector</h2>
-              <Inspector
-                schema={loaded.detail.schema}
-                values={values}
-                onChange={setValues}
-                assets={assets}
-                templateSlug={loaded.detail.template.slug}
-              />
+              <h2 className="text-xs uppercase tracking-widest text-muted mb-3">Inspector</h2>
+              {elements.length > 1 && (
+                <div className="flex flex-wrap gap-1 mb-4" role="tablist" aria-label="Elements">
+                  {inStartOrder(elements).map((e) => (
+                    <button
+                      key={e.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={e.id === selected?.id}
+                      data-testid={`element-tab-${e.id}`}
+                      onClick={() => setSelectedId(e.id)}
+                      className={`text-xs px-2 py-1 border ${e.id === selected?.id ? 'border-cobalt text-cobalt' : 'border-hairline text-muted hover:text-fg'}`}
+                    >
+                      {e.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {selected && (
+                <Inspector
+                  key={selected.id}
+                  schema={selected.schema}
+                  values={values[selected.id] ?? {}}
+                  onChange={setSelectedValues}
+                  assets={assets}
+                  templateSlug={loaded.detail.template.slug}
+                  elementBaseUrl={selected.lottieUrl.replace(/\/template\.json$/, '')}
+                />
+              )}
             </div>
             <div className="p-6">
               <MediaPanel onSelect={selectFootage} selectedId={selectedAssetId} onChange={setAssets} />
@@ -229,7 +283,8 @@ function useDebounced<T>(value: T, delay: number): T {
 /**
  * The PREVIEW RUNNER's props. Same composition as the server, handed the
  * PROXY footage and /api-relative URLs. See server/src/renderProject.ts for
- * the export runner doing the same with originals.
+ * the export runner doing the same with originals. Every element is built
+ * from its own Lottie, schema and values, exactly as the export runner does.
  */
 function Monitor({
   loaded,
@@ -237,41 +292,52 @@ function Monitor({
   elements,
   transitions,
   assets,
+  selectedId,
+  onSelect,
   onElementChange,
   onTransitionChange,
 }: {
   loaded: Loaded;
-  values: ParamValues;
+  values: ValuesByElement;
   elements: ProjectElement[];
   transitions: ProjectTransition[];
   assets: MediaAsset[];
+  selectedId: number | undefined;
+  onSelect: (id: number) => void;
   onElementChange: (id: number, patch: ElementPatch) => void;
   onTransitionChange: (afterElementId: number, t: { preset: TransitionPreset; durationInFrames: number }) => void;
 }) {
-  const { detail, lottie: source } = loaded;
-  const schema = detail.schema;
+  const { detail, lotties } = loaded;
   const slug = detail.template.slug;
 
   const renderedValues = useDebounced(values, RENDER_DEBOUNCE_MS);
-  const resolvedSource = useMemo(() => resolveLottieAssets(source, `${API}/templates/${slug}`), [source, slug]);
-  const resolvedValues = useMemo(() => withBaseUrl(renderedValues, schema, API), [renderedValues, schema]);
-  const lottie = useMemo(() => applyLottieValues(resolvedSource, resolvedValues, schema), [resolvedSource, resolvedValues, schema]);
+
+  const elementProps = useMemo<ElementProps[]>(
+    () =>
+      elements.map((e) => {
+        const source = lotties[e.id];
+        const base = `${API}${e.lottieUrl.replace(/\/template\.json$/, '')}`;
+        const resolvedSource = source ? resolveLottieAssets(source, base) : EMPTY_LOTTIE;
+        const resolvedValues = withBaseUrl(renderedValues[e.id] ?? {}, e.schema, API);
+        const lottie = applyLottieValues(resolvedSource, resolvedValues, e.schema);
+        return { id: String(e.id), lottie, startFrame: e.startFrame, endFrame: e.endFrame, zIndex: e.zIndex, enabled: e.enabled };
+      }),
+    [elements, lotties, renderedValues],
+  );
 
   const media = useMemo<MainProps['media']>(() => {
-    const mediaParam = schema.find((p) => p.kind === 'media');
-    const v = mediaParam ? renderedValues[mediaParam.key] : null;
-    if (!mediaParam || !isMediaValue(v)) return null;
-    const asset = assets.find((a) => a.id === v.assetId);
-    const rect = mediaFillRect(source, mediaParam.path);
-    if (!asset || !rect) return null;
-    return { src: api.fileUrl(mediaSourceFor(asset, 'preview')), rect, fit: v.fit, key: isChromaKey(v.key) ? v.key : null };
-  }, [schema, renderedValues, assets, source]);
-
-  // One Bodymovin export is one element today, so every element shares the template's Lottie.
-  const elementProps = useMemo<ElementProps[]>(
-    () => elements.map((e) => ({ id: String(e.id), lottie, startFrame: e.startFrame, endFrame: e.endFrame, zIndex: e.zIndex, enabled: e.enabled })),
-    [elements, lottie],
-  );
+    for (const e of inStartOrder(elements)) {
+      const mediaParam = e.schema.find((p) => p.kind === 'media');
+      const v = mediaParam ? renderedValues[e.id]?.[mediaParam.key] : null;
+      if (!mediaParam || !isMediaValue(v)) continue;
+      const asset = assets.find((a) => a.id === v.assetId);
+      const source = lotties[e.id];
+      const rect = source ? mediaFillRect(source, mediaParam.path) : null;
+      if (!asset || !rect) continue;
+      return { src: api.fileUrl(mediaSourceFor(asset, 'preview')), rect, fit: v.fit, key: isChromaKey(v.key) ? v.key : null };
+    }
+    return null;
+  }, [elements, renderedValues, assets, lotties]);
 
   const transitionProps = useMemo<TransitionProps[]>(
     () => transitions.map((t) => ({ afterElementId: String(t.afterElementId), preset: t.preset, durationInFrames: t.durationInFrames })),
@@ -348,6 +414,8 @@ function Monitor({
         onChange={onElementChange}
         transitions={transitions}
         onTransitionChange={onTransitionChange}
+        selectedId={selectedId}
+        onSelect={onSelect}
       />
     </section>
   );

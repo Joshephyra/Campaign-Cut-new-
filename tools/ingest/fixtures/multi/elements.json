@@ -1,0 +1,23 @@
+[
+  {
+    "folder": "01-open",
+    "slug": "open",
+    "name": "Open",
+    "startFrame": 0,
+    "zIndex": 0
+  },
+  {
+    "folder": "02-lower-third",
+    "slug": "lower-third",
+    "name": "Lower third",
+    "startFrame": 60,
+    "zIndex": 1
+  },
+  {
+    "folder": "03-end-card",
+    "slug": "end-card",
+    "name": "End card",
+    "startFrame": 150,
+    "zIndex": 0
+  }
+]

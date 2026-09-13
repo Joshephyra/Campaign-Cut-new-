@@ -19,8 +19,19 @@ const lottie = {
 const detail = {
   project: { id: 7, name: 'Demo project', templateId: 1, templateSlug: 'demo', templateName: 'Demo' },
   template: { id: 1, slug: 'demo', name: 'Demo', durationFrames: 60, fps: 30, width: 1920, height: 1080, thumbUrl: '' },
-  schema: [{ key: 'headline', role: 'headline', kind: 'text', label: 'Headline', default: 'AUTHORED', path: '/layers/0' }],
-  elements: [{ id: 3, slug: 'demo', zIndex: 0, startFrame: 0, endFrame: 60, enabled: true }],
+  elements: [
+    {
+      id: 3,
+      slug: 'demo',
+      name: 'Demo',
+      zIndex: 0,
+      startFrame: 0,
+      endFrame: 60,
+      enabled: true,
+      lottieUrl: '/templates/demo/template.json',
+      schema: [{ key: 'headline', role: 'headline', kind: 'text', label: 'Headline', default: 'AUTHORED', path: '/layers/0' }],
+    },
+  ],
   meta: { fonts: ['IBM Plex Sans'], fontFiles: [{ family: 'IBM Plex Sans', file: 'IBMPlexSans-Regular.ttf' }] },
   values: [{ elementId: 3, key: 'headline', value: 'SAVED EARLIER' }],
 };

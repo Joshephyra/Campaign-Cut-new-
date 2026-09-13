@@ -65,10 +65,10 @@ describe('ingestTemplate', () => {
     const result = await run(makeHandover(tmp));
     const dir = path.join(templatesDir, 'standin');
     expect(result.dir).toBe(dir);
-    for (const f of ['template.json', 'schema.json', 'meta.json', 'thumb.png']) {
+    for (const f of ['elements/standin/template.json', 'elements/standin/schema.json', 'meta.json', 'thumb.png']) {
       expect(fs.existsSync(path.join(dir, f)), f).toBe(true);
     }
-    const schema = JSON.parse(fs.readFileSync(path.join(dir, 'schema.json'), 'utf8')) as AnyRecord[];
+    const schema = JSON.parse(fs.readFileSync(path.join(dir, 'elements', 'standin', 'schema.json'), 'utf8')) as AnyRecord[];
     expect(schema.map((p) => p.key).sort()).toEqual(['accent', 'disclaimer', 'headline', 'logo', 'mediaFill', 'surface']);
 
     const rows = db.listTemplates();
@@ -135,7 +135,7 @@ describe('ingestTemplate', () => {
     fs.mkdirSync(path.join(input, 'images'));
     fs.writeFileSync(path.join(input, 'images', 'logo.png'), 'img');
     await run(input);
-    expect(fs.existsSync(path.join(templatesDir, 'standin', 'images', 'logo.png'))).toBe(true);
+    expect(fs.existsSync(path.join(templatesDir, 'standin', 'elements', 'standin', 'images', 'logo.png'))).toBe(true);
   });
 
   it('rejects a Lottie with zero dimensions, naming the field', async () => {
@@ -227,12 +227,13 @@ describe('ingestTemplate: thumbnail render gets embedded fonts and images', () =
       },
     });
     expect(seen!.fonts).toEqual([{ family: 'IBM Plex Sans', url: `data:font/ttf;base64,${Buffer.from('plex-bytes').toString('base64')}` }]);
-    const logo = (seen!.lottie.assets as AnyRecord[]).find((a) => a.id === 'image_0')!;
+    expect(seen!.elements.map((e) => [e.id, e.startFrame, e.endFrame])).toEqual([['standin', 0, 150]]);
+    const logo = (seen!.elements[0]!.lottie.assets as AnyRecord[]).find((a) => a.id === 'image_0')!;
     expect(logo.e).toBe(1);
     expect(logo.u).toBe('');
     expect(String(logo.p).startsWith('data:image/png;base64,')).toBe(true);
     // the template on disk is untouched: it still references images/logo.png
-    const written = JSON.parse(fs.readFileSync(path.join(templatesDir, 'standin', 'template.json'), 'utf8')) as { assets: AnyRecord[] };
+    const written = JSON.parse(fs.readFileSync(path.join(templatesDir, 'standin', 'elements', 'standin', 'template.json'), 'utf8')) as { assets: AnyRecord[] };
     expect(written.assets.find((a) => a.id === 'image_0')).toMatchObject({ u: 'images/', p: 'logo.png' });
     db.close();
     fs.rmSync(tmp, { recursive: true, force: true });

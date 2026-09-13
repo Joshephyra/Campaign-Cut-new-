@@ -146,3 +146,84 @@ describe('buildProjectProps: chroma key travels to the export runner', () => {
     fs.rmSync(tmp, { recursive: true, force: true });
   });
 });
+
+describe('buildProjectProps: multi-element templates (M17)', () => {
+  const textLayer = (name: string, text: string) => ({ ty: 5, nm: name, t: { d: { k: [{ s: { t: text, f: 'X', s: 10 }, t: 0 }] } } });
+  const openLottie = { fr: 30, ip: 0, op: 90, w: 1920, h: 1080, layers: [textLayer('cc.headline', 'OPEN')] };
+  const endLottie = {
+    fr: 30, ip: 0, op: 90, w: 1920, h: 1080,
+    assets: [{ id: 'image_0', w: 100, h: 50, u: 'images/', p: 'logo.png', e: 0 }],
+    layers: [
+      textLayer('cc.headline', 'END'),
+      { ty: 2, nm: 'cc.logo', refId: 'image_0' },
+      { ty: 1, nm: 'cc.mediaFill', sw: 960, sh: 1080, ks: { o: { a: 0, k: 100 }, p: { a: 0, k: [1440, 540, 0] }, a: { a: 0, k: [480, 540, 0] }, s: { a: 0, k: [100, 100, 100] } } },
+    ],
+  };
+  const openSchema = [{ key: 'headline', role: 'headline', kind: 'text', label: 'Headline', default: 'OPEN', path: '/layers/0' }];
+  const endSchema = [
+    { key: 'headline', role: 'headline', kind: 'text', label: 'Headline', default: 'END', path: '/layers/0' },
+    { key: 'logo', role: 'logo', kind: 'image', label: 'Logo', default: 'images/logo.png', path: '/assets/0' },
+    { key: 'mediaFill', role: 'mediaFill', kind: 'media', label: 'Footage', default: null, path: '/layers/2' },
+  ];
+
+  let tmp: string;
+  let db: Db;
+  let projectId: number;
+  let openId: number;
+  let endId: number;
+
+  beforeEach(() => {
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-rp-multi-'));
+    for (const [slug, lottie, schema] of [['open', openLottie, openSchema], ['end-card', endLottie, endSchema]] as const) {
+      const dir = path.join(tmp, 'two', 'elements', slug);
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'template.json'), JSON.stringify(lottie));
+      fs.writeFileSync(path.join(dir, 'schema.json'), JSON.stringify(schema));
+    }
+    db = openDb(':memory:');
+    const t = db.upsertTemplate({ slug: 'two', name: 'Two', adType: 'Bio', durationFrames: 180, fps: 30, width: 1920, height: 1080, thumbPath: '' });
+    openId = db.upsertTemplateElement({ templateId: t.id, slug: 'open', name: 'Open', zIndex: 0, startFrame: 0, endFrame: 90 }).id;
+    endId = db.upsertTemplateElement({ templateId: t.id, slug: 'end-card', name: 'End card', zIndex: 0, startFrame: 90, endFrame: 180 }).id;
+    const asset = db.insertMediaAsset({ originalName: 'r.mp4', originalPath: 'originals/r.mp4', proxyPath: 'proxies/r.mp4', thumbPath: 'thumbs/r.jpg', width: 1920, height: 1080, durationS: 5, fps: 30 });
+    projectId = db.createProject({
+      templateId: t.id,
+      name: 'P',
+      values: [
+        { elementId: openId, key: 'headline', value: 'OPEN EDITED' },
+        { elementId: endId, key: 'headline', value: 'END EDITED' },
+        { elementId: endId, key: 'logo', value: 'images/logo.png' },
+        { elementId: endId, key: 'mediaFill', value: { assetId: asset.id, fit: 'cover' } },
+      ],
+    }).id;
+  });
+
+  afterEach(() => {
+    db.close();
+    fs.rmSync(tmp, { recursive: true, force: true });
+  });
+
+  const headlineOf = (lottie: { layers: unknown[] }) => (lottie.layers[0] as { t: { d: { k: { s: { t: string } }[] } } }).t.d.k[0]!.s.t;
+
+  it('gives every element its own Lottie with its own values applied, in the DB order', () => {
+    const props = buildProjectProps({ db, templatesDir: tmp, projectId, serverBase: 'http://x' });
+    expect(props.elements.map((e) => [e.id, e.startFrame, e.endFrame])).toEqual([
+      [String(openId), 0, 90],
+      [String(endId), 90, 180],
+    ]);
+    expect(headlineOf(props.elements[0]!.lottie)).toBe('OPEN EDITED');
+    expect(headlineOf(props.elements[1]!.lottie)).toBe('END EDITED');
+  });
+
+  it('resolves an element\'s own images against its element directory', () => {
+    const props = buildProjectProps({ db, templatesDir: tmp, projectId, serverBase: 'http://x' });
+    const asset = (props.elements[1]!.lottie.assets as { u: string; p: string }[])[0]!;
+    expect(`${asset.u}${asset.p}`).toBe('http://x/templates/two/elements/end-card/images/logo.png');
+  });
+
+  it('takes the footage from the element that has a media slot and a clip chosen', () => {
+    const props = buildProjectProps({ db, templatesDir: tmp, projectId, serverBase: 'http://x' });
+    expect(props.media).toMatchObject({ src: 'http://x/media/originals/r.mp4', rect: { x: 0.5, y: 0, w: 0.5, h: 1 }, fit: 'cover' });
+    // the slot layer in THAT element is made transparent
+    expect((props.elements[1]!.lottie.layers[2] as { ks: { o: { k: number } } }).ks.o.k).toBe(0);
+  });
+});

@@ -326,6 +326,31 @@ The pre-flight script (M15) answers "will this tag work". This answers "what is 
 
 ---
 
+## M17 · Multi-element templates · DONE
+
+Today one Bodymovin export is one element and every element in a project shares the template's single Lottie. SPEC section 3 describes an ad example as several elements (open, lower third, stat callout, end card, disclaimer) already placed on the timeline. This makes that real, with no bespoke code per design.
+
+**Build**
+- Handover folder with one sub-folder per element, each a Bodymovin export (`data.json` plus `images/`), and an optional `elements.json` manifest giving each element its slug, name, start frame and z-index. Without a manifest: alphabetical folder order, laid end to end, slugs derived from the folder names.
+- A single-export handover (a `data.json` at the top) still works and becomes a one-element template.
+- Ingest validates every element (tags, fonts, comp settings) and reports problems prefixed with the element, writes nothing on failure, and writes `templates/<slug>/elements/<element>/{template.json, schema.json, images/}` plus a template-level `meta.json` (with an `elements` list), `fonts/` (the union) and a composite `thumb.png` rendered through the composition with every element in place.
+- Every element must share fps, width and height; a mismatch fails naming the element.
+- Template duration is the last element's out point.
+- `template_element` gains a `name` column (migration adds it to existing databases).
+- API: each element returned by `GET /templates/:slug` and `GET /projects/:id` carries its own `schema` and `lottieUrl`; the top-level `schema` goes away. `POST /projects` seeds defaults for every element.
+- Export runner (`buildProjectProps`) builds each element from its own Lottie, schema and values. Footage comes from the first element (in start order) that has a media slot and a clip chosen.
+- Editor: loads every element's Lottie, keeps values per element, and shows the inspector for the selected element (SPEC section 4). Clicking an element in the timeline selects it; element tabs above the inspector do the same. The preview runner builds each element's Lottie exactly as the export runner does.
+- The composition does not change: `ElementProps` already carries one Lottie per element.
+
+**Tests**
+- Ingest: three-folder handover with manifest produces three element directories, meta with timing, three `template_element` rows, and a 240-frame template; no manifest gives alphabetical sequential order; a bad tag fails naming element and layer with nothing written; mismatched fps fails naming the element; fonts are the union shipped once; the thumbnail renderer receives every element with its timing; duplicate element slugs are rejected; the single-export path still works and lands in `elements/<slug>/`.
+- Server: element files resolve to `elements/<slug>/` with a fallback to the template root for old layouts; `GET /templates/:slug` and `GET /projects/:id` carry per-element schema and lottieUrl; `POST /projects` seeds defaults for every element; `buildProjectProps` gives each element its own Lottie and values and takes footage from the element that has it.
+- App: the editor loads both Lotties, shows the first element's controls, switches to the second element's controls when its timeline row is clicked, saves with that element's id, and hands the Player two different Lotties. Timeline reports row selection.
+
+**Done when:** the three-element fixture ingests with one command, opens with three bars on the timeline, each element's text edits live in the preview, and the export matches the preview (parity script) with a human watching.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

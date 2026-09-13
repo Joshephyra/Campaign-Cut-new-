@@ -1,0 +1,18 @@
+[
+  {
+    "key": "subhead",
+    "role": "subhead",
+    "kind": "text",
+    "label": "Subhead",
+    "default": "Lower third subhead",
+    "path": "/layers/0"
+  },
+  {
+    "key": "logo",
+    "role": "logo",
+    "kind": "image",
+    "label": "Logo",
+    "default": "images/logo.png",
+    "path": "/assets/0"
+  }
+]

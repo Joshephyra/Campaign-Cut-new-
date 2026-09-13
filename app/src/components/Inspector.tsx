@@ -18,8 +18,10 @@ type Props = {
   onChange: (next: ParamValues) => void;
   /** Uploaded footage, for cc.mediaFill params. */
   assets?: MediaAsset[];
-  /** For resolving a template's own image defaults (images/logo.png). */
+  /** For resolving a template's own image defaults (images/logo.png) when no elementBaseUrl is given. */
   templateSlug?: string;
+  /** Server-relative base of the element's files, e.g. /templates/two/elements/open (M17). */
+  elementBaseUrl?: string;
 };
 
 /**
@@ -27,8 +29,9 @@ type Props = {
  * code anywhere: a template with three text roles and one accent colour
  * produces three text fields and a colour picker, automatically.
  */
-export function Inspector({ schema, values, onChange, assets = [], templateSlug = '' }: Props) {
+export function Inspector({ schema, values, onChange, assets = [], templateSlug = '', elementBaseUrl }: Props) {
   const set = (key: string, value: unknown) => onChange({ ...values, [key]: value });
+  const imageBase = elementBaseUrl ?? `/templates/${templateSlug}`;
 
   return (
     <div className="flex flex-col gap-5">
@@ -37,7 +40,7 @@ export function Inspector({ schema, values, onChange, assets = [], templateSlug 
           {param.kind === 'text' && <TextControl param={param} value={valueOf(param, values)} onChange={(v) => set(param.key, v)} />}
           {param.kind === 'color' && <ColorControl param={param} value={valueOf(param, values)} onChange={(v) => set(param.key, v)} />}
           {param.kind === 'image' && (
-            <ImageControl param={param} value={valueOf(param, values)} templateSlug={templateSlug} onChange={(v) => set(param.key, v)} />
+            <ImageControl param={param} value={valueOf(param, values)} imageBase={imageBase} onChange={(v) => set(param.key, v)} />
           )}
           {param.kind === 'media' && (
             <MediaControl param={param} value={values[param.key]} assets={assets} onChange={(v) => set(param.key, v)} />
@@ -136,28 +139,29 @@ function normalizeHex(hex: string): string {
 // ---- image (cc.logo) ---------------------------------------------------
 
 /** Where an image value can be shown from, in the browser. */
-function imagePreviewUrl(value: string, templateSlug: string): string | null {
+function imagePreviewUrl(value: string, imageBase: string): string | null {
   if (!value) return null;
   if (value.startsWith('data:') || /^https?:/.test(value)) return value;
   if (value.startsWith('/')) return api.fileUrl(value);
-  return `${api.fileUrl(`/templates/${templateSlug}`)}/${value}`;
+  return `${api.fileUrl(imageBase)}/${value}`;
 }
 
 function ImageControl({
   param,
   value,
-  templateSlug,
+  imageBase,
   onChange,
 }: {
   param: TemplateParam;
   value: string;
-  templateSlug: string;
+  /** Server-relative base the element's own images resolve against. */
+  imageBase: string;
   onChange: (v: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
-  const preview = imagePreviewUrl(value, templateSlug);
+  const preview = imagePreviewUrl(value, imageBase);
 
   const onFile = async (file: File | undefined) => {
     if (!file) return;

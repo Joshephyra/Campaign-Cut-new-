@@ -8,7 +8,7 @@ import { resolvePointer } from './jsonPointer';
 import type { TemplateParam } from './schema';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const standinDir = path.resolve(here, '..', '..', 'templates', 'standin');
+const standinDir = path.resolve(here, '..', '..', 'templates', 'standin', 'elements', 'standin');
 const loadStandin = () =>
   JSON.parse(fs.readFileSync(path.join(standinDir, 'template.json'), 'utf8')) as LottieAnimationData;
 const schema = JSON.parse(fs.readFileSync(path.join(standinDir, 'schema.json'), 'utf8')) as TemplateParam[];

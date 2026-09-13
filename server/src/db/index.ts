@@ -21,12 +21,14 @@ export type TemplateRow = TemplateInput & { id: number; adTypeSort: number };
 export type TemplateElementInput = {
   templateId: number;
   slug: string;
+  /** Shown in the timeline and inspector; defaults to the slug. */
+  name?: string;
   zIndex: number;
   startFrame: number;
   endFrame: number;
 };
 
-export type TemplateElementRow = TemplateElementInput & { id: number };
+export type TemplateElementRow = Omit<TemplateElementInput, 'name'> & { id: number; name: string };
 
 export type ProjectValue = { elementId: number; key: string; value: unknown };
 
@@ -48,6 +50,7 @@ export type ProjectDetail = ProjectRow & { values: ProjectValue[] };
 export type ProjectElement = {
   id: number;
   slug: string;
+  name: string;
   zIndex: number;
   startFrame: number;
   endFrame: number;
@@ -102,6 +105,8 @@ export type Db = Database.Database & {
   getTemplateBySlug(slug: string): TemplateRow | undefined;
   upsertTemplateElement(e: TemplateElementInput): { id: number };
   listTemplateElements(templateId: number): TemplateElementRow[];
+  /** Drop a template's elements whose slug is not in `keep` (a re-ingest that lost an element). */
+  deleteTemplateElementsExcept(templateId: number, keep: string[]): void;
   createProject(p: ProjectInput): { id: number };
   getProject(id: number): ProjectDetail | undefined;
   listProjects(): ProjectRow[];
@@ -141,6 +146,7 @@ CREATE TABLE IF NOT EXISTS template_element (
   id           INTEGER PRIMARY KEY,
   template_id  INTEGER NOT NULL REFERENCES template(id) ON DELETE CASCADE,
   slug         TEXT    NOT NULL,
+  name         TEXT    NOT NULL DEFAULT '',
   z_index      INTEGER NOT NULL DEFAULT 0,
   start_frame  INTEGER NOT NULL DEFAULT 0,
   end_frame    INTEGER NOT NULL,
@@ -216,6 +222,10 @@ export function openDb(file: string): Db {
   if (file !== ':memory:') db.pragma('journal_mode = WAL');
   db.exec(MIGRATIONS);
 
+  // M17: elements gained a display name. Add the column to databases created before it.
+  const elementColumns = (db.prepare(`PRAGMA table_info(template_element)`).all() as { name: string }[]).map((c) => c.name);
+  if (!elementColumns.includes('name')) db.exec(`ALTER TABLE template_element ADD COLUMN name TEXT NOT NULL DEFAULT ''`);
+
   const seed = db.prepare(`INSERT OR IGNORE INTO ad_type (name, sort) VALUES (?, ?)`);
   AD_TYPES.forEach((name, i) => seed.run(name, i + 1));
 
@@ -225,6 +235,7 @@ export function openDb(file: string): Db {
     getTemplateBySlug: (slug: string) => getTemplateBySlug(db, slug),
     upsertTemplateElement: (e: TemplateElementInput) => upsertTemplateElement(db, e),
     listTemplateElements: (templateId: number) => listTemplateElements(db, templateId),
+    deleteTemplateElementsExcept: (templateId: number, keep: string[]) => deleteTemplateElementsExcept(db, templateId, keep),
     createProject: (p: ProjectInput) => createProject(db, p),
     getProject: (id: number) => getProject(db, id),
     listProjects: () => listProjects(db),
@@ -250,7 +261,7 @@ export function openDb(file: string): Db {
 function getProjectElements(db: Database.Database, projectId: number): ProjectElement[] {
   const rows = db
     .prepare(
-      `SELECT e.id, e.slug, e.z_index AS zIndex,
+      `SELECT e.id, e.slug, COALESCE(NULLIF(e.name, ''), e.slug) AS name, e.z_index AS zIndex,
               COALESCE(pe.start_frame, e.start_frame) AS startFrame,
               COALESCE(pe.end_frame, e.end_frame) AS endFrame,
               COALESCE(pe.enabled, 1) AS enabledInt
@@ -426,24 +437,41 @@ function getTemplateBySlug(db: Database.Database, slug: string): TemplateRow | u
 function upsertTemplateElement(db: Database.Database, e: TemplateElementInput): { id: number } {
   return db
     .prepare(
-      `INSERT INTO template_element (template_id, slug, z_index, start_frame, end_frame)
-       VALUES (@templateId, @slug, @zIndex, @startFrame, @endFrame)
+      `INSERT INTO template_element (template_id, slug, name, z_index, start_frame, end_frame)
+       VALUES (@templateId, @slug, @name, @zIndex, @startFrame, @endFrame)
        ON CONFLICT(template_id, slug) DO UPDATE SET
+         name = excluded.name,
          z_index = excluded.z_index,
          start_frame = excluded.start_frame,
          end_frame = excluded.end_frame
        RETURNING id`,
     )
-    .get(e) as { id: number };
+    .get({ ...e, name: e.name ?? e.slug }) as { id: number };
 }
 
 function listTemplateElements(db: Database.Database, templateId: number): TemplateElementRow[] {
   return db
     .prepare(
-      `SELECT id, template_id AS templateId, slug, z_index AS zIndex, start_frame AS startFrame, end_frame AS endFrame
+      `SELECT id, template_id AS templateId, slug, COALESCE(NULLIF(name, ''), slug) AS name,
+              z_index AS zIndex, start_frame AS startFrame, end_frame AS endFrame
        FROM template_element WHERE template_id = ? ORDER BY z_index, id`,
     )
     .all(templateId) as TemplateElementRow[];
+}
+
+function deleteTemplateElementsExcept(db: Database.Database, templateId: number, keep: string[]): void {
+  const rows = db.prepare(`SELECT id, slug FROM template_element WHERE template_id = ?`).all(templateId) as { id: number; slug: string }[];
+  const gone = rows.filter((r) => !keep.includes(r.slug));
+  if (gone.length === 0) return;
+  const run = db.transaction(() => {
+    for (const { id } of gone) {
+      db.prepare(`DELETE FROM project_value WHERE element_id = ?`).run(id);
+      db.prepare(`DELETE FROM project_element WHERE element_id = ?`).run(id);
+      db.prepare(`DELETE FROM project_transition WHERE after_element_id = ?`).run(id);
+      db.prepare(`DELETE FROM template_element WHERE id = ?`).run(id);
+    }
+  });
+  run();
 }
 
 // ---- projects ----------------------------------------------------------

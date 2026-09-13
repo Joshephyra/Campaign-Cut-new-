@@ -1,0 +1,34 @@
+[
+  {
+    "key": "headline",
+    "role": "headline",
+    "kind": "text",
+    "label": "Headline",
+    "default": "OPEN HEADLINE",
+    "path": "/layers/0"
+  },
+  {
+    "key": "accent",
+    "role": "accent",
+    "kind": "color",
+    "label": "Accent colour",
+    "default": "#F05929",
+    "path": "/layers/1/shapes/0/it/1"
+  },
+  {
+    "key": "surface",
+    "role": "surface",
+    "kind": "color",
+    "label": "Surface colour",
+    "default": "#0F1729",
+    "path": "/layers/2/shapes/0/it/1"
+  },
+  {
+    "key": "mediaFill",
+    "role": "mediaFill",
+    "kind": "media",
+    "label": "Footage",
+    "default": null,
+    "path": "/layers/3"
+  }
+]

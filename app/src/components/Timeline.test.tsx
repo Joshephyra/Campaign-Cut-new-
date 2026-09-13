@@ -68,3 +68,21 @@ describe('Timeline', () => {
     expect(onChange).toHaveBeenLastCalledWith(1, { startFrame: 0, endFrame: 150 });
   });
 });
+
+describe('Timeline selection (M17)', () => {
+  it('clicking an element name selects it and the selected row is marked', () => {
+    const onSelect = vi.fn();
+    render(<Timeline elements={elements} fps={30} durationInFrames={300} frame={0} onSeek={() => {}} onChange={() => {}} selectedId={1} onSelect={onSelect} />);
+    expect(screen.getByTestId('element-row-1').getAttribute('data-selected')).toBe('true');
+    expect(screen.getByTestId('element-row-2').getAttribute('data-selected')).toBe('false');
+    fireEvent.click(screen.getByLabelText('Select end-card'));
+    expect(onSelect).toHaveBeenCalledWith(2);
+  });
+
+  it('shows an element name when it has one, else its slug', () => {
+    const named = elements.map((e) => (e.id === 2 ? { ...e, name: 'End card' } : e));
+    render(<Timeline elements={named} fps={30} durationInFrames={300} frame={0} onSeek={() => {}} onChange={() => {}} />);
+    expect(screen.getByLabelText('Select End card')).toBeTruthy();
+    expect(screen.getByLabelText('Select open')).toBeTruthy();
+  });
+});

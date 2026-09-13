@@ -6,6 +6,8 @@ export type TimelineTransition = { afterElementId: number; preset: TransitionPre
 export type TimelineElement = {
   id: number;
   slug: string;
+  /** Shown instead of the slug when present. */
+  name?: string;
   zIndex: number;
   startFrame: number;
   endFrame: number;
@@ -25,14 +27,18 @@ type Props = {
   /** Transitions per boundary. A boundary with no entry is a cut. */
   transitions?: TimelineTransition[];
   onTransitionChange?: (afterElementId: number, t: { preset: TransitionPreset; durationInFrames: number }) => void;
+  /** The element whose controls the inspector shows (M17). Click a name to select. */
+  selectedId?: number;
+  onSelect?: (elementId: number) => void;
 };
 
 /**
  * The element stack in z order (top of the stack first), with in and out
  * points. Drag a bar to move an element in time; tick to toggle it; click
- * or drag the ruler to scrub. Timecodes in Plex Mono, per DESIGN.md.
+ * a name to select it for the inspector; click or drag the ruler to scrub.
+ * Timecodes in Plex Mono, per DESIGN.md.
  */
-export function Timeline({ elements, fps, durationInFrames, frame, onSeek, onChange, transitions = [], onTransitionChange }: Props) {
+export function Timeline({ elements, fps, durationInFrames, frame, onSeek, onChange, transitions = [], onTransitionChange, selectedId, onSelect }: Props) {
   const total = Math.max(1, durationInFrames);
   const pct = (f: number) => `${(Math.min(Math.max(f, 0), total) / total) * 100}%`;
   const rows = [...elements].sort((a, b) => b.zIndex - a.zIndex || b.id - a.id);
@@ -124,8 +130,8 @@ export function Timeline({ elements, fps, durationInFrames, frame, onSeek, onCha
         </div>
 
         {rows.map((el) => (
-          <div key={el.id} className="contents" data-testid={`element-row-${el.id}`}>
-            <div className="flex items-center gap-2 h-8 pr-3 border-b border-hairline">
+          <div key={el.id} className="contents" data-testid={`element-row-${el.id}`} data-selected={el.id === selectedId ? 'true' : 'false'}>
+            <div className={`flex items-center gap-2 h-8 pr-3 border-b border-hairline ${el.id === selectedId ? 'border-l-2 border-l-cobalt pl-2' : 'pl-[10px]'}`}>
               <input
                 type="checkbox"
                 aria-label={`Toggle ${el.slug}`}
@@ -133,7 +139,14 @@ export function Timeline({ elements, fps, durationInFrames, frame, onSeek, onCha
                 onChange={(e) => onChange(el.id, { enabled: e.target.checked })}
                 className="accent-cobalt"
               />
-              <span className={`truncate ${el.enabled ? 'text-fg' : 'text-muted line-through'}`}>{el.slug}</span>
+              <button
+                type="button"
+                aria-label={`Select ${el.name ?? el.slug}`}
+                onClick={() => onSelect?.(el.id)}
+                className={`truncate text-left font-sans text-xs ${el.id === selectedId ? 'text-cobalt' : el.enabled ? 'text-fg' : 'text-muted line-through'}`}
+              >
+                {el.name ?? el.slug}
+              </button>
             </div>
             <div className="relative h-8 border-b border-hairline">
               <div

@@ -1,0 +1,35 @@
+[
+  {
+    "key": "headline",
+    "role": "headline",
+    "kind": "text",
+    "label": "Headline",
+    "default": "END CARD",
+    "path": "/layers/0"
+  },
+  {
+    "key": "disclaimer",
+    "role": "safe.disclaimer",
+    "kind": "text",
+    "label": "Disclaimer",
+    "default": "Paid for by Example Committee",
+    "path": "/layers/1",
+    "locked": true
+  },
+  {
+    "key": "logo",
+    "role": "logo",
+    "kind": "image",
+    "label": "Logo",
+    "default": "images/logo.png",
+    "path": "/assets/0"
+  },
+  {
+    "key": "surface",
+    "role": "surface",
+    "kind": "color",
+    "label": "Surface colour",
+    "default": "#0F1729",
+    "path": "/layers/3/shapes/0/it/1"
+  }
+]

@@ -267,10 +267,10 @@ describe('generateSchema: stroke, pre-comps, maxChars', () => {
 describe('generateSchema: the stand-in template', () => {
   it('generates the schema M2 has been using', () => {
     const source = JSON.parse(
-      fs.readFileSync(path.join(repoRoot, 'templates', 'standin', 'template.json'), 'utf8'),
+      fs.readFileSync(path.join(repoRoot, 'templates', 'standin', 'elements', 'standin', 'template.json'), 'utf8'),
     ) as LottieAnimationData;
     const expected = JSON.parse(
-      fs.readFileSync(path.join(repoRoot, 'templates', 'standin', 'schema.json'), 'utf8'),
+      fs.readFileSync(path.join(repoRoot, 'templates', 'standin', 'elements', 'standin', 'schema.json'), 'utf8'),
     ) as TemplateParam[];
     const out = generateSchema(source);
     expect(out.errors).toEqual([]);

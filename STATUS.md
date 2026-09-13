@@ -3,6 +3,34 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-13 · M17 Multi-element templates · DONE
+
+**Why**
+
+SPEC section 3 describes an ad example as several elements already placed on the timeline. Until now one Bodymovin export was one element and every element in a project shared the template's single Lottie. This is the data-model step Josh's "far more complicated" templates need, and it required no bespoke code per design.
+
+**What exists now**
+
+- Handover: a folder of Bodymovin exports, one sub-folder per element, with an optional `elements.json` (folder, slug, name, startFrame, zIndex). Without it, folders are taken in name order and laid end to end. A single export still works and becomes a one-element template. `docs/AE-AUTHORING.md` has the layout and the manifest.
+- Ingest validates every element (tags, fonts, comp settings) and reports problems prefixed with the element. Every element must share fps and size. Writes `templates/<slug>/elements/<element>/{template.json, schema.json, images/}`, a template-level `meta.json` with an `elements` list, `fonts/` (the union), and a composite `thumb.png` rendered at the busiest frame nearest the middle (the bare middle frame of the fixture landed in a gap and came out black). Re-ingest removes elements that are gone. The stand-in was re-ingested into the new layout; a fallback reads pre-M17 templates from the template root.
+- `template_element` gained `name` (migration adds it to existing databases). `GET /templates/:slug` and `GET /projects/:id` return each element with its own `schema` and `lottieUrl`; the top-level schema is gone. `POST /projects` seeds every element's defaults.
+- Export runner (`buildProjectProps`) builds each element from its own Lottie, schema and values, resolving images against the element's directory. Footage comes from the first element in start order that has a media slot and a clip chosen.
+- Editor: loads every element's Lottie, keeps values per element, shows the inspector for the selected element, with element tabs above it and selection by clicking a name in the timeline. The Footage panel drives the first element with a media slot. The composition did not change.
+- Fixture: `tools/ingest/fixtures/multi` (open 0-90, lower third 60-120 on top, end card 150-240; 240 frames).
+- Tests: 10 ingest (multi handover), 2 (thumbnail frame), 3 (element file resolution), 3 (routes), 3 (export runner), 3 (editor with several elements), 2 (timeline selection); older tests updated for per-element schema and the new layout. 279 tests green.
+
+**Verified in the browser and in the export**
+
+- Library shows "Three Part" with the composite thumbnail (open + lower third) at 00:08:00.
+- Project opens with three bars (Lower third on top, End card, Open), element tabs, Open's four controls. Selecting Lower third shows Subhead and Logo; typing "Josh for Council" appears in the preview at 00:02:28 and is saved with element id 3 (checked via the API). End card at 00:06:00 shows its own headline, disclaimer, logo and panel. Choosing a clip fills the Open element's slot with the proxy.
+- `npm run parity -- --id 3 --frames 45,89,105,130,200`: all five frames within threshold (mean diff 0.00 to 1.56 of 255). The exported frame 89 shows the open headline, the edited lower third text and the logo, matching the preview.
+
+**Next**
+
+M18 transform editing, M19 fidelity harness, M20 footage trim and audio.
+
+---
+
 ## 2026-09-13 · M16 After Effects project dump script · IN PROGRESS: written and unit-tested; needs one manual run inside After Effects
 
 **Why**
@@ -51,7 +79,7 @@ Milestones M0 to M15 are built. Every one has red-then-green tests, a browser or
 
 **Known limits worth knowing**
 
-- One Bodymovin export is one element. Multi-element templates (open, lower third, end card as separate comps) are a data-model step that is not on the milestone list; the timeline and transitions already handle several elements when the rows exist.
+- ~~One Bodymovin export is one element.~~ Lifted by M17 (2026-09-13): a folder of exports becomes a multi-element template. Footage is still one slot per project, taken from the first element that has one.
 - The chroma key is a colour-matrix key, not matting. ML matting was not evaluated.
 - `docs/DESIGN.md` never existed in the pack; the interface follows the SPEC section 4 summary.
 - The lottie-web canvas renderer stalls the Player and was rejected; SVG stays.

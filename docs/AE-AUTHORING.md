@@ -143,3 +143,39 @@ Give the developer, or the ingest command, a folder containing:
 ```
 
 `reference.mp4` matters. It is what the app's output gets compared against when Germain makes the fidelity call. Without it there is nothing to judge against.
+
+### A spot with several elements
+
+A real ad is several pieces: an open, a lower third, a stat callout, an end card. Build each as its own comp, tag each comp's layers, and export each comp with Bodymovin into its own sub-folder. Every comp must share the same size and frame rate.
+
+```
+<template-name>/
+  elements.json          which folder is which element, and where it starts (optional)
+  01-open/
+    data.json
+    images/
+  02-lower-third/
+    data.json
+    images/
+  03-end-card/
+    data.json
+  fonts/                 every font any element uses
+  reference.mp4          the full spot rendered from After Effects
+  preflight-*.txt, dump-*.txt
+```
+
+`elements.json` is a list, one entry per element, in the order you want them:
+
+```json
+[
+  { "folder": "01-open",        "slug": "open",        "name": "Open",        "startFrame": 0,   "zIndex": 0 },
+  { "folder": "02-lower-third", "slug": "lower-third", "name": "Lower third", "startFrame": 60,  "zIndex": 1 },
+  { "folder": "03-end-card",    "slug": "end-card",    "name": "End card",    "startFrame": 150, "zIndex": 0 }
+]
+```
+
+Only `folder` is required. `startFrame` is where the element begins on the timeline; leave it out and the element starts where the previous one ends. `zIndex` is the stacking order when elements overlap (higher is on top). Each element plays for its comp's full length; the user can move and trim it afterwards.
+
+Without `elements.json`, the folders are taken in name order and laid end to end. Number the folders so the order is what you meant.
+
+The user edits one element at a time in the app. Each element's tags are its own, so two comps can both have a `cc.headline`.

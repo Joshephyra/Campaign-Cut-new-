@@ -1,0 +1,53 @@
+{
+  "slug": "three",
+  "name": "Three Part",
+  "adType": "Contrast",
+  "durationInFrames": 240,
+  "fps": 30,
+  "width": 1920,
+  "height": 1080,
+  "fonts": [
+    "IBM Plex Sans"
+  ],
+  "fontFiles": [
+    {
+      "family": "IBM Plex Sans",
+      "file": "IBMPlexSans-Regular.ttf"
+    }
+  ],
+  "elements": [
+    {
+      "slug": "open",
+      "name": "Open",
+      "startFrame": 0,
+      "endFrame": 90,
+      "zIndex": 0,
+      "durationInFrames": 90,
+      "fonts": [
+        "IBM Plex Sans"
+      ]
+    },
+    {
+      "slug": "lower-third",
+      "name": "Lower third",
+      "startFrame": 60,
+      "endFrame": 120,
+      "zIndex": 1,
+      "durationInFrames": 60,
+      "fonts": [
+        "IBM Plex Sans"
+      ]
+    },
+    {
+      "slug": "end-card",
+      "name": "End card",
+      "startFrame": 150,
+      "endFrame": 240,
+      "zIndex": 0,
+      "durationInFrames": 90,
+      "fonts": [
+        "IBM Plex Sans"
+      ]
+    }
+  ]
+}

@@ -14,5 +14,18 @@
       "family": "IBM Plex Sans",
       "file": "IBMPlexSans-Regular.ttf"
     }
+  ],
+  "elements": [
+    {
+      "slug": "standin",
+      "name": "Stand-in",
+      "startFrame": 0,
+      "endFrame": 150,
+      "zIndex": 0,
+      "durationInFrames": 150,
+      "fonts": [
+        "IBM Plex Sans"
+      ]
+    }
   ]
 }

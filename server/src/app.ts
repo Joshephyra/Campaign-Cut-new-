@@ -11,6 +11,7 @@ import { makePoster, makeProxy, probe } from './media/ffmpeg';
 import { paths } from './paths';
 import { renderComposition } from './render';
 import { RenderQueue, type RenderFn } from './renderQueue';
+import { elementLottieUrl, loadElementSchema } from './templateFiles';
 
 export type AppOptions = {
   db?: Db;
@@ -85,6 +86,13 @@ export function buildApp(options: AppOptions = {}) {
     return groups;
   });
 
+  /** An element as the app sees it: its DB row plus its own schema and Lottie URL (M17). */
+  const withElementFiles = <E extends { slug: string }>(templateSlug: string, e: E) => ({
+    ...e,
+    schema: loadElementSchema(templatesDir, templateSlug, e.slug),
+    lottieUrl: elementLottieUrl(templatesDir, templateSlug, e.slug),
+  });
+
   app.get<{ Params: { slug: string } }>('/templates/:slug', async (req, reply) => {
     const t = db.getTemplateBySlug(req.params.slug);
     if (!t) return reply.code(404).send({ error: `No template with slug "${req.params.slug}"` });
@@ -92,8 +100,7 @@ export function buildApp(options: AppOptions = {}) {
     return {
       template: templateJson(t),
       meta: readJson(path.join(dir, 'meta.json')) ?? null,
-      schema: readJson<TemplateParam[]>(path.join(dir, 'schema.json')) ?? [],
-      elements: db.listTemplateElements(t.id),
+      elements: db.listTemplateElements(t.id).map((e) => withElementFiles(t.slug, e)),
     };
   });
 
@@ -112,18 +119,18 @@ export function buildApp(options: AppOptions = {}) {
     const t = db.getTemplateBySlug(slug);
     if (!t) return reply.code(404).send({ error: `No template with slug "${slug}"` });
 
-    const schema = readJson<TemplateParam[]>(path.join(templatesDir, t.slug, 'schema.json')) ?? [];
     let elements = db.listTemplateElements(t.id);
     if (elements.length === 0) {
-      db.upsertTemplateElement({ templateId: t.id, slug: t.slug, zIndex: 0, startFrame: 0, endFrame: t.durationFrames });
+      db.upsertTemplateElement({ templateId: t.id, slug: t.slug, name: t.name, zIndex: 0, startFrame: 0, endFrame: t.durationFrames });
       elements = db.listTemplateElements(t.id);
     }
-    const element = elements[0]!;
 
     const { id } = db.createProject({
       templateId: t.id,
       name: req.body?.name?.trim() || `${t.name} project`,
-      values: schema.map((p) => ({ elementId: element.id, key: p.key, value: p.default })),
+      values: elements.flatMap((element) =>
+        loadElementSchema(templatesDir, t.slug, element.slug).map((p: TemplateParam) => ({ elementId: element.id, key: p.key, value: p.default })),
+      ),
     });
     return reply.code(201).send({ id });
   });
@@ -138,8 +145,7 @@ export function buildApp(options: AppOptions = {}) {
       project: rest,
       template: templateJson(t),
       meta: readJson(path.join(dir, 'meta.json')) ?? null,
-      schema: readJson<TemplateParam[]>(path.join(dir, 'schema.json')) ?? [],
-      elements: db.getProjectElements(project.id),
+      elements: db.getProjectElements(project.id).map((e) => withElementFiles(t.slug, e)),
       transitions: db.getProjectTransitions(project.id),
       values,
     };
