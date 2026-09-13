@@ -237,7 +237,13 @@ export function Editor({ projectId, onBack }: Props) {
           <button type="button" onClick={onBack} className="text-xs text-muted hover:text-fg">
             ← Library
           </button>
-          <h1 className="text-sm font-semibold tracking-tight">{loaded?.detail.project.name ?? '…'}</h1>
+          <ProjectName
+            name={loaded?.detail.project.name ?? null}
+            onRename={async (name) => {
+              const row = await api.renameProject(projectId, name);
+              setLoaded((prev) => (prev ? { ...prev, detail: { ...prev.detail, project: { ...prev.detail.project, name: row.name } } } : prev));
+            }}
+          />
         </div>
         <div className="font-mono text-xs text-muted flex items-center gap-4">
           <SaveIndicator state={saveState} />
@@ -308,6 +314,59 @@ export function Editor({ projectId, onBack }: Props) {
         </div>
       )}
     </main>
+  );
+}
+
+/** M22: the project name, editable in place. Enter saves, Escape cancels, an empty name is ignored. */
+function ProjectName({ name, onRename }: { name: string | null; onRename: (name: string) => Promise<void> }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const commit = async () => {
+    const next = draft.trim();
+    setEditing(false);
+    if (!next || next === name) return;
+    try {
+      await onRename(next);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        aria-label="Project name"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') void commit();
+          if (e.key === 'Escape') setEditing(false);
+        }}
+        onBlur={() => void commit()}
+        className="bg-panel border border-cobalt px-2 py-0.5 text-sm text-fg focus:outline-none"
+      />
+    );
+  }
+  return (
+    <h1 className="text-sm font-semibold tracking-tight flex items-center gap-2">
+      <span>{name ?? '…'}</span>
+      {name !== null && (
+        <button
+          type="button"
+          aria-label="Rename project"
+          onClick={() => {
+            setDraft(name);
+            setError(null);
+            setEditing(true);
+          }}
+          className="font-mono text-[10px] font-normal text-muted hover:text-fg"
+        >
+          rename
+        </button>
+      )}
+      {error && <span className="font-mono text-[10px] font-normal text-danger">{error}</span>}
+    </h1>
   );
 }
 

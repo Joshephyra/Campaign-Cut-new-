@@ -19,6 +19,17 @@ export type LibraryGroup = { adType: string; sort: number; templates: TemplateSu
 
 export type ProjectValue = { elementId: number; key: string; value: unknown };
 
+/** A project as listed in the library (M22). */
+export type ProjectRow = {
+  id: number;
+  templateId: number;
+  templateSlug: string;
+  templateName: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 /** One element of a project: its own Lottie (at lottieUrl), its own schema, and this project's in/out and toggle. */
 export type ProjectElement = {
   id: number;
@@ -89,6 +100,23 @@ export const api = {
     }).then((r) => json<{ id: number }>(r)),
 
   project: (id: number) => fetch(`${API}/projects/${id}`).then((r) => json<ProjectDetail>(r)),
+
+  /** M22: every project, newest first. */
+  projects: () => fetch(`${API}/projects`).then((r) => json<ProjectRow[]>(r)),
+
+  renameProject: (id: number, name: string) =>
+    fetch(`${API}/projects/${id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name }),
+    }).then((r) => json<ProjectRow>(r)),
+
+  duplicateProject: (id: number) => fetch(`${API}/projects/${id}/duplicate`, { method: 'POST' }).then((r) => json<{ id: number }>(r)),
+
+  deleteProject: async (id: number) => {
+    const res = await fetch(`${API}/projects/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  },
 
   saveValues: (id: number, values: ProjectValue[]) =>
     fetch(`${API}/projects/${id}/values`, {

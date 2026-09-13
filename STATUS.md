@@ -3,6 +3,30 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-13 · M22 Projects in the library · DONE
+
+**Why**
+
+Every click on a template made a new project and the only way back was its URL. A staffer needs to find yesterday's spot, rename it, copy it for a second market, and throw away a mistake. One shared list, no accounts (CLAUDE.md non-goals).
+
+**What exists now**
+
+- Library: a Projects section above the templates lists every project newest first with its name, template and last change. Open, Rename (inline; Enter saves, Escape cancels), Duplicate (opens the copy), Delete (a second "Really delete" click confirms; "Keep" backs out). Rename and delete apply the API's answer to the list without a refetch.
+- Editor header: the project name has a "rename" control; Enter saves.
+- API: `PATCH /projects/:id` (400 on an empty name), `POST /projects/:id/duplicate` (copies values, timeline overrides, transitions and the music bed into "<name> copy"), `DELETE /projects/:id` (project, values, overrides, transitions, music bed and render rows; rendered files stay on disk). DB: `renameProject`, `duplicateProject` (one transaction), `deleteProject`.
+- Tests: 3 server (rename, duplicate with every child table, delete with 404 afterwards), 4 library (list order and facts, open, rename, duplicate, two-click delete), 1 editor header rename; the older library test now mocks fetch by URL. 334 tests green.
+
+**Verified**
+
+- Browser: the library shows the Projects list with the four projects, template names and timestamps, above the two templates.
+- The in-app browser pane stopped delivering keyboard input and screenshots partway through (its viewport also shrank; a name-overlap at narrow widths got fixed with a one-line truncate). Rename and delete were therefore exercised through the live API: duplicated project 3 to 4, renamed it "Second market", deleted it, list back to three. The click flows are covered by the library tests. Josh should rename and delete a copy once in his own browser.
+
+**Next**
+
+Nothing queued. Candidates needing Josh's call: the real template (AT-2), the After Effects panel, an own Lottie renderer, undo/redo in the editor.
+
+---
+
 ## 2026-09-13 · M21 Footage per element · DONE
 
 **Why**

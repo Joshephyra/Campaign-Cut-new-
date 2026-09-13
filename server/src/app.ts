@@ -110,6 +110,33 @@ export function buildApp(options: AppOptions = {}) {
 
   app.get('/projects', async () => db.listProjects());
 
+  // ---- project management (M22) ---------------------------------------
+
+  app.patch<{ Params: { id: string }; Body: { name?: string } }>('/projects/:id', async (req, reply) => {
+    const id = Number(req.params.id);
+    if (!db.getProject(id)) return reply.code(404).send({ error: `No project ${id}` });
+    const name = String(req.body?.name ?? '').trim();
+    if (!name) return reply.code(400).send({ error: 'name must not be empty' });
+    db.renameProject(id, name);
+    const { values: _values, ...project } = db.getProject(id)!;
+    return project;
+  });
+
+  app.post<{ Params: { id: string } }>('/projects/:id/duplicate', async (req, reply) => {
+    const id = Number(req.params.id);
+    const source = db.getProject(id);
+    if (!source) return reply.code(404).send({ error: `No project ${id}` });
+    const copy = db.duplicateProject(id, `${source.name} copy`);
+    return reply.code(201).send(copy);
+  });
+
+  app.delete<{ Params: { id: string } }>('/projects/:id', async (req, reply) => {
+    const id = Number(req.params.id);
+    if (!db.getProject(id)) return reply.code(404).send({ error: `No project ${id}` });
+    db.deleteProject(id);
+    return reply.code(204).send();
+  });
+
   /**
    * Create a project from a template. The user starts from a finished spot:
    * every schema default is copied into project_value so the editor opens

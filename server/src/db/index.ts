@@ -120,6 +120,12 @@ export type Db = Database.Database & {
   createProject(p: ProjectInput): { id: number };
   getProject(id: number): ProjectDetail | undefined;
   listProjects(): ProjectRow[];
+  /** M22 */
+  renameProject(id: number, name: string): void;
+  /** M22: copy values, timeline overrides, transitions and the music bed into a new project. */
+  duplicateProject(id: number, name: string): { id: number };
+  /** M22: the project and everything that hangs off it (rendered files stay on disk). */
+  deleteProject(id: number): void;
   /** Upsert the given values (others untouched) and bump updated_at. */
   setProjectValues(projectId: number, values: ProjectValue[]): void;
   /** The project's timeline: template elements with this project's overrides, in z order. */
@@ -260,6 +266,9 @@ export function openDb(file: string): Db {
     createProject: (p: ProjectInput) => createProject(db, p),
     getProject: (id: number) => getProject(db, id),
     listProjects: () => listProjects(db),
+    renameProject: (id: number, name: string) => renameProject(db, id, name),
+    duplicateProject: (id: number, name: string) => duplicateProject(db, id, name),
+    deleteProject: (id: number) => deleteProject(db, id),
     setProjectValues: (projectId: number, values: ProjectValue[]) => setProjectValues(db, projectId, values),
     getProjectElements: (projectId: number) => getProjectElements(db, projectId),
     setProjectElement: (projectId: number, elementId: number, patch: ProjectElementPatch) =>
@@ -549,6 +558,38 @@ function getProject(db: Database.Database, id: number): ProjectDetail | undefine
 
 function listProjects(db: Database.Database): ProjectRow[] {
   return db.prepare(`${PROJECT_SELECT} ORDER BY p.id DESC`).all() as ProjectRow[];
+}
+
+// ---- project management (M22) ------------------------------------------
+
+function renameProject(db: Database.Database, id: number, name: string): void {
+  db.prepare(`UPDATE project SET name = ?, updated_at = datetime('now') WHERE id = ?`).run(name, id);
+}
+
+function duplicateProject(db: Database.Database, id: number, name: string): { id: number } {
+  const run = db.transaction((): { id: number } => {
+    const source = db.prepare(`SELECT template_id AS templateId FROM project WHERE id = ?`).get(id) as { templateId: number } | undefined;
+    if (!source) throw new Error(`No project ${id}`);
+    const copy = Number(db.prepare(`INSERT INTO project (template_id, name) VALUES (?, ?)`).run(source.templateId, name).lastInsertRowid);
+    db.prepare(`INSERT INTO project_value (project_id, element_id, param_key, value_json) SELECT ?, element_id, param_key, value_json FROM project_value WHERE project_id = ?`).run(copy, id);
+    db.prepare(`INSERT INTO project_element (project_id, element_id, start_frame, end_frame, enabled) SELECT ?, element_id, start_frame, end_frame, enabled FROM project_element WHERE project_id = ?`).run(copy, id);
+    db.prepare(`INSERT INTO project_transition (project_id, after_element_id, preset, duration_frames) SELECT ?, after_element_id, preset, duration_frames FROM project_transition WHERE project_id = ?`).run(copy, id);
+    db.prepare(`INSERT INTO project_audio (project_id, asset_id, volume, in_s) SELECT ?, asset_id, volume, in_s FROM project_audio WHERE project_id = ?`).run(copy, id);
+    return { id: copy };
+  });
+  return run();
+}
+
+function deleteProject(db: Database.Database, id: number): void {
+  const run = db.transaction(() => {
+    db.prepare(`DELETE FROM render WHERE project_id = ?`).run(id);
+    db.prepare(`DELETE FROM project_value WHERE project_id = ?`).run(id);
+    db.prepare(`DELETE FROM project_element WHERE project_id = ?`).run(id);
+    db.prepare(`DELETE FROM project_transition WHERE project_id = ?`).run(id);
+    db.prepare(`DELETE FROM project_audio WHERE project_id = ?`).run(id);
+    db.prepare(`DELETE FROM project WHERE id = ?`).run(id);
+  });
+  run();
 }
 
 function setProjectValues(db: Database.Database, projectId: number, values: ProjectValue[]): void {

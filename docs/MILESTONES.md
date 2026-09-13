@@ -439,6 +439,24 @@ Since M17 a template has several elements, but footage was still one slot per pr
 
 ---
 
+## M22 · Projects in the library · DONE
+
+Every click on a template made a new project, and the only way back to one was its URL. A staffer needs to find yesterday's spot, rename it, copy it for a second market, and throw away a mistake. Not accounts, not workspaces: one shared list, as CLAUDE.md's non-goals require.
+
+**Build**
+- Library: a Projects section above the templates listing every project with its name, template and last change. Open, Rename (inline), Duplicate, Delete (two clicks: the second confirms).
+- Editor header: the project name is editable in place.
+- API: `PATCH /projects/:id` renames; `POST /projects/:id/duplicate` copies values, timeline overrides, transitions and the music bed into a new project named "… copy"; `DELETE /projects/:id` removes the project and everything that hangs off it (values, timeline, transitions, music bed, render rows; rendered files stay on disk).
+
+**Tests**
+- Rename persists and refuses an empty name; duplicate produces a second project with the same values, overrides, transitions and music bed and its own id; delete removes the project and its rows and 404s afterwards.
+- Library lists projects newest first, opens one, renames one, duplicates one, and deletes one only after the confirmation click.
+- Editor header rename saves and shows the new name.
+
+**Done when:** you can leave a project, find it again in the library, rename it, copy it and delete the copy, in the browser.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

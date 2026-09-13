@@ -24,9 +24,20 @@ const groups = [
   },
 ];
 
+/** Route by URL: the library loads templates and (since M22) projects. */
+function mockApi(projects: unknown[] = []) {
+  return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    const url = String(input);
+    if (url === '/api/templates') return new Response(JSON.stringify(groups), { status: 200 });
+    if (url === '/api/projects' && !init?.method) return new Response(JSON.stringify(projects), { status: 200 });
+    if (url === '/api/projects' && init?.method === 'POST') return new Response(JSON.stringify({ id: 42 }), { status: 201 });
+    return new Response('not found', { status: 404 });
+  });
+}
+
 describe('Library', () => {
   it('renders ad type groups in order with template facts', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify(groups), { status: 200 }));
+    mockApi();
     render(<Library onOpenProject={() => {}} />);
 
     await waitFor(() => expect(screen.getByText('Split Record')).toBeTruthy());
@@ -39,10 +50,7 @@ describe('Library', () => {
   });
 
   it('clicking a template creates a project and opens it', async () => {
-    const fetchMock = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(new Response(JSON.stringify(groups), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 42 }), { status: 201 }));
+    const fetchMock = mockApi();
     const onOpenProject = vi.fn();
     render(<Library onOpenProject={onOpenProject} />);
 
@@ -50,8 +58,8 @@ describe('Library', () => {
     screen.getByRole('button', { name: /Turnout Push/ }).click();
 
     await waitFor(() => expect(onOpenProject).toHaveBeenCalledWith(42));
-    const [url, init] = fetchMock.mock.calls[1]!;
-    expect(url).toBe('/api/projects');
-    expect(JSON.parse((init as RequestInit).body as string)).toEqual({ templateSlug: 'turnout' });
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST')!;
+    expect(String(post[0])).toBe('/api/projects');
+    expect(JSON.parse((post[1] as RequestInit).body as string)).toEqual({ templateSlug: 'turnout' });
   });
 });
