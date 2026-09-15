@@ -512,6 +512,21 @@ Four small things a staffer hits within the first hour, bundled because each is 
 
 ---
 
+## M26 · Sample project builder · IN PROGRESS
+
+Josh asked for a sample project to follow the guide with. An After Effects project file cannot be written outside After Effects, so a script builds it in place.
+
+**Build**
+- `tools/ae-preflight/sample-project.jsx`: builds the "Contrast :30" sample from the guide inside After Effects: the handover folder with numbered sub-folders, fonts and manifest on the Desktop, four tagged comps with animation, a master comp for the reference render, the logo imported, the project saved. Renders nothing.
+- `docs/AE-STEP-BY-STEP.md` points at it as the head start.
+
+**Tests**
+- The script's plan obeys the ingest rules: known roles on the right layer types, no duplicates per comp, every role covered, one size and frame rate, the two copied fonts only, the timeline inside the master, `elements.json` as the ingest expects. ES3-safe source that never renders.
+
+**Done when:** Josh runs it once in After Effects, exports the comps with Bodymovin, renders the master comp, and the folder ingests from the library page.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

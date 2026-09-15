@@ -3,6 +3,24 @@
 Running log of where the build is. Newest entry first.
 
 ---
+## 2026-09-15 · M26 Sample project builder · IN PROGRESS: written and plan-tested; needs one run inside After Effects
+
+**Why**
+
+Josh asked for a sample project to follow the step-by-step guide with. An `.aep` cannot be written from here, so a script builds it inside After Effects instead.
+
+**What exists now**
+
+- `tools/ae-preflight/sample-project.jsx` (ES3 ExtendScript, File > Scripts > Run Script File). Builds the sample "Contrast :30": a `contrast-30` folder on the Desktop with `01-open` … `04-end-card`, `fonts/` (Arial Regular and Bold copied from Windows and renamed so the ingest's style lookup finds them), `elements.json`; four tagged comps at 1920x1080, 30 fps (open with surface, accent, headline, footage slot; lower third with subhead, body, accent, logo; stat callout with two stats, body, accent; end card with headline, disclaimer, logo, footage slot), each with fade, slide or scale animation; a master comp "Contrast 30 (reference)" laying them out at frames 0, 90, 300 and 750 for the reference render; the logo imported from the stand-in fixture; the project saved into the folder. It renders nothing; the person exports with Bodymovin and renders the master comp.
+- The PLAN is plain data; `tools/ingest/src/sampleProject.test.ts` (9 tests) checks it against the ingest's own rules: known roles on the right layer types, no duplicates per comp, every role covered, only the two copied fonts used, the timeline inside the master, and `elements.json` exactly as the ingest expects.
+- `docs/AE-STEP-BY-STEP.md`: a plain guide for the whole hand-over (also the answer to "like I am five"), now with the script as the head start.
+
+**Verified**
+
+- Node: 9 plan tests green; ES3 safety checked. Not run inside After Effects (Josh's run).
+
+---
+
 ## 2026-09-13 · M25 Editor polish · DONE
 
 **Why**

@@ -2,6 +2,16 @@
 
 A plain walkthrough for making the first real CampaignCut template in After Effects and handing it over. Nothing here needs a terminal. The full reference is `AE-AUTHORING.md`; this is the version you follow with the mouse.
 
+## Head start: let a script build the sample
+
+Steps 1 to 10 and 12, 14 and 16 below can be done for you. In After Effects go to File, Scripts, Run Script File and pick:
+
+```
+tools/ae-preflight/sample-project.jsx
+```
+
+It makes a `contrast-30` folder on your Desktop with the numbered sub-folders, `fonts/` (Arial Regular and Bold) and `elements.json`, builds four tagged comps (Open, Lower third, Stat callout, End card) plus a master comp called "Contrast 30 (reference)", and saves the project in that folder. Then you only do the rest: run the pre-flight on each comp (step 9), export each comp with Bodymovin into its sub-folder (step 13), render the master comp to `reference.mp4` (step 15), and ingest (Part 4). Change any text, colour or timing you like before exporting; it is a starting point, not a rule.
+
 ---
 
 ## Part 1 · Before you open After Effects
