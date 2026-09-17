@@ -32,8 +32,10 @@ type FakeLayer = {
 };
 
 /** Build the small subset of the After Effects object model the script touches. */
-function fakeComp(name: string, layers: FakeLayer[], settings = { width: 1920, height: 1080, frameRate: 30, duration: 5 }) {
-  const layerObjects = layers.map((l) => ({
+type FakeComp = { name: string; width: number; height: number; frameRate: number; duration: number; numLayers: number; layer: (i: number) => Record<string, unknown> };
+
+function fakeComp(name: string, layers: FakeLayer[], settings = { width: 1920, height: 1080, frameRate: 30, duration: 5 }): FakeComp {
+  const layerObjects: Record<string, unknown>[] = layers.map((l) => ({
     name: l.name,
     index: l.index,
     threeDLayer: l.threeDLayer ?? false,
@@ -48,7 +50,7 @@ function fakeComp(name: string, layers: FakeLayer[], settings = { width: 1920, h
     __effects: l.effects ?? [],
     __nested: l.nested ? fakeComp(`${name}/${l.name}`, l.nested, settings) : null,
   }));
-  return { name, ...settings, numLayers: layerObjects.length, layer: (i: number) => layerObjects[i - 1] };
+  return { name, ...settings, numLayers: layerObjects.length, layer: (i: number) => layerObjects[i - 1]! };
 }
 
 /** Adapters the script uses instead of touching After Effects classes directly. */
