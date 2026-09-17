@@ -3,6 +3,7 @@ import { Film, Music, Upload } from 'lucide-react';
 import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { api, type MediaAsset, type ProjectAudio } from '../api';
 import { AudioPanel } from './AudioPanel';
+import { StockPanel } from './StockPanel';
 import { ICON } from './ui';
 
 /** The drag payload a library clip carries onto the monitor (M30). */
@@ -137,6 +138,7 @@ export function MediaPanel({ onSelect, selectedId, onChange, audio, onAudioChang
             })}
           </ul>
         )}
+        <StockPanel onImported={() => void refresh()} />
       </section>
 
       <section className="px-4 py-4 border-b border-line">

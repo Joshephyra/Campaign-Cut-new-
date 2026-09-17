@@ -11,6 +11,7 @@ import { makePoster, makeProxy, probe, probeAudio } from './media/ffmpeg';
 import { paths } from './paths';
 import { renderComposition } from './render';
 import { RenderQueue, type RenderFn } from './renderQueue';
+import { pexelsClient, type StockOptions } from './stock';
 import { elementLottieUrl, loadElementSchema, projectFontFiles } from './templateFiles';
 import { defaultUploadsDir, makeStagingDir, problemsFrom, runIngestCommand, stagedRelativePath, type RunIngest } from './ingestUpload';
 
@@ -28,6 +29,8 @@ export type AppOptions = {
   runIngest?: RunIngest;
   /** M24: where uploaded handover folders are staged before ingest. */
   uploadsDir?: string;
+  /** M34: the stock provider's key and (in tests) fetch. Defaults to PEXELS_API_KEY from the environment. */
+  stock?: StockOptions;
 };
 
 declare module 'fastify' {
@@ -547,23 +550,71 @@ export function buildApp(options: AppOptions = {}) {
         });
         return reply.code(201).send(assetJson(db.getMediaAsset(id)!));
       }
-      const info = await probe(originalFile);
-      await makeProxy(originalFile, path.join(mediaDir, proxyPath));
-      await makePoster(originalFile, path.join(mediaDir, thumbPath), Math.min(1, info.durationS / 2));
-      const { id } = db.insertMediaAsset({
-        originalName: part.filename,
-        originalPath,
-        proxyPath,
-        thumbPath,
-        width: info.width,
-        height: info.height,
-        durationS: info.durationS,
-        fps: info.fps,
-      });
+      const { id } = await registerVideo(originalFile, { originalPath, proxyPath, thumbPath }, part.filename);
       return reply.code(201).send(assetJson(db.getMediaAsset(id)!));
     } catch (err) {
       for (const p of [originalPath, proxyPath, thumbPath]) fs.rmSync(path.join(mediaDir, p), { force: true });
       return reply.code(400).send({ error: (err as Error).message });
+    }
+  });
+
+  /** A video file already at its original path becomes an asset: proxy, poster, row. Uploads and stock imports share this. */
+  async function registerVideo(originalFile: string, rel: { originalPath: string; proxyPath: string; thumbPath: string }, originalName: string): Promise<{ id: number }> {
+    const info = await probe(originalFile);
+    await makeProxy(originalFile, path.join(mediaDir, rel.proxyPath));
+    await makePoster(originalFile, path.join(mediaDir, rel.thumbPath), Math.min(1, info.durationS / 2));
+    return db.insertMediaAsset({
+      originalName,
+      originalPath: rel.originalPath,
+      proxyPath: rel.proxyPath,
+      thumbPath: rel.thumbPath,
+      width: info.width,
+      height: info.height,
+      durationS: info.durationS,
+      fps: info.fps,
+    });
+  }
+
+  // ---- stock footage (M34) --------------------------------------------
+
+  const stock = pexelsClient(options.stock ?? { apiKey: process.env.PEXELS_API_KEY ?? '' });
+  const STOCK_OFF = 'Stock footage is off: set PEXELS_API_KEY in .env and restart the server';
+
+  app.get<{ Querystring: { q?: string } }>('/stock/search', async (req, reply) => {
+    if (!stock.enabled) return reply.code(503).send({ error: STOCK_OFF });
+    const q = (req.query.q ?? '').trim();
+    if (!q) return reply.code(400).send({ error: 'Say what to search for' });
+    try {
+      return { results: await stock.search(q) };
+    } catch (err) {
+      return reply.code(502).send({ error: (err as Error).message });
+    }
+  });
+
+  /** Download a stock clip and register it like an upload. */
+  app.post<{ Body: { provider?: string; id?: string } }>('/stock/import', async (req, reply) => {
+    if (!stock.enabled) return reply.code(503).send({ error: STOCK_OFF });
+    if (req.body?.provider !== 'pexels') return reply.code(400).send({ error: `Unknown stock provider "${String(req.body?.provider)}"` });
+    const id = String(req.body?.id ?? '').trim();
+    if (!id) return reply.code(400).send({ error: 'id is required' });
+    let found: Awaited<ReturnType<typeof stock.video>>;
+    try {
+      found = await stock.video(id);
+    } catch (err) {
+      return reply.code(502).send({ error: (err as Error).message });
+    }
+    if (!found) return reply.code(404).send({ error: `Pexels has no video ${id}` });
+    const { result, file } = found;
+    const stem = `${Date.now()}-pexels-${id}`;
+    const rel = { originalPath: `originals/${stem}.mp4`, proxyPath: `proxies/${stem}.mp4`, thumbPath: `thumbs/${stem}.jpg` };
+    const originalFile = path.join(mediaDir, rel.originalPath);
+    try {
+      fs.writeFileSync(originalFile, await stock.download(file.link));
+      const asset = await registerVideo(originalFile, rel, `${result.title} (${result.credit}).mp4`);
+      return reply.code(201).send(assetJson(db.getMediaAsset(asset.id)!));
+    } catch (err) {
+      for (const p of Object.values(rel)) fs.rmSync(path.join(mediaDir, p), { force: true });
+      return reply.code(502).send({ error: (err as Error).message });
     }
   });
 

@@ -650,12 +650,17 @@ Colours only, by Josh's choice (fonts wait for client profiles, where the client
 
 ---
 
-## M34 · Stock footage · TODO
+## M34 · Stock footage · DONE (live run awaits the key)
 
 **Build**
-- Search one stock site from the library panel (key in `.env`), preview results, import a clip into the media pipeline (proxy, thumbnail) and drop it on the video like any upload.
+- Pexels, behind a small provider shape so another site can follow. `PEXELS_API_KEY` from `.env` (gitignored; the server loads it, no dependency) or the shell; without it the routes answer 503 naming the variable and the panel shows that message.
+- `GET /stock/search?q=` answers normalised results (title, thumbnail, length, size, credit, page). `POST /stock/import` downloads the largest mp4 at or under 1080p and registers it through the same path as an upload (original, proxy, poster, row), named "<title> (<photographer> on Pexels).mp4" so the credit travels with the clip.
+- "Find stock footage" under the Footage grid: search on Enter, results with thumbnail, length and credit, "Add to footage" pulls one in and it drags onto the video like any clip.
 
-**Done when:** a stock clip found in the app lands in a spot and exports. Needs Josh's API key for the chosen site.
+**Tests**
+- Parsing and file choice; no key is 503 naming the variable; search calls Pexels with the key and the query; import downloads through an injected fetch and lands a real asset with proxy and poster (ffmpeg on the fixture); unknown video 404, unknown provider 400. Panel: search, results, import marks the card, the server's message on 503, "nothing matched".
+
+**Done when:** a stock clip found in the app lands in a spot and exports. The path is built and tested end to end with an injected Pexels; the live run needs Josh's key in `.env`.
 
 ---
 

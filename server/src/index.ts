@@ -1,4 +1,8 @@
 import { buildApp } from './app';
+import { loadDotEnv } from './env';
+
+// Keys such as PEXELS_API_KEY come from .env (gitignored) or the shell.
+loadDotEnv();
 
 // Deliberately NOT the generic PORT variable: dev-server launchers set that for the app.
 const port = Number(process.env.CAMPAIGNCUT_SERVER_PORT ?? 3001);

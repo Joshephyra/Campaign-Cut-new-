@@ -36,6 +36,9 @@ export type ProjectRow = {
   updatedAt: string;
 };
 
+/** M34: one stock search result. */
+export type StockResult = { provider: 'pexels'; id: string; title: string; thumbUrl: string; durationS: number; width: number; height: number; credit: string; pageUrl: string };
+
 /** M33: a client profile: the brand guide a spot is made for. */
 export type Client = { id: number; name: string; logoUrl: string; colors: Record<string, string>; disclaimer: string; createdAt: string };
 export type ClientInput = Omit<Client, 'id' | 'createdAt'>;
@@ -143,6 +146,21 @@ export const api = {
     const res = await fetch(`${API}/clients/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   },
+  /** M34: search the stock site. The server's own message comes back as the error (for example, the key is not set). */
+  searchStock: async (q: string): Promise<StockResult[]> => {
+    const res = await fetch(`${API}/stock/search?q=${encodeURIComponent(q)}`);
+    const body = (await res.json()) as { results?: StockResult[]; error?: string };
+    if (!res.ok) throw new Error(body.error ?? `${res.status} ${res.statusText}`);
+    return body.results ?? [];
+  },
+  /** M34: pull a stock clip into the footage. Answers the new asset. */
+  importStock: async (provider: string, id: string): Promise<MediaAsset> => {
+    const res = await fetch(`${API}/stock/import`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ provider, id }) });
+    const body = (await res.json()) as MediaAsset & { error?: string };
+    if (!res.ok) throw new Error(body.error ?? `${res.status} ${res.statusText}`);
+    return body;
+  },
+
   /** M33: apply the spot's client brand again. Answers the values written. */
   applyBrand: (projectId: number) => fetch(`${API}/projects/${projectId}/brand`, { method: 'POST' }).then((r) => json<{ values: ProjectValue[] }>(r)),
 

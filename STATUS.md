@@ -4,6 +4,29 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M34 Stock footage · DONE (live run awaits Josh's key)
+
+**Why**
+
+The last of the four phase-2 features Josh opened: stock footage found and pulled in without leaving the editor.
+
+**What exists now**
+
+- Pexels (free key at pexels.com/api) behind a small provider shape. The key comes from `PEXELS_API_KEY` in `.env` (gitignored; `.env.example` shows the line; the server now loads `.env` itself, no dependency) or the shell. Without a key the routes answer 503 naming the variable and the panel shows that sentence; nothing else changes.
+- `GET /stock/search?q=` answers normalised results; `POST /stock/import` downloads the largest mp4 at or under 1080p and registers it through the same function uploads now use (original, proxy, poster, row), named "<title> (<photographer> on Pexels).mp4" so the credit rides with the clip everywhere it shows.
+- "Find stock footage" under the Footage grid in the editor: type, Enter, thumbnails with length and credit, "Add to footage" pulls one in and marks the card; the clip then presses or drags onto the video like any upload.
+- Tests: 2 parsing, 3 route (one runs the real ffmpeg pipeline on the fixture through an injected fetch), 2 panel. 431 tests green.
+
+**Verified**
+
+- Real browser without a key: searching shows "Stock footage is off: set PEXELS_API_KEY in .env and restart the server", and the route answers 503. The full import path is proven by the route test against an injected Pexels; the live search and import are Josh's to run once the key is in `.env`.
+
+**Next**
+
+Josh: put a Pexels key in `.env` (copy `.env.example`), restart `npm run dev`, search for something, pull a clip in, drop it on the video, export. Then the phase-2 list is built; the five acceptance tests and Germain's verdict are still the gate for the proof of concept.
+
+---
+
 ## 2026-09-17 · M33 Client profiles · DONE
 
 **Why**
