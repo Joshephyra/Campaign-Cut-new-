@@ -301,3 +301,18 @@ describe('generateSchema: numbered lines (M57)', () => {
     expect(logo.errors[0]!.message).toMatch(/not repeatable/);
   });
 });
+
+describe('generateSchema: photo slots (M58)', () => {
+  it('cc.image.1 and cc.image.2 are two image params, Photo 1 and Photo 2, each with a placement; cc.image alone needs its index', () => {
+    const assets = [{ id: 'img_0', u: 'images/', p: 'lombardo.png' }, { id: 'img_1', u: 'images/', p: 'musk.png' }, { id: 'img_2', u: 'images/', p: 'logo.png' }];
+    const out = generateSchema(lottie([imageLayer('cc.image.2', 'img_1'), imageLayer('cc.image.1', 'img_0'), imageLayer('cc.logo', 'img_2')], { assets }));
+    expect(out.errors).toEqual([]);
+    expect(out.params.filter((p) => p.kind === 'image').map((p) => [p.key, p.role, p.label, p.default])).toEqual([
+      ['image.1', 'image', 'Photo 1', 'images/lombardo.png'],
+      ['image.2', 'image', 'Photo 2', 'images/musk.png'],
+      ['logo', 'logo', 'Logo', 'images/logo.png'],
+    ]);
+    expect(out.params.filter((p) => p.kind === 'transform').map((p) => p.for)).toEqual(['image.1', 'image.2', 'logo']);
+    expect(generateSchema(lottie([imageLayer('cc.image', 'img_0')], { assets })).errors[0]!.message).toMatch(/needs an index/);
+  });
+});

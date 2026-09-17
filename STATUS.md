@@ -4,6 +4,14 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M58 Photo slots · DONE
+
+- : any replaceable photo, one slot each, labelled Photo N;  reserved for the logo the brand kit fills. Roles, pre-flight, SPEC 1.1, AE-AUTHORING and the handover guide (Lombardo is , the Musk photo ).
+- Tests: 2 new (schema, pre-flight); ingest and pre-flight suites green.
+- Not yet verified with a real file: waits for the designer's export, as M57.
+
+---
+
 ## 2026-09-17 · M57 A real designer's file: numbered lines, native aspect · DONE
 
 **What exists now**

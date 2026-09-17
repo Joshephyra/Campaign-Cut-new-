@@ -45,7 +45,8 @@ Roles:
 | `cc.stat.N` | text | Repeated. N is 1-based. |
 | `cc.accent` | color | Primary brand color |
 | `cc.surface` | color | Background or panel color |
-| `cc.logo` | image | Replaceable image asset |
+| `cc.logo` | image | Replaceable image asset: the logo, which a client's brand fills |
+| `cc.image.N` | image | Repeated. Any other replaceable photo or picture (M58). |
 | `cc.mediaFill` | media | Slot where user footage shows through |
 | `cc.safe.disclaimer` | text | Locked position and size. Text editable only. |
 

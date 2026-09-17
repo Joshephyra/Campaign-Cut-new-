@@ -33,6 +33,7 @@ var CC_PREFLIGHT = (function () {
     'accent': { kind: 'color', label: 'Accent colour' },
     'surface': { kind: 'color', label: 'Surface colour' },
     'logo': { kind: 'image', label: 'Logo' },
+    'image': { kind: 'image', label: 'Photo', repeated: true },
     'mediaFill': { kind: 'media', label: 'Footage' },
     'safe.disclaimer': { kind: 'text', label: 'Disclaimer', locked: true }
   };

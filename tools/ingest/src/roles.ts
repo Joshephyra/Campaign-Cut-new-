@@ -29,6 +29,8 @@ export const ROLES: Readonly<Record<string, RoleSpec>> = {
   accent: { kind: 'color', label: 'Accent colour' },
   surface: { kind: 'color', label: 'Surface colour' },
   logo: { kind: 'image', label: 'Logo' },
+  /** M58: any replaceable photo or picture that is not the logo: cc.image.1, cc.image.2, … one slot each. */
+  image: { kind: 'image', label: 'Photo', repeated: true },
   mediaFill: { kind: 'media', label: 'Footage' },
   'safe.disclaimer': { kind: 'text', label: 'Disclaimer', locked: true },
 };

@@ -17,7 +17,7 @@ CampaignCut plays your animation with Lottie, the same engine that plays Bodymov
 
 So "1 to 1" is achieved by building with the things Lottie carries, and by baking everything else into images before export. The look does not change. What changes is where the look lives: a torn edge stops being a Roughen Edges effect and becomes the PNG it always rendered to.
 
-The user gets a narrow set of controls: the text you tag, one replaceable image per comp, the disclaimer, a nudge and scale on each tagged layer, plus the app's own extras (colour treatments, a call-out on one word, the 16:9, 4:5 and 9:16 versions). Everything you do not tag is locked. Timing, animation and fonts are always locked. That is the product.
+The user gets a narrow set of controls: the text you tag, the photos you tag, the disclaimer, a nudge and scale on each tagged layer, plus the app's own extras (colour treatments, a call-out on one word, the 16:9, 4:5 and 9:16 versions). Everything you do not tag is locked. Timing, animation and fonts are always locked. That is the product.
 
 ---
 
@@ -30,8 +30,9 @@ We looked at `DGA_Ayudando y Perjudicando_6s_Gif_V2.gif`: 1080 by 1080, 6 second
 | Navy paper background with the grain | Lock it. Make it a real layer (a solid or a PNG), not the comp's background colour. If the grain is an effect or a Multiply-blended texture, bake it into the PNG. | `bg-paper` |
 | The big faint "$" watermark | Lock it. Text or shapes, either is fine. If it uses a blend mode or reduced-opacity effect, use plain opacity instead. | `bg-dollar` |
 | Red blocks behind the photo and in the corner | Lock them, or tag one of them `cc.accent` if all your red lives in one shape layer (see 4.4). | `red-block-1`, `red-block-2` |
-| Joe Lombardo cut-out photo | Tag it. This is the one replaceable image in the comp. The app calls the slot "Logo"; it is the image slot. | `cc.logo` |
-| Elon Musk polaroid with the tape | Lock it. One image slot per comp today. (If the campaign is more likely to swap this photo than the big one, tag this one instead and lock Lombardo.) | `polaroid-photo`, `polaroid-tape` |
+| Joe Lombardo cut-out photo | Tag it: a photo the user can replace. | `cc.image.1` |
+| Elon Musk polaroid photo | Tag it too. Tag the photo layer only, not the tape or the frame. | `cc.image.2` |
+| The polaroid's tape and frame | Lock them. | `polaroid-tape`, `polaroid-frame` |
 | "JOE LOMBARDO:" kicker, beat 1 | Tag it, one line. | `cc.subhead.1` |
 | "AYUDA" | Tag it, one line on its own layer. | `cc.headline.1` |
 | "A LOS" | Tag it. | `cc.headline.2` |
@@ -148,11 +149,12 @@ cc.subhead.2          JOE LOMBARDO:        (beat 2)
 cc.headline.4         PERJUDICA
 cc.headline.5         A LAS FAMILIAS
 cc.headline.6         DE NEVADA.
-cc.logo               the Lombardo cut-out
+cc.image.1            the Lombardo cut-out
+cc.image.2            the Musk photo inside the polaroid
 cc.safe.disclaimer    PAID FOR BY A MORE AFFORDABLE NEVADA
 ```
 
-In the app these appear as Subhead 1, Headline 1 to Headline 6, Subhead 2, Logo, Disclaimer, each field pre-filled with your words.
+In the app these appear as Subhead 1, Headline 1 to Headline 6, Subhead 2, Photo 1, Photo 2, Disclaimer, each pre-filled with what you authored. `cc.logo` is reserved for an actual logo, which a client's brand kit fills automatically; this piece has none.
 
 ### 4.2 Rules that will bite
 
@@ -161,7 +163,7 @@ In the app these appear as Subhead 1, Headline 1 to Headline 6, Subhead 2, Logo,
 - **Every tag once.** Two layers named `cc.headline.1` is a rejection. That is why the beat-2 lines continue the numbering at 4.
 - **Numbers start at 1**, no leading zeros.
 - **A text tag must be on a text layer.** `cc.headline.1` on a shape is a rejection.
-- **`cc.logo` must be on an image layer** (footage), not a shape, solid or precomp.
+- **`cc.image.1` and `cc.logo` must be on an image layer** (footage), not a shape, solid or precomp. A photo inside a precomp is not reachable; put the photo layer in the main comp.
 - **The disclaimer tag is `cc.safe.disclaimer`**, with `safe` in the middle, and no number.
 
 ### 4.3 Name the locked layers too
@@ -185,7 +187,7 @@ The app can circle, underline, highlight or enlarge any one word of a tagged lin
 3. A box shows a count of tags and problems. A report named `preflight-<comp name>.txt` appears next to the project file, inside `ayudando-6s`. Open it.
 4. Under **PROBLEMS**, every line names a layer and says what is wrong: an effect that will not travel, a blend mode, a bad tag. Fix each one in After Effects.
 5. Under **NOTES**, untagged text layers are listed. Check that every one of them is meant to be locked. The "$" watermark is; a headline line you forgot to rename is not.
-6. Under **TAGS FOUND**, check that all ten tags from 4.1 are there with the right role, and that the text ones say "box text". "Point text" means step 3.4 was skipped for that layer.
+6. Under **TAGS FOUND**, check that all eleven tags from 4.1 are there with the right role, and that the text ones say "box text". "Point text" means step 3.4 was skipped for that layer.
 7. Run it again until the last line reads **READY TO EXPORT**.
 
 Then, once: File > Scripts > Run Script File, pick `dump.jsx`. Two files appear next to the project, `dump-ayudando-6s.txt` and `.json`. You do not need to read them; they let the developer find anything by name if something goes missing in export.
@@ -286,9 +288,9 @@ Before you zip, tick every line:
 - [ ] No effects, layer styles, blend modes, motion blur, 3D, cameras, adjustment layers, time remap or expressions remain
 - [ ] The navy background is a layer, not the comp background colour
 - [ ] Every tagged text layer is live text, paragraph text, one line, typed in capitals
-- [ ] The ten tags from 4.1 are present, lower case, each once
+- [ ] The eleven tags from 4.1 are present, lower case, each once
 - [ ] The disclaimer is `cc.safe.disclaimer` and on screen the full 6 s
-- [ ] The Lombardo photo is an image layer named `cc.logo`
+- [ ] The Lombardo and Musk photos are image layers named `cc.image.1` and `cc.image.2`
 - [ ] Every locked layer has a readable name
 - [ ] The pre-flight report ends READY TO EXPORT
 - [ ] Bodymovin settings: Glyphs off, original asset names on, originals copied
@@ -301,7 +303,7 @@ Before you zip, tick every line:
 ## Appendix A: what the staffer will be able to do
 
 - Change each tagged line, with a character limit from your box
-- Replace the Lombardo photo (the "Logo" slot)
+- Replace either photo (Photo 1 and Photo 2)
 - Change the disclaimer's words
 - Nudge, scale or rotate any tagged layer a little; your animation on it is kept underneath
 - Circle, underline, highlight or enlarge one word of any line
@@ -312,7 +314,7 @@ And not: change timing, animation, fonts, colours you did not tag, or anything u
 
 ## Appendix B: two scenes instead of one
 
-If you want the app to treat the two beats as two scenes (so a staffer can drop one, reorder, or put a transition between them), split the piece into two comps of 3.00 s each, `Beat 1` and `Beat 2`, sharing a background precomp. Tag each comp on its own (`cc.subhead`, `cc.headline.1` to `.3`, `cc.logo`, `cc.safe.disclaimer` in each; numbering restarts per comp). Export each comp to its own sub-folder, `01-beat-1/data.json` and `02-beat-2/data.json`, and add a file named `elements.json` at the top of the handover folder:
+If you want the app to treat the two beats as two scenes (so a staffer can drop one, reorder, or put a transition between them), split the piece into two comps of 3.00 s each, `Beat 1` and `Beat 2`, sharing a background precomp. Tag each comp on its own (`cc.subhead`, `cc.headline.1` to `.3`, `cc.image.1`, `cc.image.2`, `cc.safe.disclaimer` in each; numbering restarts per comp). Export each comp to its own sub-folder, `01-beat-1/data.json` and `02-beat-2/data.json`, and add a file named `elements.json` at the top of the handover folder:
 
 ```json
 {

@@ -926,6 +926,18 @@ Josh (2026-09-17): a designer will prepare their own organised After Effects pro
 
 ---
 
+## M58 · Photo slots · DONE
+
+Josh (2026-09-17): one replaceable image per comp was a limit the designer should not have to live with.
+
+**Build**
+- , , … tag any replaceable photo or picture, one slot each (Photo 1, Photo 2 in the panel, each with its placement).  stays the logo: the one a client's brand kit fills and the one readiness asks about. Ingest, pre-flight, SPEC, AE-AUTHORING and the handover guide agree.
+
+**Tests**
+- Schema: two photo slots and a logo, in order, with placements;  without an index rejected. Pre-flight: a photo slot on an image layer passes; on a text layer it is named.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

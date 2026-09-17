@@ -167,6 +167,16 @@ describe('preflight report', () => {
     expect(r.text).toMatch(/cc.headline.2/);
   });
 
+  it('M58: cc.image.N is a photo slot on an image layer, never on text', () => {
+    const r = api.buildReport(fakeComp('c', [
+      { name: 'cc.image.1', index: 1, kind: 'av' },
+      { name: 'cc.image.2', index: 2, kind: 'text', text: { font: 'A', fontSize: 1, text: 'x' } },
+    ]), env);
+    expect(r.problems).toHaveLength(1);
+    expect(r.problems[0]).toMatch(/"cc.image.2".*not an image/);
+    expect(r.text).toMatch(/cc.image.1\s+image/);
+  });
+
   it('ends with a clear verdict line', () => {
     const clean = api.buildReport(fakeComp('c', [{ name: 'cc.headline', index: 1, kind: 'text', text: { font: 'A', fontSize: 1, text: 'x' } }]), env);
     expect(clean.text).toMatch(/READY TO EXPORT/);

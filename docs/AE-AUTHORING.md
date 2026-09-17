@@ -74,7 +74,8 @@ cc.headline.<n>    one line of a headline  cc.headline.1, cc.headline.2 (also su
 | `cc.stat.1`, `cc.stat.2`, … | Text | One text field each, in order |
 | `cc.accent` | Shape with a fill or stroke | A color picker |
 | `cc.surface` | Shape with a fill | A color picker |
-| `cc.logo` | Image layer | An image upload |
+| `cc.logo` | Image layer | An image upload; a client's brand fills it with their logo |
+| `cc.image.1`, `cc.image.2`, … | Image layer | An image upload each: photos, cut-outs, pictures. As many as the design has. |
 | `cc.mediaFill` | Shape or solid | Where the user's footage shows through |
 | `cc.safe.disclaimer` | Text | A text field. Position and size are locked. |
 
