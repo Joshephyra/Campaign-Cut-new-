@@ -754,6 +754,24 @@ The prototype's Bubbly is a font swap (Fredoka) and rounded corners. Text must r
 
 ---
 
+## M41 · A spot from nothing · DONE
+
+With an element library and a starter pack, a spot no longer has to begin as a template. The prototype's composer started from an empty stage; so does this.
+
+**Build**
+- A built-in `blank` template (library only, no elements, no files), ensured on every server start. `POST /projects { templateSlug: "blank" }` makes an empty spot named "New spot" (or "<client>: New spot"), with no auto-made element.
+- Library page: a "From nothing" section with one card, "Start a spot from nothing", for the chosen client.
+- The editor opens an empty spot and says so on the video and in the panel, with "Add the first scene" in both places.
+- Where a library element lands (`app/src/landing.ts`, on `SCENE_TYPES` in the composition): a scene (open, headline, stat, background, end card) lands at the playhead, never past the end of the last scene, and moves the playhead on to its own end, so scenes added one after another follow one another; an overlay (lower third, caption, callout, bar, disclaimer) lands at the playhead, and past the end lands on the start of the last scene, so it always overlays something. An empty spot puts everything at 0.
+- The opening-frame seek runs once per spot opened, not on every reload (it had been resetting the playhead after every add).
+
+**Tests**
+- Blank template and spot (server); scene types; landing and the playhead after; the library card; the editor's empty state and three adds in a row.
+
+**Done when:** a spot built from nothing out of the starter pack plays and exports like any other.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

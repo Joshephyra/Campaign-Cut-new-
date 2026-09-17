@@ -61,6 +61,17 @@ export function Library({ onOpenProject }: Props) {
       setBusySlug(null);
     }
   };
+  // M41: a spot from nothing, built from the library.
+  const startBlank = async () => {
+    setBusySlug('blank');
+    try {
+      const { id } = await api.createProject('blank', clientId ?? undefined);
+      onOpenProject(id);
+    } catch (e) {
+      setError((e as Error).message);
+      setBusySlug(null);
+    }
+  };
 
   const [adding, setAdding] = useState(false);
   const addSection = useRef<HTMLDivElement>(null);
@@ -102,6 +113,31 @@ export function Library({ onOpenProject }: Props) {
               <ClientChip key={c.id} label={c.name} active={clientId === c.id} onClick={() => setClientId(c.id)} />
             ))}
           </div>
+        )}
+
+        {groups && (
+          <section className="mb-10">
+            <div className="flex items-baseline justify-between mb-3">
+              <h2 className="text-base font-semibold tracking-tight">From nothing</h2>
+              <span className="text-xs text-fg-3">{clientId === null ? 'An empty spot, built from the element library' : `An empty spot for ${clients.find((c) => c.id === clientId)?.name ?? 'the client'}, built from the element library`}</span>
+            </div>
+            <button
+              type="button"
+              aria-label="Start a spot from nothing"
+              disabled={busySlug !== null}
+              onClick={() => void startBlank()}
+              className="group text-left rounded-xl bg-panel border border-dashed border-line-strong overflow-hidden transition-colors hover:border-blue hover:bg-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-blue disabled:opacity-60 w-[calc((100%-2rem)/3)]"
+            >
+              <div className="aspect-video bg-stage flex items-center justify-center">
+                <span className="text-sm font-medium text-fg-2 group-hover:text-fg">Empty spot</span>
+              </div>
+              <div className="p-3.5">
+                <div className="text-sm font-medium">Start from nothing</div>
+                <div className="text-xs text-fg-3 mt-1">Add scenes and overlays from every template</div>
+                {busySlug === 'blank' && <div className="text-xs text-blue mt-2">Creating project…</div>}
+              </div>
+            </button>
+          </section>
         )}
 
         {groups?.map((group) => (

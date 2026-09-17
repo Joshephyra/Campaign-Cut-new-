@@ -4,6 +4,32 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M41 A spot from nothing · DONE
+
+**Why**
+
+The library (M31), the composer (M37) and the starter pack (M38) make a spot possible without a template. The prototype's composer began on an empty stage; the app now can too.
+
+**What exists now**
+
+- A built-in `blank` template (slug `blank`, library only, no elements, no files) that `buildApp` ensures on every start. `POST /projects { templateSlug: "blank" }` makes an empty spot ("New spot", or "<client>: New spot" with a client). The detail, the render props and the disclaimer rule take an empty spot in their stride: nothing to render, and no export until a disclaimer is on for four seconds.
+- Library page: "From nothing" above the templates, one dashed card, "Start a spot from nothing", for the chosen client.
+- The editor opens an empty spot with "An empty spot. Everything on the video comes from the library." on the stage and "Nothing on the video yet" in the panel, each with "Add the first scene".
+- Landing (`app/src/landing.ts`; `SCENE_TYPES` and `isSceneType` in the composition): a scene lands at the playhead, never past the end, and moves the playhead on to its end; an overlay lands at the playhead, or on the start of the last scene when the playhead is past the end. The picker's note says so.
+- Fixed on the way: the opening-frame seek ran on every reload of the spot, so every add reset the playhead to the first scene's hold frame; it now runs once per spot opened.
+- Tests: 3 server, 1 scene types, 4 landing, 1 library, 1 editor. 499 tests green.
+
+**Verified**
+
+- Real browser: the Library shows "Start a spot from nothing"; pressing it opened spot 8 ("New spot") empty, with the prompt on the stage and in the panel. "Add the first scene" opened the library; Footage background landed at 0.0 s (5 s), Headline followed at 5.0 s, Bar lower third landed on the Headline at 5.0 s, Disclaimer bar at the playhead (6.0 s, 4 s), after which the disclaimer check read "Disclaimer 4.0 s" and Export was enabled. Captures in .impeccable/review/m41-*.png.
+- Export parity on that spot (frames 30, 180, 250): all within threshold, worst mean 0.54. A spot from nothing exports like any other.
+
+**Next**
+
+Josh's call. Everything the prototype listed is built but Bubbly (M40, waits for a designed pack) and the timeline (parked). The five acceptance tests and Germain's verdict are the gate; the human items are unchanged (Germain's verdict on media/fidelity, the fps reading, a first-time user, closing After Effects).
+
+---
+
 ## 2026-09-17 · M39 Style treatments · DONE
 
 **Why**

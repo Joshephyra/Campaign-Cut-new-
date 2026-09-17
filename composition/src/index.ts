@@ -23,7 +23,7 @@ export type { ChromaFilter, ChromaKey } from './chroma';
 export { applyTransform, DEFAULT_TRANSFORM, isTransformValue, LAYER_CLASS, layerClassFor, type TransformValue } from './transform';
 export { mediaTiming } from './media';
 export type { MainAudio } from './config';
-export { COLOR_ROLES, ELEMENT_TYPES, ELEMENT_TYPE_LABELS, inferElementType, isElementType } from './elementTypes';
+export { COLOR_ROLES, ELEMENT_TYPES, ELEMENT_TYPE_LABELS, inferElementType, isElementType, isSceneType, SCENE_TYPES } from './elementTypes';
 export type { ElementType } from './elementTypes';
 export { carriesDisclaimer, DISCLAIMER_MIN_SECONDS, disclaimerCheck, disclaimerSeconds } from './compliance';
 export type { DisclaimerCheck, DisclaimerScene } from './compliance';

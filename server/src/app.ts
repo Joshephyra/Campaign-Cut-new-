@@ -53,11 +53,19 @@ const VIDEO_EXTENSIONS = new Set(['.mp4', '.mov', '.m4v', '.webm', '.mkv', '.avi
 const AUDIO_EXTENSIONS = new Set(['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac', '.aif', '.aiff']);
 
 /** Builds the Fastify app without listening, so tests can inject requests. */
+/**
+ * M41: the template a spot from nothing is made on. It has no elements and
+ * no files; a spot on it starts empty and is built from the library. It is
+ * library-only so the grid never offers it as a design.
+ */
+export const BLANK_TEMPLATE = { slug: 'blank', name: 'Blank spot', adType: 'Blank', durationFrames: 0, fps: 30, width: 1920, height: 1080, thumbPath: '', libraryOnly: true } as const;
+
 export function buildApp(options: AppOptions = {}) {
   const db = options.db ?? openDb(paths.db);
   const templatesDir = options.templatesDir ?? paths.templates;
   const mediaDir = options.mediaDir ?? paths.media;
   const app = Fastify({ logger: false });
+  db.upsertTemplate(BLANK_TEMPLATE);
 
   // CORS on everything. The render process fetches template files and media
   // over HTTP from a different origin; a missing header here was the
@@ -227,14 +235,16 @@ export function buildApp(options: AppOptions = {}) {
     if (clientId !== null && !client) return reply.code(404).send({ error: `No client ${String(clientId)}` });
 
     let elements = db.listTemplateElements(t.id);
-    if (elements.length === 0) {
+    // A single-element template is its own element; a blank spot (M41) has none until the library fills it.
+    if (elements.length === 0 && t.slug !== BLANK_TEMPLATE.slug) {
       db.upsertTemplateElement({ templateId: t.id, slug: t.slug, name: t.name, zIndex: 0, startFrame: 0, endFrame: t.durationFrames });
       elements = db.listTemplateElements(t.id);
     }
 
+    const baseName = t.slug === BLANK_TEMPLATE.slug ? 'New spot' : t.name;
     const { id } = db.createProject({
       templateId: t.id,
-      name: req.body?.name?.trim() || (client ? `${client.name}: ${t.name}` : `${t.name} project`),
+      name: req.body?.name?.trim() || (client ? `${client.name}: ${baseName}` : t.slug === BLANK_TEMPLATE.slug ? baseName : `${t.name} project`),
       clientId: client?.id ?? null,
       values: elements.flatMap((element) =>
         loadElementSchema(templatesDir, t.slug, element.slug).map((p: TemplateParam) => ({ elementId: element.id, key: p.key, value: p.default })),

@@ -42,7 +42,7 @@ describe('Library', () => {
 
     await waitFor(() => expect(screen.getByText('Split Record')).toBeTruthy());
     const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
-    expect(headings).toEqual(['Contrast', 'GOTV', 'Clients']); // M33 adds the clients section
+    expect(headings).toEqual(['From nothing', 'Contrast', 'GOTV', 'Clients']); // M41 adds the blank spot first, M33 the clients section
     // duration in timecode, dimensions in mono facts
     expect(screen.getByText('00:30:00')).toBeTruthy();
     expect(screen.getByText('00:05:00')).toBeTruthy();
@@ -61,5 +61,20 @@ describe('Library', () => {
     const post = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST')!;
     expect(String(post[0])).toBe('/api/projects');
     expect(JSON.parse((post[1] as RequestInit).body as string)).toEqual({ templateSlug: 'turnout' });
+  });
+});
+
+
+/** M41: a spot from nothing, on the blank template, for the chosen client. */
+describe('Library: start from nothing (M41)', () => {
+  it('creates a spot on the blank template and opens it', async () => {
+    const fetchMock = mockApi();
+    const onOpenProject = vi.fn();
+    render(<Library onOpenProject={onOpenProject} />);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Start a spot from nothing' })).toBeTruthy());
+    screen.getByRole('button', { name: 'Start a spot from nothing' }).click();
+    await waitFor(() => expect(onOpenProject).toHaveBeenCalledWith(42));
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST')!;
+    expect(JSON.parse((post[1] as RequestInit).body as string)).toEqual({ templateSlug: 'blank' });
   });
 });

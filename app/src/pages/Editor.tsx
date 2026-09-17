@@ -58,6 +58,7 @@ import {
 import { API, api, type LibraryElement, type MediaAsset, type ProjectAudio, type ProjectDetail, type ProjectElement, type ProjectTransition, type Theme } from '../api';
 import { StylePanel } from '../components/StylePanel';
 import { ElementPreview, previewValues } from '../components/ElementPreview';
+import { frameAfterLanding, landingFrame } from '../landing';
 import { ExportHistory } from '../components/ExportHistory';
 import { ExportPanel } from '../components/ExportPanel';
 import { Inspector } from '../components/Inspector';
@@ -522,7 +523,8 @@ export function Editor({ projectId, onBack }: Props) {
   const addFromLibrary = async (item: LibraryElement) => {
     setLibraryError(null);
     try {
-      const element = await api.addElement(projectId, item.id, frameRef.current);
+      // M41: a scene lands at the playhead and moves it on; an overlay lands on the scene under the playhead.
+      const element = await api.addElement(projectId, item.id, landingFrame(item.type, elements, frameRef.current));
       const lottie = await api.elementLottie(element.lottieUrl);
       setLoaded((prev) => (prev ? { ...prev, lotties: { ...prev.lotties, [element.id]: lottie } } : prev));
       changeKey.current = `add:${element.id}`;
@@ -535,7 +537,7 @@ export function Editor({ projectId, onBack }: Props) {
       setElements((prev) => (prev.some((e) => e.id === element.id) ? prev.map((e) => (e.id === element.id ? { ...e, ...element } : e)) : [...prev, element]));
       setSelectedId(element.id);
       setPicking(false);
-      seekRef.current(holdFrame(element));
+      seekRef.current(frameAfterLanding(item.type, element, holdFrame(element)));
     } catch (e) {
       setLibraryError((e as Error).message);
     }
@@ -735,6 +737,15 @@ export function Editor({ projectId, onBack }: Props) {
           />
 
           <aside className="w-[320px] shrink-0 border-l border-line bg-panel overflow-y-auto">
+            {!selected && (
+              <div className="px-5 py-6" data-testid="empty-panel">
+                <h2 className="text-lg font-semibold tracking-tight">Nothing on the video yet</h2>
+                <p className="mt-2 text-[13px] text-fg-2">Add a scene from the library: a headline, a background, an end card. Overlays sit on top of the scene under the playhead.</p>
+                <Button variant="primary" className="mt-4" onClick={openLibrary}>
+                  Add the first scene
+                </Button>
+              </div>
+            )}
             {selected && (
               <>
                 <div className="px-5 pt-4 pb-3 border-b border-line flex items-center justify-between gap-3">
@@ -987,7 +998,7 @@ function LibraryPicker({
           onChange={(e) => setCopy(e.target.value)}
           className="field !py-1.5"
         />
-        <p className="mt-2 text-[11px] text-fg-3">Every element of every template, drawn with your words. It lands at the playhead with its own length.</p>
+        <p className="mt-2 text-[11px] text-fg-3">Every element of every template, drawn with your words. A scene lands at the playhead and moves it on; an overlay lands on the scene under the playhead.</p>
       </div>
       {error && <p className="px-4 pt-2 text-xs text-red">{error}</p>}
       {library === null && !error && <p className="px-4 py-3 text-xs text-fg-3">Loading…</p>}
@@ -1382,7 +1393,8 @@ function Monitor({
   // Open on a frame where the first scene's design is on screen, not on the empty first frame of its entrance.
   const firstScene = inStartOrder(elements)[0];
   const initialFrame = firstScene ? holdFrame(firstScene) : 0;
-  useEffect(() => setFrame(initialFrame), [loaded]); // eslint-disable-line react-hooks/exhaustive-deps -- the opening frame, once
+  // Once per spot opened, not on every reload: an added scene moves the playhead itself (M41).
+  useEffect(() => setFrame(initialFrame), [loaded.detail.project.id]); // eslint-disable-line react-hooks/exhaustive-deps -- the opening frame, once
 
   // M12 measurement mode: open the editor with ?perf=<seconds> and the Player
   // is played from the start for that long while frame updates are counted.
@@ -1457,6 +1469,14 @@ function Monitor({
                 style={{ pointerEvents: 'none', left: dropBox.box.left, top: dropBox.box.top, width: dropBox.box.width, height: dropBox.box.height }}
               >
                 <span className="px-2 py-1 rounded-sm bg-blue text-white text-xs font-medium">Drop to use here · {dropBox.label}</span>
+              </div>
+            )}
+            {elements.length === 0 && (
+              <div data-testid="empty-spot" className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center">
+                <p className="text-[13px] text-fg-2">An empty spot. Everything on the video comes from the library.</p>
+                <Button variant="primary" onClick={onAdd}>
+                  Add the first scene
+                </Button>
               </div>
             )}
             {editing && editingParam && (

@@ -11,6 +11,18 @@ export function isElementType(v: unknown): v is ElementType {
   return typeof v === 'string' && (ELEMENT_TYPES as readonly string[]).includes(v);
 }
 
+/**
+ * M41: the types that are a scene of their own (they fill the frame and
+ * follow one another) as against an overlay (it sits on a scene). Where a
+ * library element lands when added, and where the playhead goes after,
+ * follow from this.
+ */
+export const SCENE_TYPES: readonly ElementType[] = ['open', 'headline', 'stat', 'background', 'end-card'];
+
+export function isSceneType(type: string): boolean {
+  return (SCENE_TYPES as readonly string[]).includes(type);
+}
+
 /** Slug words that name a type, most specific first. */
 const HINTS: [RegExp, ElementType][] = [
   [/(^|[-_])(lower[-_]?third|l3|lowerthird)([-_]|$)/, 'lower-third'],
