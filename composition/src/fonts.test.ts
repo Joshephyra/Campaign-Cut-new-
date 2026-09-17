@@ -33,3 +33,35 @@ describe('fontsFor', () => {
     expect(fontsFor([], 'x', '/api')).toEqual([]);
   });
 });
+
+describe('font faces by style (M27)', () => {
+  it('declares weight and style per face the way lottie-web reads fStyle, so one family can ship several files', () => {
+    const css = fontFaceCss([
+      { family: 'Arial', style: 'Regular', url: '/api/templates/t/fonts/Arial-Regular.ttf' },
+      { family: 'Arial', style: 'Bold', url: '/api/templates/t/fonts/Arial-Bold.ttf' },
+      { family: 'Arial', style: 'Bold Italic', url: '/api/templates/t/fonts/Arial-BoldItalic.ttf' },
+      { family: 'Inter', style: 'Black', url: '/api/x.ttf' },
+      { family: 'Inter', style: 'Light', url: '/api/y.ttf' },
+      { family: 'Old', url: '/api/z.ttf' },
+    ]);
+    const faces = css.split('\n');
+    expect(faces[0]).toContain('font-weight: 400; font-style: normal;');
+    expect(faces[1]).toContain('font-weight: 700; font-style: normal;');
+    expect(faces[2]).toContain('font-weight: 700; font-style: italic;');
+    expect(faces[3]).toContain('font-weight: 900;');
+    expect(faces[4]).toContain('font-weight: 200;');
+    expect(faces[5]).toContain('font-weight: 400; font-style: normal;'); // no style recorded: regular
+    expect(css.match(/font-family: "Arial"/g)).toHaveLength(3);
+  });
+
+  it('carries the style from meta font files into the runner fonts', () => {
+    const files = [
+      { family: 'Arial', style: 'Regular', file: 'Arial-Regular.ttf' },
+      { family: 'Arial', style: 'Bold', file: 'Arial-Bold.ttf' },
+    ];
+    expect(fontsFor(files, 'c', '/api')).toEqual([
+      { family: 'Arial', style: 'Regular', url: '/api/templates/c/fonts/Arial-Regular.ttf' },
+      { family: 'Arial', style: 'Bold', url: '/api/templates/c/fonts/Arial-Bold.ttf' },
+    ]);
+  });
+});

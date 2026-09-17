@@ -108,8 +108,10 @@ describe('the sample plan obeys the ingest rules', () => {
     expect(PLAN.timeline.map((t) => t.slug)).toEqual(PLAN.comps.map((c) => c.slug));
   });
 
-  it('writes an elements.json the ingest accepts', () => {
-    const manifest = JSON.parse(manifestJson()) as { folder: string; slug: string; name: string; startFrame: number; zIndex: number }[];
+  it('writes an elements.json the ingest accepts, carrying the comp background colour', () => {
+    const parsed = JSON.parse(manifestJson()) as { background: string; elements: { folder: string; slug: string; name: string; startFrame: number; zIndex: number }[] };
+    expect(parsed.background).toBe('#0F1729');
+    const manifest = parsed.elements;
     expect(manifest).toEqual([
       { folder: '01-open', slug: 'open', name: 'Open', startFrame: 0, zIndex: 0 },
       { folder: '02-lower-third', slug: 'lower-third', name: 'Lower third', startFrame: 90, zIndex: 1 },

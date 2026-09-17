@@ -4,11 +4,16 @@
 import { useEffect, useState } from 'react';
 import { cancelRender, continueRender, delayRender } from 'remotion';
 
-/** A font the template needs, by the family name lottie-web will ask for, and where to fetch it. */
-export type TemplateFont = { family: string; url: string };
+/**
+ * A font face the template needs: the family name lottie-web will ask for,
+ * the style Bodymovin recorded for it ("Regular", "Bold", "Bold Italic"...),
+ * and where to fetch the file. One entry per family AND style (M27): a
+ * family shipped as one file renders every weight with that file.
+ */
+export type TemplateFont = { family: string; style?: string; url: string };
 
-/** What ingest writes into meta.json: the family and the file shipped under templates/<slug>/fonts/. */
-export type TemplateFontFile = { family: string; file: string };
+/** What ingest writes into meta.json: family, style and the file shipped under templates/<slug>/fonts/. */
+export type TemplateFontFile = { family: string; style?: string; file: string };
 
 function formatFor(url: string): string {
   if (url.startsWith('data:')) {
@@ -33,17 +38,64 @@ function formatFor(url: string): string {
 
 const quote = (s: string) => `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
-/** One @font-face per font. The family name must equal the Lottie's fFamily. */
+/**
+ * The CSS weight and style a Bodymovin fStyle maps to. Mirrors lottie-web's
+ * own reading of fStyle (getFontProperties), so the @font-face we declare
+ * is the face lottie-web asks for.
+ */
+export function faceFor(style: string | undefined): { weight: string; fontStyle: string } {
+  let weight = '400';
+  let fontStyle = 'normal';
+  for (const word of (style ?? '').split(' ')) {
+    switch (word.toLowerCase()) {
+      case 'italic':
+      case 'oblique':
+        fontStyle = 'italic';
+        break;
+      case 'bold':
+        weight = '700';
+        break;
+      case 'black':
+        weight = '900';
+        break;
+      case 'medium':
+        weight = '500';
+        break;
+      case 'regular':
+      case 'normal':
+        weight = '400';
+        break;
+      case 'light':
+      case 'thin':
+        weight = '200';
+        break;
+      default:
+        break;
+    }
+  }
+  return { weight, fontStyle };
+}
+
+/** One @font-face per font face. The family name must equal the Lottie's fFamily. */
 export function fontFaceCss(fonts: TemplateFont[]): string {
   return fonts
-    .map((f) => `@font-face { font-family: ${quote(f.family)}; src: url(${quote(f.url)}) format("${formatFor(f.url)}"); font-display: block; }`)
+    .map((f) => {
+      const face = faceFor(f.style);
+      return `@font-face { font-family: ${quote(f.family)}; font-weight: ${face.weight}; font-style: ${face.fontStyle}; src: url(${quote(f.url)}) format("${formatFor(f.url)}"); font-display: block; }`;
+    })
     .join('\n');
 }
 
 /** Meta font files -> URLs for a runner ('/api' in the Player, the server origin for export). */
 export function fontsFor(files: TemplateFontFile[] | undefined, slug: string, baseUrl: string): TemplateFont[] {
   if (!files || files.length === 0) return [];
-  return files.map((f) => ({ family: f.family, url: `${baseUrl}/templates/${slug}/fonts/${f.file}` }));
+  return files.map((f) => ({ family: f.family, style: f.style, url: `${baseUrl}/templates/${slug}/fonts/${f.file}` }));
+}
+
+/** The `document.fonts.load` spec for a face: "bold italic 1em Family". */
+function loadSpec(f: TemplateFont): string {
+  const face = faceFor(f.style);
+  return `${face.fontStyle} ${face.weight} 1em ${quote(f.family)}`;
 }
 
 /**
@@ -66,7 +118,7 @@ export function TemplateFonts({ fonts }: { fonts: TemplateFont[] }) {
         continueRender(handle);
       }
     };
-    Promise.all(fonts.map((f) => document.fonts.load(`1em ${quote(f.family)}`)))
+    Promise.all(fonts.map((f) => document.fonts.load(loadSpec(f))))
       .then(() => document.fonts.ready)
       .then(finish)
       .catch((err: unknown) => cancelRender(err instanceof Error ? err : new Error(`Font load failed: ${String(err)}`)));

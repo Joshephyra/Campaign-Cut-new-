@@ -3,7 +3,28 @@
 Running log of where the build is. Newest entry first.
 
 ---
-## 2026-09-15 · M26 Sample project builder · IN PROGRESS: written and plan-tested; needs one run inside After Effects
+## 2026-09-17 · M27 The first real template: font faces and the comp background · DONE
+
+**Why**
+
+The first After Effects template went through the whole pipeline end to end (see M26 below) and the fidelity harness found two things no stand-in could have: 8 of 12 samples over threshold.
+
+**What the harness found, and the fixes**
+
+- **One font file per family was wrong.** Arial Bold and Arial Regular are two faces; the ingest shipped one file for the family, so regular captions rendered from the bold file and drifted a character width per word. Now every (family, style) pair from each export's font list gets its own file, found strictly by style (`Arial-Regular.ttf` / `arial.ttf` for Regular, `Arial-Bold.ttf` / `arialbd.ttf` for Bold; a regular file is never accepted for a bold face). `meta.fontFiles` carries the style; the composition declares one `@font-face` per face with the weight and style lottie-web asks for, and waits for each face before the first frame. Missing faces fail the ingest naming family, style and element.
+- **The comp background colour never travelled.** Bodymovin does not export it; After Effects paints it wherever no layer covers the frame, so a reference render contains it. `elements.json` may now be `{ "background": "#rrggbb", "elements": [...] }`; `meta.background` reaches both runners (black when absent). The sample builder writes it.
+- Fidelity on the sample after the fixes: 12 of 12 samples within threshold, worst mean 5.8 (edge antialiasing on 220 px stats and a sliding accent bar). Before: worst 25.3.
+- Tests: 2 composition (face CSS, style through fontsFor), 3 strict finder, 4 ingest (two faces shipped, missing face named, background read and validated, absent when the list form is used), 1 server (both builders use the meta background), 1 editor. 378 tests green.
+
+**How the template got in without a person clicking through After Effects**
+
+- `AfterFX.exe -s "$.evalFile(...)"` runs a script in After Effects from the command line. It only worked reliably against a freshly launched instance with no project open, so every unattended script opens the project itself, does its work, and quits After Effects cleanly when done (never force-close it: that raises a "Crash Repair Options" dialog on the next launch that blocks all scripts until a person clicks Continue; Josh clicked it twice).
+- `preflight-all.jsx` ran the pre-flight over the five comps in two seconds (zero problems). `bodymovin-export.jsx` drove Bodymovin's own exporter without its panel: it loads the extension's scripts, and stands in for the panel on the three hand-offs (font data, image processing, progress). Four comps exported in six seconds. `aerender` rendered the 30 s reference in 16 seconds. `npm run ingest` took the folder; `npm run fidelity` judged it.
+- Pop-ups in the scripts honour `$.__ccQuiet` so unattended runs never block.
+
+---
+
+## 2026-09-15 · M26 Sample project builder · DONE: built, exported, rendered, ingested and judged on 2026-09-17
 
 **Why**
 

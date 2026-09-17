@@ -197,7 +197,7 @@ describe('ingestTemplate: shipping fonts with the template (M13)', () => {
     expect(fs.readFileSync(shipped, 'utf8')).toBe('plex-bytes');
     const meta = JSON.parse(fs.readFileSync(path.join(templatesDir, 'standin', 'meta.json'), 'utf8')) as AnyRecord;
     expect(meta.fonts).toEqual(['IBM Plex Sans']);
-    expect(meta.fontFiles).toEqual([{ family: 'IBM Plex Sans', file: 'IBMPlexSans-Regular.ttf' }]);
+    expect(meta.fontFiles).toEqual([{ family: 'IBM Plex Sans', style: 'Regular', file: 'IBMPlexSans-Regular.ttf' }]);
   });
 });
 
@@ -226,7 +226,7 @@ describe('ingestTemplate: thumbnail render gets embedded fonts and images', () =
         await fakeThumbnail(opts);
       },
     });
-    expect(seen!.fonts).toEqual([{ family: 'IBM Plex Sans', url: `data:font/ttf;base64,${Buffer.from('plex-bytes').toString('base64')}` }]);
+    expect(seen!.fonts).toEqual([{ family: 'IBM Plex Sans', style: 'Regular', url: `data:font/ttf;base64,${Buffer.from('plex-bytes').toString('base64')}` }]);
     expect(seen!.elements.map((e) => [e.id, e.startFrame, e.endFrame])).toEqual([['standin', 0, 150]]);
     const logo = (seen!.elements[0]!.lottie.assets as AnyRecord[]).find((a) => a.id === 'image_0')!;
     expect(logo.e).toBe(1);

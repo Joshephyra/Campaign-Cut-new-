@@ -125,16 +125,32 @@ var CC_SAMPLE = (function () {
     return null;
   }
 
-  /* The elements.json the ingest reads, built by hand (no JSON in ExtendScript). */
+  /* #rrggbb for a [r, g, b] colour in 0..1. */
+  function hex(c) {
+    var out = '#';
+    for (var i = 0; i < 3; i++) {
+      var v = Math.round(c[i] * 255).toString(16).toUpperCase();
+      out += v.length < 2 ? '0' + v : v;
+    }
+    return out;
+  }
+
+  /*
+    The elements.json the ingest reads, built by hand (no JSON in
+    ExtendScript). The object form carries the comp background colour, so
+    the app shows it wherever no element covers the frame, as After Effects
+    does in the reference render (M27).
+  */
   function manifestJson() {
-    var lines = ['['];
+    var lines = ['{', '  "background": "' + hex(PLAN.background) + '",', '  "elements": ['];
     for (var i = 0; i < PLAN.timeline.length; i++) {
       var t = PLAN.timeline[i];
       var c = compBySlug(t.slug);
-      var line = '  { "folder": "' + c.folder + '", "slug": "' + c.slug + '", "name": "' + c.name + '", "startFrame": ' + t.startFrame + ', "zIndex": ' + t.zIndex + ' }';
+      var line = '    { "folder": "' + c.folder + '", "slug": "' + c.slug + '", "name": "' + c.name + '", "startFrame": ' + t.startFrame + ', "zIndex": ' + t.zIndex + ' }';
       lines.push(line + (i < PLAN.timeline.length - 1 ? ',' : ''));
     }
-    lines.push(']');
+    lines.push('  ]');
+    lines.push('}');
     return lines.join('\n') + '\n';
   }
 

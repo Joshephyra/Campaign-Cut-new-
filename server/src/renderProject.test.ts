@@ -257,3 +257,25 @@ describe('buildTemplateDefaultProps: the template as authored, no project (M19)'
     fs.rmSync(tmp, { recursive: true, force: true });
   });
 });
+
+describe('template background (M27)', () => {
+  it('both builders use the meta background when the template has one, black otherwise', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-rp-bg-'));
+    fs.mkdirSync(path.join(tmp, 't'), { recursive: true });
+    fs.writeFileSync(path.join(tmp, 't', 'template.json'), JSON.stringify(lottie));
+    fs.writeFileSync(path.join(tmp, 't', 'schema.json'), JSON.stringify(schema));
+    const db = openDb(':memory:');
+    const t = db.upsertTemplate({ slug: 't', name: 'T', adType: 'Bio', durationFrames: 30, fps: 30, width: 1920, height: 1080, thumbPath: '' });
+    db.upsertTemplateElement({ templateId: t.id, slug: 't', zIndex: 0, startFrame: 0, endFrame: 30 });
+    const projectId = db.createProject({ templateId: t.id, name: 'P', values: [] }).id;
+
+    expect(buildProjectProps({ db, templatesDir: tmp, projectId, serverBase: 'http://x' }).background).toBe('#000000');
+    expect(buildTemplateDefaultProps({ db, templatesDir: tmp, slug: 't', serverBase: 'http://x' }).background).toBe('#000000');
+
+    fs.writeFileSync(path.join(tmp, 't', 'meta.json'), JSON.stringify({ background: '#0F1729', fontFiles: [] }));
+    expect(buildProjectProps({ db, templatesDir: tmp, projectId, serverBase: 'http://x' }).background).toBe('#0F1729');
+    expect(buildTemplateDefaultProps({ db, templatesDir: tmp, slug: 't', serverBase: 'http://x' }).background).toBe('#0F1729');
+    db.close();
+    fs.rmSync(tmp, { recursive: true, force: true });
+  });
+});

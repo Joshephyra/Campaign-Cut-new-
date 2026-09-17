@@ -2,7 +2,7 @@ import type { ElementProps, LottieAnimationData, TemplateParam } from '@campaign
 import type { Db } from '@campaigncut/server/db';
 import fs from 'node:fs';
 import path from 'node:path';
-import { findFontFile } from './fonts';
+import { findFontFileForStyle } from './fonts';
 import { generateSchema, type TagReport } from './generateSchema';
 
 /** Every problem found, so the author can fix them all at once. */
@@ -22,7 +22,7 @@ export type ThumbnailRenderer = (opts: {
   outputPath: string;
   frame: number;
   /** The shipped fonts as data URIs, so the thumbnail draws real text without a running server. */
-  fonts: { family: string; url: string }[];
+  fonts: { family: string; style?: string; url: string }[];
 }) => Promise<void>;
 
 export type IngestOptions = {
@@ -80,10 +80,12 @@ export type TemplateMeta = {
   /** Font families referenced by any element, de-duplicated. */
   fonts: string[];
   /** The font file shipped for each family under templates/<slug>/fonts/. */
-  fontFiles: { family: string; file: string }[];
+  fontFiles: { family: string; style: string; file: string }[];
   elements: ElementMeta[];
   /** The After Effects reference render, relative to the template dir, when one was handed over (M19). */
   reference?: string;
+  /** M27: the comp background colour (#rrggbb) from elements.json, shown wherever no element covers the frame. */
+  background?: string;
 };
 
 export type ElementIngestResult = ElementMeta & {
@@ -145,7 +147,8 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
   const problems: string[] = [];
 
   // 1. Find the elements in the handover.
-  const { handoverDir, elements: found } = discoverElements(options.input, slug, name);
+  const { handoverDir, elements: found, background, manifestProblems } = discoverElements(options.input, slug, name);
+  problems.push(...manifestProblems);
   log(`Reading ${handoverDir}: ${found.length} element(s)`);
 
   // 2. Every element: Lottie -> tags -> schema. Authoring mistakes come back naming the element and layer.
@@ -206,40 +209,35 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
   const fonts: string[] = [];
   for (const el of prepared) for (const f of el.fonts) if (!fonts.includes(f)) fonts.push(f);
 
-  const meta: TemplateMeta = { slug, name, adType, durationInFrames, fps, width, height, fonts, fontFiles: [], elements: elementMetas };
+  const meta: TemplateMeta = { slug, name, adType, durationInFrames, fps, width, height, fonts, fontFiles: [], elements: elementMetas, ...(background ? { background } : {}) };
   for (const field of ['durationInFrames', 'fps', 'width', 'height'] as const) {
     const v = meta[field];
     if (!Number.isFinite(v) || v <= 0) problems.push(`Template ${field} is ${String(v)}; it must be a positive number`);
   }
 
-  // 5. Every referenced font must have a file. Fonts in the handover get copied in.
+  // 5. Every referenced font FACE (family and style) must have a file (M27: a
+  //    family shipped as one file renders every weight with that file). Fonts
+  //    in the handover get copied in.
   const fontDirs = [path.join(handoverDir, 'fonts'), ...prepared.map((el) => path.join(el.folder, 'fonts'))];
   const fontCopies: Array<{ from: string; to: string }> = [];
-  const fontSources: Array<{ family: string; from: string }> = [];
-  const styleOf = (family: string): string | undefined => {
-    for (const el of prepared) {
-      const list = ((el.lottie.fonts as { list?: { fFamily?: string; fStyle?: string }[] } | undefined)?.list) ?? [];
-      const hit = list.find((f) => f.fFamily === family);
-      if (hit?.fStyle) return hit.fStyle;
-    }
-    return undefined;
-  };
-  for (const family of fonts) {
-    const inApp = findFontFile(family, [fontsDir], styleOf(family));
+  const fontSources: Array<{ family: string; style: string; from: string }> = [];
+  const faces = fontFaces(prepared.map((el) => ({ slug: el.slug, lottie: el.lottie, fonts: el.fonts })));
+  for (const face of faces) {
+    const inApp = findFontFileForStyle(face.family, face.style, [fontsDir]);
     if (inApp) {
-      fontSources.push({ family, from: inApp });
+      fontSources.push({ family: face.family, style: face.style, from: inApp });
       continue;
     }
-    const inHandover = findFontFile(family, fontDirs, styleOf(family));
+    const inHandover = findFontFileForStyle(face.family, face.style, fontDirs);
     if (inHandover) {
       fontCopies.push({ from: inHandover, to: path.join(fontsDir, path.basename(inHandover)) });
-      fontSources.push({ family, from: inHandover });
+      fontSources.push({ family: face.family, style: face.style, from: inHandover });
       continue;
     }
-    const users = prepared.filter((el) => el.fonts.includes(family)).map((el) => `"${el.slug}"`).join(', ');
+    const users = face.elements.map((s) => `"${s}"`).join(', ');
     problems.push(
-      `Font "${family}" (used by element ${users}) is not present in ${fontsDir} and no matching file was handed over in a fonts/ folder. ` +
-        `Missing fonts silently reflow text, so the template is rejected. Hand over the font file with the template.`,
+      `Font "${face.family}" style "${face.style}" (used by element ${users}) has no file in ${fontsDir} and none was handed over in a fonts/ folder. ` +
+        `A missing face would be faked by the browser and no longer match After Effects, so the template is rejected. Hand over that font file (for example ${face.family.replace(/\s+/g, '')}-${face.style.replace(/\s+/g, '')}.ttf).`,
     );
   }
 
@@ -278,10 +276,10 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
   // SPEC 8: ship the font files alongside the template.
   fs.rmSync(path.join(dir, 'fonts'), { recursive: true, force: true });
   fs.mkdirSync(path.join(dir, 'fonts'), { recursive: true });
-  for (const { family, from } of fontSources) {
+  for (const { family, style, from } of fontSources) {
     const file = path.basename(from);
     fs.copyFileSync(from, path.join(dir, 'fonts', file));
-    meta.fontFiles.push({ family, file });
+    meta.fontFiles.push({ family, style, file });
   }
   if (fontSources.length > 0) log(`Shipped ${fontSources.length} font file(s) -> ${path.join(dir, 'fonts')}`);
   // M19: the After Effects reference render travels with the template for the fidelity harness.
@@ -297,11 +295,11 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
 
   // 7. Thumbnail: the whole timeline at its middle frame, through the same composition.
   const thumbPath = path.join(dir, 'thumb.png');
-  const thumbFonts = meta.fontFiles.map(({ family, file }) => {
+  const thumbFonts = meta.fontFiles.map(({ family, style, file }) => {
     const bytes = fs.readFileSync(path.join(dir, 'fonts', file));
     const ext = path.extname(file).toLowerCase().slice(1);
     const mime = ext === 'woff2' ? 'font/woff2' : ext === 'woff' ? 'font/woff' : ext === 'otf' ? 'font/otf' : 'font/ttf';
-    return { family, url: `data:${mime};base64,${bytes.toString('base64')}` };
+    return { family, style, url: `data:${mime};base64,${bytes.toString('base64')}` };
   });
   const thumbElements: ElementProps[] = prepared.map((el, i) => ({
     id: el.slug,
@@ -393,26 +391,38 @@ function exportJsonIn(folder: string): string | undefined {
  * element named after the template. A folder of export folders is one
  * element each, ordered by elements.json when present, else by name.
  */
-function discoverElements(input: string, templateSlug: string, templateName: string): { handoverDir: string; elements: DiscoveredElement[] } {
+type Discovered = { handoverDir: string; elements: DiscoveredElement[]; background?: string; manifestProblems: string[] };
+
+function discoverElements(input: string, templateSlug: string, templateName: string): Discovered {
   const resolved = path.resolve(input);
   if (!fs.existsSync(resolved)) throw new IngestFailure([`Input not found: ${resolved}`], []);
 
   const single = (jsonPath: string, folder: string): DiscoveredElement => ({ slug: templateSlug, name: templateName, folder, jsonPath });
 
   if (fs.statSync(resolved).isFile()) {
-    return { handoverDir: path.dirname(resolved), elements: [single(resolved, path.dirname(resolved))] };
+    return { handoverDir: path.dirname(resolved), elements: [single(resolved, path.dirname(resolved))], manifestProblems: [] };
   }
 
   const ownJson = exportJsonIn(resolved);
-  if (ownJson) return { handoverDir: resolved, elements: [single(ownJson, resolved)] };
+  if (ownJson) return { handoverDir: resolved, elements: [single(ownJson, resolved)], manifestProblems: [] };
 
   const manifestFile = path.join(resolved, 'elements.json');
   const problems: string[] = [];
+  const manifestProblems: string[] = [];
   const elements: DiscoveredElement[] = [];
+  let background: string | undefined;
 
   if (fs.existsSync(manifestFile)) {
-    const manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf8')) as ElementManifestEntry[];
-    if (!Array.isArray(manifest) || manifest.length === 0) throw new IngestFailure([`${manifestFile} must be a non-empty list of { folder, slug?, name?, startFrame?, zIndex? }`], []);
+    // Either a bare list of elements, or { background?, elements } (M27).
+    const parsed = JSON.parse(fs.readFileSync(manifestFile, 'utf8')) as ElementManifestEntry[] | { background?: unknown; elements?: ElementManifestEntry[] };
+    const manifest = Array.isArray(parsed) ? parsed : parsed.elements;
+    if (!Array.isArray(manifest) || manifest.length === 0) {
+      throw new IngestFailure([`${manifestFile} must be a non-empty list of { folder, slug?, name?, startFrame?, zIndex? }, or { background, elements: [...] }`], []);
+    }
+    if (!Array.isArray(parsed) && parsed.background !== undefined) {
+      if (typeof parsed.background === 'string' && /^#[0-9a-fA-F]{6}$/.test(parsed.background)) background = parsed.background.toUpperCase();
+      else manifestProblems.push(`elements.json "background" must be a #rrggbb colour, got ${JSON.stringify(parsed.background)}`);
+    }
     for (const entry of manifest) {
       const folder = path.join(resolved, String(entry.folder ?? ''));
       if (!entry.folder || !fs.existsSync(folder) || !fs.statSync(folder).isDirectory()) {
@@ -451,5 +461,33 @@ function discoverElements(input: string, templateSlug: string, templateName: str
   if (elements.length === 0) {
     throw new IngestFailure([`No Bodymovin JSON found in ${resolved}: expected data.json, or one sub-folder per element each holding an export`], []);
   }
-  return { handoverDir: resolved, elements };
+  return { handoverDir: resolved, elements, background, manifestProblems };
+}
+
+/**
+ * M27: every font FACE the elements use, as (family, style) from each
+ * export's fonts list, with the elements that use it. A family with no
+ * list entry (older exports) counts as Regular.
+ */
+export function fontFaces(elements: { slug: string; lottie: LottieAnimationData; fonts: string[] }[]): { family: string; style: string; elements: string[] }[] {
+  const faces: { family: string; style: string; elements: string[] }[] = [];
+  const add = (family: string, style: string, slug: string) => {
+    const key = `${family} ${style}`;
+    let face = faces.find((f) => `${f.family} ${f.style}` === key);
+    if (!face) {
+      face = { family, style, elements: [] };
+      faces.push(face);
+    }
+    if (!face.elements.includes(slug)) face.elements.push(slug);
+  };
+  for (const el of elements) {
+    const list = ((el.lottie.fonts as { list?: { fFamily?: string; fStyle?: string }[] } | undefined)?.list) ?? [];
+    const listed = list.filter((f) => typeof f.fFamily === 'string' && f.fFamily.length > 0);
+    if (listed.length > 0) {
+      for (const f of listed) add(f.fFamily!, (f.fStyle && f.fStyle.trim()) || 'Regular', el.slug);
+    } else {
+      for (const family of el.fonts) add(family, 'Regular', el.slug);
+    }
+  }
+  return faces;
 }

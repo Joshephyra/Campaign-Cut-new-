@@ -22,6 +22,9 @@ import path from 'node:path';
 import type { Db } from './db/index';
 import { elementBaseUrl, loadElementFiles } from './templateFiles';
 
+/** Shown wherever no element covers the frame, unless the template's meta carries its own (M27). */
+export const DEFAULT_BACKGROUND = '#000000';
+
 export type BuildProjectPropsOptions = {
   db: Db;
   templatesDir: string;
@@ -46,8 +49,9 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase, run
   if (!project) throw new Error(`No project ${projectId}`);
 
   const metaFile = path.join(templatesDir, project.templateSlug, 'meta.json');
-  const meta = fs.existsSync(metaFile) ? (JSON.parse(fs.readFileSync(metaFile, 'utf8')) as { fontFiles?: TemplateFontFile[] }) : {};
+  const meta = fs.existsSync(metaFile) ? (JSON.parse(fs.readFileSync(metaFile, 'utf8')) as { fontFiles?: TemplateFontFile[]; background?: string }) : {};
   const fonts = fontsFor(meta.fontFiles, project.templateSlug, serverBase);
+  const background = meta.background ?? DEFAULT_BACKGROUND;
 
   const rows = db.getProjectElements(projectId);
   const files = new Map(rows.map((e) => [e.id, loadElementFiles(templatesDir, project.templateSlug, e.slug)] as const));
@@ -100,7 +104,7 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase, run
     durationInFrames: t.durationInFrames,
   }));
 
-  return { background: '#000000', audio, elements, transitions, fonts };
+  return { background, audio, elements, transitions, fonts };
 }
 
 /**
@@ -112,7 +116,7 @@ export function buildTemplateDefaultProps({ db, templatesDir, slug, serverBase }
   const template = db.getTemplateBySlug(slug);
   if (!template) throw new Error(`No template with slug "${slug}"`);
   const metaFile = path.join(templatesDir, slug, 'meta.json');
-  const meta = fs.existsSync(metaFile) ? (JSON.parse(fs.readFileSync(metaFile, 'utf8')) as { fontFiles?: TemplateFontFile[] }) : {};
+  const meta = fs.existsSync(metaFile) ? (JSON.parse(fs.readFileSync(metaFile, 'utf8')) as { fontFiles?: TemplateFontFile[]; background?: string }) : {};
   const fonts = fontsFor(meta.fontFiles, slug, serverBase);
 
   const elements = db.listTemplateElements(template.id).map((e) => {
@@ -124,5 +128,5 @@ export function buildTemplateDefaultProps({ db, templatesDir, slug, serverBase }
     return { id: e.slug, lottie, startFrame: e.startFrame, endFrame: e.endFrame, zIndex: e.zIndex, enabled: true, media: null };
   });
 
-  return { background: '#000000', elements, transitions: [], fonts };
+  return { background: meta.background ?? DEFAULT_BACKGROUND, elements, transitions: [], fonts };
 }

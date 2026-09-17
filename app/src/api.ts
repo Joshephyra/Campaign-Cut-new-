@@ -63,7 +63,7 @@ export type ProjectTransition = { afterElementId: number; preset: TransitionPres
 export type ProjectDetail = {
   project: { id: number; name: string; templateId: number; templateSlug: string; templateName: string };
   template: TemplateSummary;
-  meta?: { fonts?: string[]; fontFiles?: TemplateFontFile[] } | null;
+  meta?: { fonts?: string[]; fontFiles?: TemplateFontFile[]; background?: string } | null;
   elements: ProjectElement[];
   transitions?: ProjectTransition[];
   /** The music bed, or null (M20). */

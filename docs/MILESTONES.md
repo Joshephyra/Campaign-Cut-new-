@@ -512,7 +512,7 @@ Four small things a staffer hits within the first hour, bundled because each is 
 
 ---
 
-## M26 · Sample project builder · IN PROGRESS
+## M26 · Sample project builder · DONE
 
 Josh asked for a sample project to follow the guide with. An After Effects project file cannot be written outside After Effects, so a script builds it in place.
 
@@ -524,6 +524,22 @@ Josh asked for a sample project to follow the guide with. An After Effects proje
 - The script's plan obeys the ingest rules: known roles on the right layer types, no duplicates per comp, every role covered, one size and frame rate, the two copied fonts only, the timeline inside the master, `elements.json` as the ingest expects. ES3-safe source that never renders.
 
 **Done when:** Josh runs it once in After Effects, exports the comps with Bodymovin, renders the master comp, and the folder ingests from the library page.
+
+---
+
+## M27 · The first real template: font faces and the comp background · DONE
+
+The sample project (M26) went through the whole pipeline unattended and the fidelity harness found two things no stand-in could have.
+
+**Build**
+- One font file per family AND style. The ingest reads every (family, style) from each export's font list, finds a file for each strictly by style, ships them all, and fails naming family, style and element when one is missing. The composition declares one `@font-face` per face with the weight and style lottie-web asks for.
+- The comp background colour travels: `elements.json` may be `{ "background": "#rrggbb", "elements": [...] }`; both runners paint it wherever no element covers the frame.
+- Unattended After Effects scripts: `preflight-all.jsx`, `bodymovin-export.jsx` (drives Bodymovin's exporter without its panel) and the builder all quit After Effects cleanly when done and never pop up.
+
+**Tests**
+- Face CSS per style; strict style lookup; two faces shipped and a missing face named; background read, validated and absent for the list form; both server builders and the editor use the meta background.
+
+**Done when:** the fidelity comparison of the sample template is within threshold on every sample. It is: 12 of 12, worst mean 5.8.
 
 ---
 

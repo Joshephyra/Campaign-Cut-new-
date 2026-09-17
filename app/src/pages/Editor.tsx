@@ -623,8 +623,8 @@ function Monitor({
   );
   const fonts = useMemo(() => fontsFor(detail.meta?.fontFiles, slug, API), [detail.meta, slug]);
   const inputProps = useMemo<MainProps>(
-    () => ({ background: BACKGROUND, audio: audioProps, elements: elementProps, transitions: transitionProps, fonts }),
-    [audioProps, elementProps, transitionProps, fonts],
+    () => ({ background: detail.meta?.background ?? BACKGROUND, audio: audioProps, elements: elementProps, transitions: transitionProps, fonts }),
+    [detail.meta, audioProps, elementProps, transitionProps, fonts],
   );
   const durationInFrames = compositionDurationWithTransitions(elementProps, transitionProps);
 

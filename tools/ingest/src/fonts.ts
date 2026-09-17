@@ -33,3 +33,40 @@ export function findFontFile(family: string, dirs: string[], style?: string): st
   }
   return undefined;
 }
+
+/**
+ * The file name suffixes (after the family) that mean a given style. Foundry
+ * names ("Arial-Bold.ttf"), Windows names ("arialbd.ttf") and bare regular
+ * files ("arial.ttf") are all common in a handover.
+ */
+const STYLE_SUFFIXES: Record<string, string[]> = {
+  regular: ['', 'regular', 'normal', 'roman', 'book', 'r'],
+  bold: ['bold', 'bd', 'b'],
+  italic: ['italic', 'it', 'i', 'oblique'],
+  bolditalic: ['bolditalic', 'bi', 'z', 'boldoblique'],
+};
+
+/**
+ * M27: a file for one family AND one style, strictly. "Arial" + "Bold" must
+ * be a bold file; a regular file is not an acceptable stand-in, because the
+ * browser would fake the weight and the text would no longer match After
+ * Effects. Returns undefined when no file carries that style.
+ */
+export function findFontFileForStyle(family: string, style: string, dirs: string[]): string | undefined {
+  const wanted = normalizeFontName(family);
+  if (!wanted) return undefined;
+  const styleKey = normalizeFontName(style || 'Regular');
+  const accepted = STYLE_SUFFIXES[styleKey] ?? [styleKey];
+  for (const dir of dirs) {
+    if (!fs.existsSync(dir)) continue;
+    const files = fs.readdirSync(dir).sort();
+    for (const file of files) {
+      if (!FONT_EXTENSIONS.has(path.extname(file).toLowerCase())) continue;
+      const stem = normalizeFontName(path.basename(file, path.extname(file)));
+      if (!stem.startsWith(wanted)) continue;
+      const suffix = stem.slice(wanted.length);
+      if (accepted.includes(suffix)) return path.join(dir, file);
+    }
+  }
+  return undefined;
+}

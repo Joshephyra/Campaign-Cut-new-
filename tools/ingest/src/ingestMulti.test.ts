@@ -151,7 +151,7 @@ describe('ingestTemplate: multi-element handover', () => {
     await run(copyFixture(tmp));
     expect(fs.existsSync(path.join(templatesDir, 'three', 'fonts', 'IBMPlexSans-Regular.ttf'))).toBe(true);
     const meta = JSON.parse(fs.readFileSync(path.join(templatesDir, 'three', 'meta.json'), 'utf8')) as AnyRecord;
-    expect(meta.fontFiles).toEqual([{ family: 'IBM Plex Sans', file: 'IBMPlexSans-Regular.ttf' }]);
+    expect(meta.fontFiles).toEqual([{ family: 'IBM Plex Sans', style: 'Regular', file: 'IBMPlexSans-Regular.ttf' }]);
 
     fs.rmSync(path.join(fontsDir, 'IBMPlexSans-Regular.ttf'));
     const input = copyFixture(path.join(tmp, 'b'), (dir) =>
@@ -242,5 +242,74 @@ describe('ingestTemplate: reference render (M19)', () => {
     expect(meta.reference).toBe('reference.mp4');
     db.close();
     fs.rmSync(tmp, { recursive: true, force: true });
+  });
+});
+
+describe('ingestTemplate: font faces and the comp background (M27, found by the first real template)', () => {
+  let tmp: string;
+  let templatesDir: string;
+  let fontsDir: string;
+  let db: Db;
+
+  beforeEach(() => {
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-faces-'));
+    templatesDir = path.join(tmp, 'templates');
+    fontsDir = path.join(tmp, 'fonts');
+    fs.mkdirSync(fontsDir, { recursive: true });
+    fs.writeFileSync(path.join(fontsDir, 'IBMPlexSans-Regular.ttf'), 'plex');
+    db = openDb(':memory:');
+  });
+
+  afterEach(() => {
+    db.close();
+    fs.rmSync(tmp, { recursive: true, force: true });
+  });
+
+  const run = (input: string) =>
+    ingestTemplate({ input, adType: 'Contrast', name: 'Faces', slug: 'faces', templatesDir, fontsDir, db, renderThumbnail: fakeThumbnail });
+
+  /** Give the open comp's headline a Bold face while the lower third stays Regular. */
+  const twoFaces = (dir: string) =>
+    editLottie(dir, '01-open', (l) => {
+      (l.fonts as { list: AnyRecord[] }).list = [{ fName: 'IBMPlexSans-Bold', fFamily: 'IBM Plex Sans', fStyle: 'Bold', ascent: 74.5 }];
+      ((l.layers as AnyRecord[])[0]!.t as { d: { k: { s: { f: string } }[] } }).d.k[0]!.s.f = 'IBMPlexSans-Bold';
+    });
+
+  it('ships one file per family AND style, each with its style in meta', async () => {
+    fs.writeFileSync(path.join(fontsDir, 'IBMPlexSans-Bold.ttf'), 'plex-bold');
+    await run(copyFixture(tmp, twoFaces));
+    const meta = JSON.parse(fs.readFileSync(path.join(templatesDir, 'faces', 'meta.json'), 'utf8')) as { fonts: string[]; fontFiles: AnyRecord[] };
+    expect(meta.fonts).toEqual(['IBM Plex Sans']);
+    expect(meta.fontFiles).toEqual([
+      { family: 'IBM Plex Sans', style: 'Bold', file: 'IBMPlexSans-Bold.ttf' },
+      { family: 'IBM Plex Sans', style: 'Regular', file: 'IBMPlexSans-Regular.ttf' },
+    ]);
+    expect(fs.existsSync(path.join(templatesDir, 'faces', 'fonts', 'IBMPlexSans-Bold.ttf'))).toBe(true);
+    expect(fs.existsSync(path.join(templatesDir, 'faces', 'fonts', 'IBMPlexSans-Regular.ttf'))).toBe(true);
+  });
+
+  it('fails naming the family, the style and the element when a face has no file, even though the regular file exists', async () => {
+    const input = copyFixture(tmp, twoFaces);
+    await expect(run(input)).rejects.toThrow(/"IBM Plex Sans" style "Bold".*"open"/s);
+    expect(fs.existsSync(path.join(templatesDir, 'faces'))).toBe(false);
+  });
+
+  it('reads the comp background from the object form of elements.json and rejects a bad colour', async () => {
+    const withBackground = (dir: string, value: unknown) => {
+      const list = JSON.parse(fs.readFileSync(path.join(dir, 'elements.json'), 'utf8')) as unknown[];
+      fs.writeFileSync(path.join(dir, 'elements.json'), JSON.stringify({ background: value, elements: list }));
+    };
+    await run(copyFixture(tmp, (dir) => withBackground(dir, '#0f1729')));
+    const meta = JSON.parse(fs.readFileSync(path.join(templatesDir, 'faces', 'meta.json'), 'utf8')) as { background?: string; elements: unknown[] };
+    expect(meta.background).toBe('#0F1729');
+    expect(meta.elements).toHaveLength(3);
+
+    await expect(run(copyFixture(path.join(tmp, 'b'), (dir) => withBackground(dir, 'navy')))).rejects.toThrow(/background.*#rrggbb/);
+  });
+
+  it('leaves the background out when the manifest is the plain list', async () => {
+    await run(copyFixture(tmp));
+    const meta = JSON.parse(fs.readFileSync(path.join(templatesDir, 'faces', 'meta.json'), 'utf8')) as { background?: string };
+    expect(meta.background).toBeUndefined();
   });
 });
