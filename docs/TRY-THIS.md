@@ -32,6 +32,10 @@ Drag a scene chip under the video onto another scene chip: left half puts it bef
 
 Add **Boxed caption** again: the picker says "in the spot ×2" and the second caption is its own scene, with its own words and timing. Or select any scene and press **Duplicate scene** in the panel: a copy with the same words lands right after it.
 
+## 7. Everything on a client's spot (M47, M48)
+
+Pick **Rivera for Senate** under "New spots for" before **Start from nothing**: every scene you add arrives in that client's colours with its disclaimer. The top bar tells you which scenes still show the designer's stand-in footage ("No clip yet in 2 scenes") before you export.
+
 ## For you to do
 
 - Close After Effects (File > Exit); an unattended run left it open on an empty project.

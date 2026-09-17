@@ -1,4 +1,4 @@
-import { Download, Loader2, Share, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Download, Film, Loader2, Share, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { api, type RenderJob } from '../api';
 import { Button, ICON } from './ui';
@@ -10,13 +10,15 @@ type Props = {
   onFinished?: () => void;
   /** M35: the disclaimer check; red and blocking while not ok. */
   check?: { ok: boolean; seconds: number; message: string };
+  /** M48: scenes whose footage slot has no clip; a note, never a block. */
+  emptySlots?: string[];
 };
 
 /**
  * Export: queue a server-side render of THE composition with the original
  * footage, poll until it is done, then offer the MP4. AT-5 is watching it.
  */
-export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, check }: Props) {
+export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, check, emptySlots = [] }: Props) {
   const [job, setJob] = useState<RenderJob | null>(null);
   const [error, setError] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -55,6 +57,16 @@ export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, chec
 
   return (
     <div className="flex items-center gap-3 text-xs">
+      {emptySlots.length > 0 && (
+        <span
+          data-testid="empty-slots"
+          title={`No clip yet in: ${emptySlots.join(', ')}. The designer's stand-in shows there, in the export too.`}
+          className="inline-flex items-center gap-1.5 max-w-72 truncate text-fg-2"
+        >
+          <Film size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" className="shrink-0" />
+          {emptySlots.length === 1 ? `No clip yet in ${emptySlots[0]}` : `No clip yet in ${emptySlots.length} scenes`}
+        </span>
+      )}
       {check && (
         <span
           data-testid="disclaimer-check"

@@ -297,9 +297,10 @@ export function buildApp(options: AppOptions = {}) {
    * field. Empty parts leave the designer's values alone. The values are
    * ordinary project values afterwards; both runners are untouched.
    */
-  const applyBrand = (id: number, brand: { colors: Record<string, string>; logoUrl?: string; disclaimer?: string }) => {
+  const applyBrand = (id: number, brand: { colors: Record<string, string>; logoUrl?: string; disclaimer?: string }, only?: number) => {
     const values: { elementId: number; key: string; value: string }[] = [];
     for (const e of db.getProjectElements(id)) {
+      if (only !== undefined && e.id !== only) continue;
       for (const p of loadElementSchema(templatesDir, e.templateSlug, e.slug)) {
         if (p.kind === 'color' && brand.colors[p.role]) values.push({ elementId: e.id, key: p.key, value: brand.colors[p.role]! });
         else if (p.kind === 'image' && p.role === 'logo' && brand.logoUrl) values.push({ elementId: e.id, key: p.key, value: brand.logoUrl });
@@ -412,9 +413,14 @@ export function buildApp(options: AppOptions = {}) {
     const sceneId = db.addProjectElement(id, elementId, startFrame);
     const defaults = loadElementSchema(templatesDir, library.templateSlug, library.slug).map((p: TemplateParam) => ({ elementId: sceneId, key: p.key, value: p.default }));
     if (defaults.length > 0) db.setProjectValues(id, defaults);
+    // M47: a scene added to a client's spot arrives in the client's brand, as the spot's own scenes did.
+    const owner = db.getProject(id)!.clientId;
+    const client = owner === null ? undefined : db.getClient(owner);
+    if (client) applyBrand(id, client, sceneId);
     const element = db.getProjectElements(id).find((e) => e.id === sceneId)!;
     const projectAspect = db.getProject(id)!.aspect;
-    return reply.code(201).send(withElementFiles(element.templateSlug, element, isAspect(projectAspect) ? projectAspect : '16:9'));
+    const values = db.getProject(id)!.values.filter((v) => v.elementId === sceneId);
+    return reply.code(201).send({ ...withElementFiles(element.templateSlug, element, isAspect(projectAspect) ? projectAspect : '16:9'), values });
   });
 
   /** Remove an added element from a project. The spot's own elements can be hidden, not removed. */

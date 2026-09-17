@@ -823,6 +823,18 @@ A spot from nothing needs two captions and two lower thirds. Until now a scene's
 
 ---
 
+## M47 · A client's spot brands what is added · DONE
+
+- A scene added from the library to a spot that belongs to a client arrives in the client's brand (colours by role, logo, disclaimer), as the spot's own scenes did at creation. `POST /projects/:id/elements` answers the new scene with its values, and the editor takes those instead of the schema defaults.
+
+---
+
+## M48 · The export panel names empty footage slots · DONE
+
+- `emptySlots` in the composition: the enabled scenes whose footage slot has no clip, in play order. The export panel says "No clip yet in Headline" or "No clip yet in 2 scenes" (the names in the title), as a note, never a block: the designer's stand-in shows there, in the export too.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

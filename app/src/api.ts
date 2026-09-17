@@ -200,12 +200,13 @@ export const api = {
   },
 
   /** M31: add a library element to a project at a frame. Answers the new project element with its files. */
+  /** Answers the new scene with its values (its defaults, in the client's brand when the spot has one: M47). */
   addElement: (projectId: number, elementId: number, startFrame: number) =>
     fetch(`${API}/projects/${projectId}/elements`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ elementId, startFrame }),
-    }).then((r) => json<ProjectElement>(r)),
+    }).then((r) => json<ProjectElement & { values?: ProjectValue[] }>(r)),
 
   /** M31: remove an added element from a project. */
   removeElement: async (projectId: number, elementId: number) => {

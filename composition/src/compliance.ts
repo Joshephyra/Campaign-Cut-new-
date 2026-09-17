@@ -43,3 +43,23 @@ export function carriesDisclaimer(schema: { kind: string; role: string; key: str
     return typeof v === 'string' && v.trim().length > 0;
   });
 }
+
+
+/**
+ * M48: the scenes whose footage slot has no clip yet, in play order. The
+ * designer's stand-in shows there, in the preview and in the export alike,
+ * so the export panel says so before anyone presses Export. A note, not a
+ * block: a stand-in is sometimes what a rough cut wants.
+ */
+export function emptySlots(scenes: { name: string; enabled: boolean; startFrame: number; schema: { kind: string; key: string }[]; values: Record<string, unknown> }[]): string[] {
+  return scenes
+    .filter((s) => s.enabled)
+    .sort((a, b) => a.startFrame - b.startFrame)
+    .filter((s) => {
+      const slot = s.schema.find((p) => p.kind === 'media');
+      if (!slot) return false;
+      const v = s.values[slot.key];
+      return !(v && typeof v === 'object' && 'assetId' in v && (v as { assetId: unknown }).assetId);
+    })
+    .map((s) => s.name);
+}

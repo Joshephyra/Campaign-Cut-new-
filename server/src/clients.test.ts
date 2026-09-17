@@ -91,3 +91,34 @@ describe('client routes (M33)', () => {
     expect(values.find((v) => v.key === 'accent')!.value).toBe('#F05929');
   });
 });
+
+/** M47: a scene added to a client's spot arrives in the client's brand, and the add answers the scene's values. */
+describe('a client spot brands what is added (M47)', () => {
+  it('colours, logo and disclaimer land on the new scene alone; a spot with no client gets the defaults', async () => {
+    const tmp2 = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-brand-add-'));
+    const dir = path.join(tmp2, 'pack', 'elements', 'card');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'schema.json'), JSON.stringify([
+      { key: 'accent', role: 'accent', kind: 'color', label: 'Accent colour', default: '#F05929', path: '/layers/0/shapes/0/it/1' },
+      { key: 'disclaimer', role: 'safe.disclaimer', kind: 'text', label: 'Disclaimer', default: 'Paid for by Example', path: '/layers/1' },
+    ]));
+    fs.writeFileSync(path.join(dir, 'template.json'), JSON.stringify({ fr: 30, ip: 0, op: 150, w: 1920, h: 1080, layers: [{ ty: 4, nm: 'cc.accent', shapes: [{ ty: 'gr', it: [{ ty: 'rc' }, { ty: 'fl', c: { a: 0, k: [1, 0, 0, 1] } }] }] }, { ty: 5, nm: 'cc.safe.disclaimer', t: { d: { k: [{ s: { t: 'Paid' }, t: 0 }] } } }] }));
+    const db2 = openDb(':memory:');
+    const pack = db2.upsertTemplate({ slug: 'pack', name: 'Pack', adType: 'Library', durationFrames: 150, fps: 30, width: 1920, height: 1080, thumbPath: '', libraryOnly: true });
+    const card = db2.upsertTemplateElement({ templateId: pack.id, slug: 'card', name: 'Card', type: 'end-card', zIndex: 0, startFrame: 0, endFrame: 150 }).id;
+    const app2 = buildApp({ db: db2, templatesDir: tmp2 });
+    try {
+      const client = (await app2.inject({ method: 'POST', url: '/clients', payload: { name: 'Rivera for Senate', colors: { accent: '#1D4ED8' }, disclaimer: 'Paid for by Rivera for Senate.' } })).json() as { id: number };
+      const branded = ((await app2.inject({ method: 'POST', url: '/projects', payload: { templateSlug: 'blank', clientId: client.id } })).json() as { id: number }).id;
+      const plain = ((await app2.inject({ method: 'POST', url: '/projects', payload: { templateSlug: 'blank' } })).json() as { id: number }).id;
+      const added = (await app2.inject({ method: 'POST', url: `/projects/${branded}/elements`, payload: { elementId: card, startFrame: 0 } })).json() as { id: number; values: { key: string; value: unknown }[] };
+      expect(added.values).toEqual(expect.arrayContaining([{ elementId: card, key: 'accent', value: '#1D4ED8' }, { elementId: card, key: 'disclaimer', value: 'Paid for by Rivera for Senate.' }]));
+      const unbranded = (await app2.inject({ method: 'POST', url: `/projects/${plain}/elements`, payload: { elementId: card, startFrame: 0 } })).json() as { values: { key: string; value: unknown }[] };
+      expect(unbranded.values).toEqual(expect.arrayContaining([{ elementId: card, key: 'accent', value: '#F05929' }, { elementId: card, key: 'disclaimer', value: 'Paid for by Example' }]));
+    } finally {
+      await app2.close();
+      db2.close();
+      fs.rmSync(tmp2, { recursive: true, force: true });
+    }
+  });
+});

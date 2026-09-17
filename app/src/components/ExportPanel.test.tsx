@@ -46,3 +46,24 @@ describe('ExportPanel', () => {
     await waitFor(() => expect(screen.getByText(/Chrome exploded/)).toBeTruthy());
   });
 });
+
+
+describe('empty footage slots (M48)', () => {
+  it('notes the scenes with no clip yet, as a note, without disabling Export', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response('[]', { status: 200 }));
+    render(<ExportPanel projectId={1} check={{ ok: true, seconds: 5, message: 'Disclaimer on screen for 5.0 s' }} emptySlots={['Headline', 'Vote end card']} />);
+    const note = screen.getByTestId('empty-slots');
+    expect(note.textContent).toBe('No clip yet in 2 scenes');
+    expect(note.getAttribute('title')).toContain('Headline, Vote end card');
+    expect((screen.getByRole('button', { name: /Export MP4/ }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('says the one scene by name, and nothing when every slot has a clip', () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response('[]', { status: 200 }));
+    const { unmount } = render(<ExportPanel projectId={1} emptySlots={['Headline']} />);
+    expect(screen.getByTestId('empty-slots').textContent).toBe('No clip yet in Headline');
+    unmount();
+    render(<ExportPanel projectId={1} emptySlots={[]} />);
+    expect(screen.queryByTestId('empty-slots')).toBeNull();
+  });
+});

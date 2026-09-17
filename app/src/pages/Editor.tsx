@@ -5,6 +5,7 @@ import {
   carriesDisclaimer,
   compositionConfig,
   disclaimerCheck,
+  emptySlots,
   fontFaceCss,
   fontLoadSpec,
   frameFor,
@@ -511,6 +512,8 @@ export function Editor({ projectId, onBack }: Props) {
   const boundaries = boundariesAfter(elements);
 
   // M35: the one compliance check, the same rule the export enforces.
+  // M48: scenes still showing the designer's stand-in footage, for the export panel's note.
+  const slotsWithoutClip = useMemo(() => emptySlots(elements.map((e) => ({ name: e.name, enabled: e.enabled, startFrame: e.startFrame, schema: e.schema, values: values[e.id] ?? {} }))), [elements, values]);
   const disclaimer = useMemo(
     () => disclaimerCheck(elements.map((e) => ({ startFrame: e.startFrame, endFrame: e.endFrame, enabled: e.enabled, hasDisclaimer: carriesDisclaimer(e.schema, values[e.id] ?? {}) })), compositionConfig.fps),
     [elements, values],
@@ -545,8 +548,10 @@ export function Editor({ projectId, onBack }: Props) {
       const withCopy = previewValues(element.schema, copy);
       setValues((prev) => {
         if (prev[element.id]) return Object.keys(withCopy).length > 0 ? { ...prev, [element.id]: { ...prev[element.id], ...withCopy } } : prev;
+        // the values the server gave the scene (its defaults, branded for a client's spot: M47), else the schema defaults
         const defaults: ParamValues = {};
         for (const p of element.schema) defaults[p.key] = p.default;
+        for (const v of element.values ?? []) defaults[v.key] = v.value;
         return { ...prev, [element.id]: { ...defaults, ...withCopy } };
       });
       setElements((prev) => (prev.some((e) => e.id === element.id) ? prev.map((e) => (e.id === element.id ? { ...e, ...element } : e)) : [...prev, element]));
@@ -720,7 +725,7 @@ export function Editor({ projectId, onBack }: Props) {
             </span>
           )}
           <span className="text-xs w-20 text-right">{loaded && <SaveIndicator state={saveState} />}</span>
-          {loaded && <ExportPanel projectId={projectId} onFinished={() => setExportsTick((t) => t + 1)} check={disclaimer} />}
+          {loaded && <ExportPanel projectId={projectId} onFinished={() => setExportsTick((t) => t + 1)} check={disclaimer} emptySlots={slotsWithoutClip} />}
         </div>
       </header>
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DISCLAIMER_MIN_SECONDS, disclaimerCheck, disclaimerSeconds } from './compliance';
+import { DISCLAIMER_MIN_SECONDS, disclaimerCheck, disclaimerSeconds, emptySlots } from './compliance';
 
 /**
  * M35: the one compliance check. A disclaimer must be on screen for at
@@ -34,5 +34,21 @@ describe('disclaimerCheck', () => {
     const none = disclaimerCheck([scene(0, 75, false)], 30);
     expect(none.ok).toBe(false);
     expect(none.message).toMatch(/no disclaimer/i);
+  });
+});
+
+
+describe('emptySlots (M48)', () => {
+  const media = { kind: 'media', key: 'footage' };
+  it('names the enabled scenes whose footage slot has no clip, in play order, and nothing for scenes without a slot', () => {
+    const scenes = [
+      { name: 'End card', enabled: true, startFrame: 300, schema: [media], values: {} },
+      { name: 'Open', enabled: true, startFrame: 0, schema: [media], values: { footage: { assetId: 4, fit: 'cover' } } },
+      { name: 'Headline', enabled: true, startFrame: 150, schema: [media], values: { footage: null } },
+      { name: 'Lower third', enabled: true, startFrame: 60, schema: [{ kind: 'text', key: 'subhead' }], values: {} },
+      { name: 'Hidden', enabled: false, startFrame: 900, schema: [media], values: {} },
+    ];
+    expect(emptySlots(scenes)).toEqual(['Headline', 'End card']);
+    expect(emptySlots([])).toEqual([]);
   });
 });
