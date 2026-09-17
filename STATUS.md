@@ -20,6 +20,7 @@ With M41–M46 in, the from-nothing flow was walked end to end as a new user wou
 
 - Real browser, spot 9 "Rivera for Senate: New spot": Footage background with the colour-bars clip, Headline with "Maria Rivera will lower your costs" from the composer, Vote end card, Disclaimer bar landing on the end card; the brand put #1D4ED8 and the client's disclaimer on every scene that carries the role; a logo uploaded through the end card's file input drew in the monitor; Glow set; Export MP4 rendered a 14.06 s 1920×1080 file (media/renders/project-9-3.mp4) with the glow, the brand colours and the disclaimer in its frames. After M47, a Bar lower third added to the same spot arrived in #1D4ED8 with the client's surface colour, with no Apply pressed. After M48 the panel reads "No clip yet in Headline", with the stand-in named in its title, and Export stays enabled.
 - Tests: 1 server (M47), 1 composition and 2 export panel (M48). 518 tests green.
+- The same spot switched to 9:16: the footage background's full-bleed slot filled the tall frame while its 16:9 surface layer sat auto-fitted in the middle band (the labelled auto-fit, as designed; a designer's 9:16 variant is the answer), two auto-fit boxes and the note showed; export parity at 9:16 (frames 60, 200, 330) all within threshold, worst mean 5.11 on the footage frame (proxy against original at 1080×1920). Captured in .impeccable/review/rehearsal-9x16.png. The spot was put back to 16:9.
 
 ---
 
