@@ -32,19 +32,24 @@ describe('Inspector: image and media params', () => {
     expect(screen.getByTestId('image-preview-logo').getAttribute('src')).toBe('/api/templates/t/images/logo.png');
   });
 
-  it('lets the user pick footage from the uploaded clips and choose fit', () => {
-    const onChange = vi.fn();
-    render(<Inspector schema={schema} values={{}} onChange={onChange} assets={assets} templateSlug="t" />);
-    fireEvent.change(screen.getByLabelText('Footage'), { target: { value: '4' } });
-    expect(onChange).toHaveBeenCalledWith({ mediaFill: { assetId: 4, fit: 'cover' } });
+  /** M29: the Footage panel's thumbnails are the picker; the inspector shows what was picked. No select. */
+  it('with no clip, points at the Footage panel and offers no select', () => {
+    render(<Inspector schema={schema} values={{}} onChange={() => {}} assets={assets} templateSlug="t" />);
+    expect(screen.getByTestId('param-mediaFill').textContent).toMatch(/pick a clip in footage/i);
+    expect(document.querySelector('select')).toBeNull();
+    expect(screen.queryByRole('button', { name: /authored slot/i })).toBeNull();
   });
 
-  it('shows the chosen clip and switches fit to contain', () => {
+  it('shows the chosen clip as a card, switches fit to contain, and can go back to the authored slot', () => {
     const onChange = vi.fn();
     render(<Inspector schema={schema} values={{ mediaFill: { assetId: 4, fit: 'cover' } }} onChange={onChange} assets={assets} templateSlug="t" />);
-    expect((screen.getByLabelText('Footage') as HTMLSelectElement).value).toBe('4');
-    fireEvent.click(screen.getByRole('button', { name: /contain/i }));
+    const card = screen.getByTestId('footage-card');
+    expect(card.textContent).toContain('rally.mp4');
+    expect(card.querySelector('img')!.getAttribute('src')).toBe('/api/media/thumbs/4.jpg');
+    fireEvent.click(screen.getByRole('button', { name: /letterbox/i }));
     expect(onChange).toHaveBeenCalledWith({ mediaFill: { assetId: 4, fit: 'contain' } });
+    fireEvent.click(screen.getByRole('button', { name: /authored slot/i }));
+    expect(onChange).toHaveBeenLastCalledWith({ mediaFill: null });
   });
 });
 
@@ -58,7 +63,7 @@ describe('Inspector: chroma key controls on a footage param', () => {
     expect((screen.getByLabelText(/key out/i) as HTMLInputElement).checked).toBe(false);
   });
 
-  it('turning the key on stores the default key; the sliders adjust threshold and spill; off clears it', () => {
+  it('turning the key on stores the default key; the sliders adjust threshold and spill; the swatches pick the colour; off clears it', () => {
     const onChange = vi.fn();
     const { rerender } = render(
       <Inspector schema={mediaOnly} values={{ mediaFill: { assetId: 4, fit: 'cover' } }} onChange={onChange} assets={assets} templateSlug="t" />,
@@ -79,7 +84,9 @@ describe('Inspector: chroma key controls on a footage param', () => {
     expect(onChange).toHaveBeenLastCalledWith({ mediaFill: { assetId: 4, fit: 'cover', key: { color: 'green', threshold: 0.7, spill: 0.3 } } });
     fireEvent.change(screen.getByLabelText(/spill/i), { target: { value: '0.1' } });
     expect(onChange).toHaveBeenLastCalledWith({ mediaFill: { assetId: 4, fit: 'cover', key: { color: 'green', threshold: 0.5, spill: 0.1 } } });
-    fireEvent.change(screen.getByLabelText(/screen colour/i), { target: { value: 'blue' } });
+    const swatches = screen.getByRole('group', { name: 'Screen colour' });
+    expect(swatches.querySelector('select')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Blue' }));
     expect(onChange).toHaveBeenLastCalledWith({ mediaFill: { assetId: 4, fit: 'cover', key: { color: 'blue', threshold: 0.5, spill: 0.3 } } });
     fireEvent.click(screen.getByLabelText(/key out/i));
     expect(onChange).toHaveBeenLastCalledWith({ mediaFill: { assetId: 4, fit: 'cover' } });

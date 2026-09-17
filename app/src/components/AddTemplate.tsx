@@ -54,7 +54,7 @@ export function AddTemplate({ onIngested }: Props) {
   return (
     <section className="mb-10">
       <div className="flex items-baseline justify-between mb-3">
-        <span className="text-xs uppercase tracking-widest text-muted">Add template</span>
+        <span className="text-[11px] uppercase tracking-[0.2em] text-muted">Add template</span>
         <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="font-mono text-xs text-cobalt">
           {open ? 'Close' : 'From an After Effects export…'}
         </button>

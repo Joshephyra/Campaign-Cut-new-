@@ -4,6 +4,32 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M29 Fewer dropdowns, fewer numbers, a cleaner surface · DONE
+
+**Why**
+
+The second half of Josh's verdict: less rigid numbers, fewer selects, a more polished look. Built straight after M28 in the same session.
+
+**What exists now**
+
+- No `<select>` and no number field anywhere in the editor. Checked in the browser: zero of each on the sample project.
+- Timeline: ruler labels are spaced from the track's measured width (at least 56 px apart, stepping 1, 2, 5, 10, 15, 30 or 60 s), so a 30 s spot no longer prints "0s1s2s3s…" on top of itself; bars carry the element name, with the in and out timecodes as a hover title; pressing a bar selects its element; the selected bar is outlined in cobalt. The transition on each boundary is a segmented row (Cut, Fade, Wipe, Slide) with a length slider read out in seconds.
+- Footage in the inspector: the Footage panel's thumbnails are the picker; the inspector shows the chosen clip as a card (thumbnail, name, length, size), Fill/Fit as two buttons, "Use the authored slot" to go back, and Trim as a two-handle bar over the clip: drag a handle or press the bar to bring the nearer one, or nudge a focused handle with the arrow keys (0.1 s, 1 s with Shift); the handles cannot cross; the times sit beside the bar as facts. Screen colour for the key is two swatches.
+- Music: tracks are rows ("No music" plus one per upload); volume and the start point are sliders with their values beside them.
+- Rhythm: one 56 px header with the project name, its template, Undo/Redo as a paired control, the save state in a fixed slot and a stronger Export button; a 22 rem sidebar with the element tabs as one segmented bar; section titles at one size and tracking everywhere (editor, footage, music, exports, library); facts in mono, controls in sans. The Console's rules are unchanged: hairlines, no radius, cobalt only when active.
+- Tests: ruler interval and rendered labels, named bars, segmented transitions and their slider, footage card and authored-slot return, trim bar by pointer and keyboard with the no-crossing rule, colour swatches, music rows and start slider; the editor's music test follows. 390 tests green across the repo.
+
+**Verified**
+
+- Browser (project 5): zero selects, zero number inputs; ruler labels 0s, 10s, 20s, 30s on a 308 px track; every bar named with its timecodes in the title; three transition groups plus Fit; the trim bar reads "0.0 s – 15.0 s of 15.0 s" for the chosen 15 s clip; sliders present for transition length, Size, Tilt, volume and start. Screenshots of the editor and the library taken in the pane.
+- Not yet: Josh's own eyes on it at laptop width. The pane here is 800 px wide, so the timeline bars truncate their names; at laptop width they do not.
+
+**Next**
+
+Josh reviews the surface and says what still feels rigid. Germain's verdict on the fidelity strips (AT-2) is still the gate for the proof of concept.
+
+---
+
 ## 2026-09-17 · M28 Direct manipulation · DONE
 
 **Why**

@@ -12,7 +12,7 @@ import {
   type TemplateParam,
   type TransformValue,
 } from '@campaigncut/composition';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { api, type MediaAsset } from '../api';
 
 type Props = {
@@ -62,7 +62,7 @@ export function Inspector({ schema, values, onChange, assets = [], templateSlug 
                   type="button"
                   aria-label={`Reset ${param.label} to authored`}
                   onClick={() => set(param.key, param.default)}
-                  className="mt-1 font-mono text-[10px] text-muted hover:text-fg"
+                  className="mt-1.5 text-[11px] text-muted hover:text-fg"
                 >
                   Reset to authored
                 </button>
@@ -297,102 +297,159 @@ function MediaControl({
   onChange: (v: MediaValue | null) => void;
 }) {
   const current = isMediaValue(value) ? value : null;
-  const id = `param-${param.key}-select`;
   const chosen = current ? assets.find((a) => a.id === current.assetId) : undefined;
   const fit: Fit = current?.fit ?? 'cover';
 
+  // M29: the Footage panel's thumbnails are the picker. This shows the pick.
+  if (!current) {
+    return (
+      <div>
+        <Label param={param} />
+        <p className="text-xs text-muted">No clip yet. Pick a clip in Footage below, or upload one there. The designer's slot shows until you do.</p>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <Label param={param} htmlFor={id} />
-      <select
-        id={id}
-        value={current ? String(current.assetId) : ''}
-        onChange={(e) => onChange(e.target.value ? { assetId: Number(e.target.value), fit } : null)}
-        className="w-full bg-panel border border-hairline px-2 py-1.5 text-sm text-fg focus:outline-none focus:border-cobalt"
-      >
-        <option value="">None (authored slot)</option>
-        {assets
-          .filter((a) => a.kind !== 'audio')
-          .map((a) => (
-            <option key={a.id} value={String(a.id)}>
-              {a.originalName}
-            </option>
-          ))}
-      </select>
-      {current && (
-        <div className="flex items-center gap-2 mt-2">
-          {chosen?.thumbUrl && <img src={api.fileUrl(chosen.thumbUrl)} alt="" className="w-16 aspect-video object-cover bg-black block" />}
-          <div className="flex border border-hairline font-mono text-[10px]">
-            {(['cover', 'contain'] as const).map((f) => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => onChange({ assetId: current.assetId, fit: f })}
-                className={`px-2 py-1 ${fit === f ? 'bg-cobalt text-white' : 'text-muted hover:text-fg'}`}
-              >
-                {f === 'cover' ? 'Cover (crop)' : 'Contain (letterbox)'}
-              </button>
-            ))}
-          </div>
+      <Label param={param} />
+      <div data-testid="footage-card" className="flex gap-3 items-center border border-hairline p-2">
+        {chosen?.thumbUrl ? (
+          <img src={api.fileUrl(chosen.thumbUrl)} alt="" className="w-20 aspect-video object-cover bg-black block shrink-0" />
+        ) : (
+          <div aria-hidden="true" className="w-20 aspect-video bg-panel shrink-0" />
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="text-xs truncate">{chosen?.originalName ?? `Clip ${current.assetId}`}</div>
+          {chosen && (
+            <div className="font-mono text-[10px] text-muted mt-1">
+              {chosen.durationS.toFixed(1)} s · {chosen.width}×{chosen.height}
+            </div>
+          )}
         </div>
-      )}
-      {current && <TrimControls value={current} clipLengthS={chosen?.durationS} onChange={onChange} />}
-      {current && <ChromaControls value={current} onChange={onChange} />}
-      <p className="font-mono text-[10px] text-muted mt-1">Upload clips in the Footage panel below.</p>
+      </div>
+      <div className="flex items-center justify-between gap-2 mt-2">
+        <div role="group" aria-label="Fit" className="flex border border-hairline text-[11px]">
+          {(['cover', 'contain'] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              aria-pressed={fit === f}
+              onClick={() => onChange({ ...current, fit: f })}
+              className={`px-2.5 py-1 ${fit === f ? 'bg-cobalt text-white' : 'text-muted hover:text-fg'}`}
+            >
+              {f === 'cover' ? 'Fill (crop)' : 'Fit (letterbox)'}
+            </button>
+          ))}
+        </div>
+        <button type="button" onClick={() => onChange(null)} className="text-[11px] text-muted hover:text-fg shrink-0">
+          Use the authored slot
+        </button>
+      </div>
+      {chosen && chosen.durationS > 0 && <TrimBar value={current} clipLengthS={chosen.durationS} onChange={onChange} />}
+      <label className="flex items-center gap-2 mt-2 text-[11px] text-muted">
+        <input type="checkbox" aria-label="Mute footage sound" checked={current.muted === true} onChange={(e) => onChange({ ...current, muted: e.target.checked })} className="accent-cobalt" />
+        Mute footage sound
+      </label>
+      <ChromaControls value={current} onChange={onChange} />
     </div>
   );
 }
 
-/** M20: where in the clip to start and stop, in seconds, and whether its own sound plays. Stored inside the footage value. */
-function TrimControls({ value, clipLengthS, onChange }: { value: MediaValue; clipLengthS?: number; onChange: (v: MediaValue) => void }) {
-  const num = (raw: string): number | undefined => {
-    if (raw.trim() === '') return undefined;
-    const n = Number(raw);
-    return Number.isFinite(n) && n >= 0 ? n : undefined;
-  };
-  const setTime = (key: 'inS' | 'outS', raw: string) => {
+/** Tenths of a second: what the trim bar works in. */
+const tenth = (n: number) => Math.round(n * 10) / 10;
+
+/**
+ * M29: where in the clip to start and stop, as two handles on a bar over
+ * the clip. Drag a handle (or press the bar to bring the nearer one), or
+ * nudge a focused handle with the arrow keys (0.1 s, 1 s with Shift). The
+ * times sit beside the bar as facts. Stored inside the footage value: no
+ * `inS` means from the start, no `outS` means to the end.
+ */
+function TrimBar({ value, clipLengthS, onChange }: { value: MediaValue; clipLengthS: number; onChange: (v: MediaValue) => void }) {
+  const len = tenth(clipLengthS);
+  const inS = tenth(value.inS ?? 0);
+  const outS = tenth(value.outS ?? len);
+  const handle = useRef<'inS' | 'outS' | null>(null);
+
+  const emit = (key: 'inS' | 'outS', raw: number) => {
+    const t = tenth(key === 'inS' ? Math.min(Math.max(raw, 0), outS - 0.1) : Math.max(Math.min(raw, len), inS + 0.1));
+    if (t === (key === 'inS' ? inS : outS)) return;
     const next = { ...value };
-    const n = num(raw);
-    if (n === undefined) delete next[key];
-    else next[key] = n;
+    if ((key === 'inS' && t === 0) || (key === 'outS' && t === len)) delete next[key];
+    else next[key] = t;
     onChange(next);
   };
+  const timeAt = (clientX: number, bar: HTMLElement) => {
+    const rect = bar.getBoundingClientRect();
+    if (rect.width <= 0) return null;
+    return Math.min(Math.max(((clientX - rect.left) / rect.width) * len, 0), len);
+  };
+  const onBarDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const t = timeAt(e.clientX, e.currentTarget);
+    if (t === null) return;
+    handle.current = Math.abs(t - inS) <= Math.abs(t - outS) ? 'inS' : 'outS';
+    try {
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+    } catch {
+      /* jsdom or a synthetic pointer id */
+    }
+    e.preventDefault();
+    emit(handle.current, t);
+  };
+  const onBarMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!handle.current || !(e.buttons & 1)) return;
+    const t = timeAt(e.clientX, e.currentTarget);
+    if (t !== null) emit(handle.current, t);
+  };
+  const onBarUp = () => {
+    handle.current = null;
+  };
+  const onKey = (key: 'inS' | 'outS') => (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    const step = e.shiftKey ? 1 : 0.1;
+    const current = key === 'inS' ? inS : outS;
+    const next = { ArrowLeft: current - step, ArrowDown: current - step, ArrowRight: current + step, ArrowUp: current + step, Home: 0, End: len }[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    emit(key, next);
+  };
+  const left = `${(inS / len) * 100}%`;
+  const width = `${((outS - inS) / len) * 100}%`;
+  const grip = (key: 'inS' | 'outS', label: string, at: number, side: 'left' | 'right') => (
+    <div
+      role="slider"
+      tabIndex={0}
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={len}
+      aria-valuenow={at}
+      aria-valuetext={`${at.toFixed(1)} s`}
+      onKeyDown={onKey(key)}
+      className="absolute top-0 bottom-0 w-2 bg-cobalt cursor-ew-resize focus:outline-none focus-visible:ring-1 focus-visible:ring-fg"
+      style={{ left: `${(at / len) * 100}%`, transform: side === 'left' ? undefined : 'translateX(-100%)' }}
+    />
+  );
+
   return (
-    <div className="mt-2 flex flex-col gap-1 font-mono text-[10px]">
-      <div className="flex items-center gap-2">
-        <label className="flex items-center gap-1 text-muted">
-          <span>Start</span>
-          <input
-            type="number"
-            min={0}
-            step={0.1}
-            aria-label="Footage start"
-            value={value.inS ?? 0}
-            onChange={(e) => setTime('inS', e.target.value)}
-            className="w-14 bg-panel border border-hairline px-1 py-0.5 text-fg focus:outline-none focus:border-cobalt"
-          />
-          <span>s</span>
-        </label>
-        <label className="flex items-center gap-1 text-muted">
-          <span>End</span>
-          <input
-            type="number"
-            min={0}
-            step={0.1}
-            aria-label="Footage end"
-            placeholder="end"
-            value={value.outS ?? ''}
-            onChange={(e) => setTime('outS', e.target.value)}
-            className="w-14 bg-panel border border-hairline px-1 py-0.5 text-fg focus:outline-none focus:border-cobalt"
-          />
-          <span>s</span>
-        </label>
+    <div className="mt-3 flex flex-col gap-1.5">
+      <div className="flex items-center justify-between text-[11px] text-muted">
+        <span>Trim</span>
+        <span className="font-mono text-fg tabular-nums">
+          {inS.toFixed(1)} s – {outS.toFixed(1)} s of {len.toFixed(1)} s
+        </span>
       </div>
-      {clipLengthS !== undefined && <span className="text-muted">clip is {clipLengthS.toFixed(1)} s long; leave End empty to play to the end</span>}
-      <label className="flex items-center gap-2 text-muted">
-        <input type="checkbox" aria-label="Mute footage sound" checked={value.muted === true} onChange={(e) => onChange({ ...value, muted: e.target.checked })} className="accent-cobalt" />
-        Mute footage sound
-      </label>
+      <div
+        data-testid="trim-bar"
+        className="relative h-6 bg-panel border border-hairline select-none touch-none"
+        onPointerDown={onBarDown}
+        onPointerMove={onBarMove}
+        onPointerUp={onBarUp}
+        onPointerCancel={onBarUp}
+      >
+        <div className="absolute top-0 bottom-0 bg-cobalt/25 pointer-events-none" style={{ left, width }} />
+        {grip('inS', 'Footage start', inS, 'left')}
+        {grip('outS', 'Footage end', outS, 'right')}
+      </div>
     </div>
   );
 }
@@ -418,18 +475,28 @@ function ChromaControls({ value, onChange }: { value: MediaValue; onChange: (v: 
       </label>
       {key && (
         <>
-          <label className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <span className="w-20 text-muted">Screen colour</span>
-            <select
-              aria-label="Screen colour"
-              value={key.color}
-              onChange={(e) => onChange(withKey({ ...key, color: e.target.value as ChromaKey['color'] }))}
-              className="bg-panel border border-hairline px-1 py-0.5 text-fg"
-            >
-              <option value="green">green</option>
-              <option value="blue">blue</option>
-            </select>
-          </label>
+            <div role="group" aria-label="Screen colour" className="flex border border-hairline">
+              {(
+                [
+                  ['green', 'Green', '#1DB954'],
+                  ['blue', 'Blue', '#1E5BFF'],
+                ] as const
+              ).map(([c, label, swatch]) => (
+                <button
+                  key={c}
+                  type="button"
+                  aria-pressed={key.color === c}
+                  onClick={() => onChange(withKey({ ...key, color: c as ChromaKey['color'] }))}
+                  className={`flex items-center gap-1.5 px-2 py-1 ${key.color === c ? 'bg-cobalt text-white' : 'text-muted hover:text-fg'}`}
+                >
+                  <span aria-hidden="true" className="w-2.5 h-2.5 block" style={{ backgroundColor: swatch }} />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
           <label className="flex items-center gap-2">
             <span className="w-20 text-muted">Threshold</span>
             <input

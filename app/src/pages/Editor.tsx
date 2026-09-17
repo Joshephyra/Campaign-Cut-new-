@@ -349,32 +349,42 @@ export function Editor({ projectId, onBack }: Props) {
 
   return (
     <main className="min-h-screen bg-ink text-fg flex flex-col">
-      <header className="border-b border-hairline px-8 h-12 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-4">
-          <button type="button" onClick={onBack} className="text-xs text-muted hover:text-fg">
+      <header className="border-b border-hairline px-6 h-14 flex items-center justify-between shrink-0 gap-6">
+        <div className="flex items-center gap-5 min-w-0">
+          <button type="button" onClick={onBack} className="text-xs text-muted hover:text-fg shrink-0">
             ← Library
           </button>
+          <div className="w-px h-5 bg-hairline shrink-0" aria-hidden="true" />
           <ProjectName
             name={loaded?.detail.project.name ?? null}
+            templateName={loaded?.detail.template.name ?? null}
             onRename={async (name) => {
               const row = await api.renameProject(projectId, name);
               setLoaded((prev) => (prev ? { ...prev, detail: { ...prev.detail, project: { ...prev.detail.project, name: row.name } } } : prev));
             }}
           />
         </div>
-        <div className="font-mono text-xs text-muted flex items-center gap-4">
+        <div className="flex items-center gap-5 shrink-0">
           {loaded && (
-            <span className="flex gap-2">
-              <button type="button" aria-label="Undo" title="Undo (Ctrl+Z)" onClick={undo} disabled={!undoAvailable} className="hover:text-fg disabled:opacity-40">
+            <span className="flex border border-hairline text-xs">
+              <button type="button" aria-label="Undo" title="Undo (Ctrl+Z)" onClick={undo} disabled={!undoAvailable} className="px-2.5 py-1 text-muted hover:text-fg disabled:opacity-40">
                 Undo
               </button>
-              <button type="button" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" onClick={redo} disabled={!redoAvailable} className="hover:text-fg disabled:opacity-40">
+              <button
+                type="button"
+                aria-label="Redo"
+                title="Redo (Ctrl+Shift+Z)"
+                onClick={redo}
+                disabled={!redoAvailable}
+                className="px-2.5 py-1 text-muted hover:text-fg disabled:opacity-40 border-l border-hairline"
+              >
                 Redo
               </button>
             </span>
           )}
-          <SaveIndicator state={saveState} />
-          <span>{loaded ? loaded.detail.template.slug : `project ${projectId}`}</span>
+          <span className="font-mono text-xs w-20 text-right">
+            <SaveIndicator state={saveState} />
+          </span>
           {loaded && <ExportPanel projectId={projectId} onFinished={() => setExportsTick((t) => t + 1)} />}
         </div>
       </header>
@@ -398,11 +408,10 @@ export function Editor({ projectId, onBack }: Props) {
             onPress={onPress}
             onDrag={onDrag}
           />
-          <aside className="w-80 border-l border-hairline shrink-0 overflow-y-auto">
-            <div className="p-6 border-b border-hairline">
-              <h2 className="text-xs uppercase tracking-widest text-muted mb-3">Inspector</h2>
-              {elements.length > 1 && (
-                <div className="flex flex-wrap gap-1 mb-4" role="tablist" aria-label="Elements">
+          <aside className="w-[22rem] border-l border-hairline shrink-0 overflow-y-auto">
+            <div className="px-6 py-5 border-b border-hairline">
+              {elements.length > 1 ? (
+                <div className="flex flex-wrap border border-hairline mb-5" role="tablist" aria-label="Elements">
                   {inStartOrder(elements).map((e) => (
                     <button
                       key={e.id}
@@ -411,12 +420,14 @@ export function Editor({ projectId, onBack }: Props) {
                       aria-selected={e.id === selected?.id}
                       data-testid={`element-tab-${e.id}`}
                       onClick={() => setSelectedId(e.id)}
-                      className={`text-xs px-2 py-1 border ${e.id === selected?.id ? 'border-cobalt text-cobalt' : 'border-hairline text-muted hover:text-fg'}`}
+                      className={`text-xs px-3 py-1.5 -mb-px -mr-px border-b border-r border-hairline ${e.id === selected?.id ? 'bg-cobalt text-white' : 'text-muted hover:text-fg'}`}
                     >
                       {e.name}
                     </button>
                   ))}
                 </div>
+              ) : (
+                <h2 className="text-[11px] uppercase tracking-[0.2em] text-muted mb-4">{selected?.name ?? 'Element'}</h2>
               )}
               {selected && (
                 <Inspector
@@ -431,13 +442,13 @@ export function Editor({ projectId, onBack }: Props) {
                 />
               )}
             </div>
-            <div className="p-6 border-b border-hairline">
+            <div className="px-6 py-5 border-b border-hairline">
               <MediaPanel onSelect={selectFootage} selectedId={selectedAssetId} onChange={setAssets} />
             </div>
-            <div className="p-6 border-b border-hairline">
+            <div className="px-6 py-5 border-b border-hairline">
               <AudioPanel assets={assets} audio={audio} onChange={onAudioChange} />
             </div>
-            <div className="p-6">
+            <div className="px-6 py-5">
               <ExportHistory projectId={projectId} refreshKey={exportsTick} />
             </div>
           </aside>
@@ -448,7 +459,7 @@ export function Editor({ projectId, onBack }: Props) {
 }
 
 /** M22: the project name, editable in place. Enter saves, Escape cancels, an empty name is ignored. */
-function ProjectName({ name, onRename }: { name: string | null; onRename: (name: string) => Promise<void> }) {
+function ProjectName({ name, templateName, onRename }: { name: string | null; templateName: string | null; onRename: (name: string) => Promise<void> }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -479,8 +490,9 @@ function ProjectName({ name, onRename }: { name: string | null; onRename: (name:
     );
   }
   return (
-    <h1 className="text-sm font-semibold tracking-tight flex items-center gap-2">
-      <span>{name ?? '…'}</span>
+    <h1 className="text-sm font-semibold tracking-tight flex items-baseline gap-3 min-w-0">
+      <span className="truncate">{name ?? '…'}</span>
+      {templateName && <span className="text-xs font-normal text-muted truncate">{templateName}</span>}
       {name !== null && (
         <button
           type="button"
@@ -490,9 +502,9 @@ function ProjectName({ name, onRename }: { name: string | null; onRename: (name:
             setError(null);
             setEditing(true);
           }}
-          className="font-mono text-[10px] font-normal text-muted hover:text-fg"
+          className="text-xs font-normal text-muted hover:text-fg shrink-0"
         >
-          rename
+          Rename
         </button>
       )}
       {error && <span className="font-mono text-[10px] font-normal text-danger">{error}</span>}
@@ -753,9 +765,13 @@ function Monitor({
           />
         )}
       </div>
-      <p className="font-mono text-xs text-muted mt-3">
-        {compositionConfig.width}×{compositionConfig.height} · {compositionConfig.fps} fps · {durationInFrames} frames
-        {hasFootage ? ' · footage: proxy' : ''}
+      <p className="font-mono text-[11px] text-muted mt-3 flex gap-4">
+        <span>
+          {compositionConfig.width}×{compositionConfig.height}
+        </span>
+        <span>{compositionConfig.fps} fps</span>
+        <span>{(durationInFrames / compositionConfig.fps).toFixed(1)} s</span>
+        {hasFootage && <span>preview footage at proxy quality</span>}
         {perf && (
           <span data-testid="perf-result" className={perf.meetsTarget ? ' text-emerald-400' : ' text-danger'}>
             {' · measured '}{perf.fps.toFixed(1)} fps over {perf.seconds.toFixed(1)} s, {perf.droppedFrames} dropped, worst gap {Math.round(perf.worstGapMs)} ms

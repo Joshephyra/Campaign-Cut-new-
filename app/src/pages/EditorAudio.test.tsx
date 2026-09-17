@@ -56,9 +56,9 @@ describe('Editor music bed', () => {
   it('hands the Player the saved music bed at the preview runner URL, start in frames', async () => {
     mockApi();
     render(<Editor projectId={7} onBack={() => {}} />);
-    await waitFor(() => expect(screen.getByLabelText('Music bed')).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Use bed.wav' })).toBeTruthy());
     await waitFor(() => expect(playerAudio()).toEqual({ src: '/api/media/originals/bed.wav', volume: 0.4, startFrom: 30 }));
-    expect((screen.getByLabelText('Music bed') as HTMLSelectElement).value).toBe('9');
+    expect(screen.getByRole('button', { name: 'Use bed.wav' }).getAttribute('aria-pressed')).toBe('true');
   });
 
   it('changing the volume updates the Player and saves the music bed', async () => {

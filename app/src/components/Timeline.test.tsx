@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { Timeline, type TimelineElement } from './Timeline';
+import { rulerInterval, Timeline, type TimelineElement } from './Timeline';
 
 afterEach(cleanup);
 
@@ -17,13 +17,16 @@ function mockTrackWidth(width: number) {
 }
 
 describe('Timeline', () => {
-  it('shows one row per element, top of the stack first, with in/out timecodes in mono', () => {
+  it('shows one row per element, top of the stack first; the bar carries the name and its in/out timecodes as a title', () => {
     render(<Timeline elements={elements} fps={30} durationInFrames={300} frame={0} onSeek={() => {}} onChange={() => {}} />);
     const rows = screen.getAllByTestId(/^element-row-/);
     expect(rows).toHaveLength(2);
     expect(rows[0]!.textContent).toContain('end-card');
     expect(rows[1]!.textContent).toContain('open');
-    expect(screen.getByText('00:05:00 – 00:10:00')).toBeTruthy();
+    const bar = screen.getByTestId('element-bar-2');
+    expect(bar.textContent).toContain('end-card');
+    expect(bar.getAttribute('title')).toBe('00:05:00 – 00:10:00');
+    expect(screen.queryByText('00:05:00 – 00:10:00')).toBeNull();
   });
 
   it('shows the playhead timecode', () => {
@@ -66,6 +69,28 @@ describe('Timeline', () => {
     fireEvent.pointerMove(bar, { clientX: 10, buttons: 1 });
     fireEvent.pointerUp(bar, { clientX: 10 });
     expect(onChange).toHaveBeenLastCalledWith(1, { startFrame: 0, endFrame: 150 });
+  });
+});
+
+/**
+ * M29: ruler labels are spaced by the track's real width so they never
+ * run into each other: at least 56 px between labels, from 1 s steps up
+ * to a minute. Without a measurement (first paint), at most a dozen labels.
+ */
+describe('Timeline ruler spacing (M29)', () => {
+  it('picks the step from the seconds per pixel', () => {
+    expect(rulerInterval(5, 1000)).toBe(1);
+    expect(rulerInterval(10, 300)).toBe(2);
+    expect(rulerInterval(30, 450)).toBe(5);
+    expect(rulerInterval(120, 450)).toBe(15);
+    expect(rulerInterval(30, 0)).toBe(5);
+    expect(rulerInterval(600, 0)).toBe(60);
+  });
+
+  it('labels a 10 s track 300 px wide every 2 s', () => {
+    mockTrackWidth(300);
+    render(<Timeline elements={elements} fps={30} durationInFrames={300} frame={0} onSeek={() => {}} onChange={() => {}} />);
+    expect(screen.getAllByTestId('ruler-label').map((n) => n.textContent)).toEqual(['0s', '2s', '4s', '6s', '8s', '10s']);
   });
 });
 

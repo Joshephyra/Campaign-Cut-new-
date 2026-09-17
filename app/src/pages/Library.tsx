@@ -49,7 +49,7 @@ export function Library({ onOpenProject }: Props) {
 
   return (
     <main className="min-h-screen bg-ink text-fg">
-      <header className="border-b border-hairline px-8 h-12 flex items-center justify-between">
+      <header className="border-b border-hairline px-6 h-14 flex items-center justify-between">
         <h1 className="text-sm font-semibold tracking-tight">CampaignCut</h1>
         <span className="font-mono text-xs text-muted">Library</span>
       </header>
@@ -74,7 +74,7 @@ export function Library({ onOpenProject }: Props) {
 
         {groups?.map((group) => (
           <section key={group.adType} className="mb-10">
-            <h2 className="text-xs uppercase tracking-widest text-muted mb-3">{group.adType}</h2>
+            <h2 className="text-[11px] uppercase tracking-[0.2em] text-muted mb-3">{group.adType}</h2>
             <div className="grid grid-cols-3 gap-px bg-hairline border border-hairline">
               {group.templates.map((t) => (
                 <button
@@ -177,7 +177,7 @@ function ProjectList({
 
   return (
     <section className="mb-10">
-      <h2 className="text-xs uppercase tracking-widest text-muted mb-3">Projects</h2>
+      <h2 className="text-[11px] uppercase tracking-[0.2em] text-muted mb-3">Projects</h2>
       <ul className="border border-hairline divide-y divide-hairline">
         {projects.map((p) => (
           <li key={p.id} data-testid={`project-row-${p.id}`} className="flex items-center gap-4 px-3 h-11 bg-ink">

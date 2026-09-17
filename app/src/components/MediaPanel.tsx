@@ -49,7 +49,7 @@ export function MediaPanel({ onSelect, selectedId, onChange }: Props) {
   return (
     <div>
       <div className="flex justify-between items-baseline mb-3">
-        <h2 className="text-xs uppercase tracking-widest text-muted">Footage</h2>
+        <h2 className="text-[11px] uppercase tracking-[0.2em] text-muted">Footage</h2>
         <label className="text-xs text-cobalt cursor-pointer">
           Upload
           <input

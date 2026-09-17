@@ -9,33 +9,41 @@ const two: TimelineElement[] = [
   { id: 2, slug: 'end-card', zIndex: 1, startFrame: 150, endFrame: 300, enabled: true },
 ];
 
+const pressed = (group: HTMLElement) =>
+  Array.from(group.querySelectorAll('button'))
+    .filter((b) => b.getAttribute('aria-pressed') === 'true')
+    .map((b) => b.textContent);
+
+/** M29: the transition on a boundary is a segmented row (Cut, Fade, Wipe, Slide) and a length slider shown in seconds. No select, no frame count to type. */
 describe('Timeline transitions', () => {
-  it('shows one transition control per boundary between consecutive elements, none for a single element', () => {
+  it('shows one transition row per boundary between consecutive elements, none for a single element', () => {
     const { unmount } = render(
       <Timeline elements={two} fps={30} durationInFrames={300} frame={0} onSeek={() => {}} onChange={() => {}} transitions={[]} onTransitionChange={() => {}} />,
     );
     expect(screen.getAllByTestId(/^transition-after-/)).toHaveLength(1);
-    expect((screen.getByLabelText('Transition after open') as HTMLSelectElement).value).toBe('cut');
+    expect(pressed(screen.getByRole('group', { name: 'Transition after open' }))).toEqual(['Cut']);
     unmount();
 
     render(<Timeline elements={[two[0]!]} fps={30} durationInFrames={150} frame={0} onSeek={() => {}} onChange={() => {}} transitions={[]} onTransitionChange={() => {}} />);
     expect(screen.queryAllByTestId(/^transition-after-/)).toHaveLength(0);
   });
 
-  it('offers cut, fade, wipe and slide', () => {
+  it('offers Cut, Fade, Wipe and Slide as buttons, and no select', () => {
     render(<Timeline elements={two} fps={30} durationInFrames={300} frame={0} onSeek={() => {}} onChange={() => {}} transitions={[]} onTransitionChange={() => {}} />);
-    const options = Array.from((screen.getByLabelText('Transition after open') as HTMLSelectElement).options).map((o) => o.value);
-    expect(options).toEqual(['cut', 'fade', 'wipe', 'slide']);
+    const group = screen.getByRole('group', { name: 'Transition after open' });
+    expect(Array.from(group.querySelectorAll('button')).map((b) => b.textContent)).toEqual(['Cut', 'Fade', 'Wipe', 'Slide']);
+    expect(document.querySelector('select')).toBeNull();
   });
 
-  it('picking a preset reports it with the default length', () => {
+  it('pressing a preset reports it with the default length', () => {
     const onTransitionChange = vi.fn();
     render(<Timeline elements={two} fps={30} durationInFrames={300} frame={0} onSeek={() => {}} onChange={() => {}} transitions={[]} onTransitionChange={onTransitionChange} />);
-    fireEvent.change(screen.getByLabelText('Transition after open'), { target: { value: 'fade' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Fade' }));
     expect(onTransitionChange).toHaveBeenCalledWith(1, { preset: 'fade', durationInFrames: 15 });
+    expect(screen.queryByLabelText('Transition length after open')).toBeNull(); // a cut has no length
   });
 
-  it('shows the stored transition and lets the length be changed', () => {
+  it('shows the stored transition, its length as a slider in seconds, and reports a new length in frames', () => {
     const onTransitionChange = vi.fn();
     render(
       <Timeline
@@ -49,8 +57,12 @@ describe('Timeline transitions', () => {
         onTransitionChange={onTransitionChange}
       />,
     );
-    expect((screen.getByLabelText('Transition after open') as HTMLSelectElement).value).toBe('wipe');
-    fireEvent.change(screen.getByLabelText('Transition length after open'), { target: { value: '30' } });
+    expect(pressed(screen.getByRole('group', { name: 'Transition after open' }))).toEqual(['Wipe']);
+    const length = screen.getByLabelText('Transition length after open') as HTMLInputElement;
+    expect(length.type).toBe('range');
+    expect(length.value).toBe('15');
+    expect(screen.getByText('0.5 s')).toBeTruthy();
+    fireEvent.change(length, { target: { value: '30' } });
     expect(onTransitionChange).toHaveBeenCalledWith(1, { preset: 'wipe', durationInFrames: 30 });
   });
 });

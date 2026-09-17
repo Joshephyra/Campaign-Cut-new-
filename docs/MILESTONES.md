@@ -564,7 +564,7 @@ Josh's verdict on the first real template (2026-09-17): placement must be click-
 
 ---
 
-## M29 · Fewer dropdowns, fewer numbers, a cleaner surface · TODO
+## M29 · Fewer dropdowns, fewer numbers, a cleaner surface · DONE
 
 The rest of Josh's verdict: less rigid numbers, fewer selects, a more polished look.
 

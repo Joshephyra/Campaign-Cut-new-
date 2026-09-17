@@ -68,7 +68,7 @@ export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished }: Pr
         type="button"
         onClick={() => void start()}
         disabled={busy}
-        className="border border-hairline px-3 py-1 text-fg hover:border-cobalt disabled:opacity-50 disabled:cursor-wait"
+        className="border border-fg px-4 py-1.5 text-xs font-sans font-semibold text-fg hover:bg-fg hover:text-ink disabled:opacity-50 disabled:cursor-wait"
       >
         Export MP4
       </button>

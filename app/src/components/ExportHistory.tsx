@@ -28,7 +28,7 @@ export function ExportHistory({ projectId, refreshKey = 0 }: Props) {
 
   return (
     <div>
-      <h2 className="text-xs uppercase tracking-widest text-muted mb-3">Exports</h2>
+      <h2 className="text-[11px] uppercase tracking-[0.2em] text-muted mb-3">Exports</h2>
       {renders === null && <p className="font-mono text-[10px] text-muted">Loading…</p>}
       {renders?.length === 0 && <p className="font-mono text-[10px] text-muted">No exports yet. Export MP4 is in the header.</p>}
       {renders && renders.length > 0 && (
