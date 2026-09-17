@@ -1,3 +1,4 @@
+import type { Callout } from './callouts';
 import type { LottieAnimationData, MainMedia } from './config';
 
 /**
@@ -15,6 +16,8 @@ export type ElementProps = {
   enabled: boolean;
   /** Footage under this element's Lottie, in its slot, or none. Trim is relative to the element's in point. */
   media?: MainMedia | null;
+  /** M56: callouts on words of this element's text. */
+  callouts?: Callout[];
 };
 
 /** The composition lasts until the latest enabled element ends. Never less than one frame. */

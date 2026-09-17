@@ -4,6 +4,7 @@ import { resolvePointer } from './jsonPointer';
 import type { ParamValues, TemplateParam } from './schema';
 import { applyTransform, isTransformValue, LAYER_CLASS, TEXT_CLASS, layerClassFor } from './transform';
 import { ACCENT_CLASS } from './treatments';
+import { biggerAnimator, calloutKey, isCalloutValue } from './callouts';
 
 type AnyRecord = Record<string, unknown>;
 
@@ -48,6 +49,20 @@ export function applyLottieValues(
     const layer = resolvePointer(result, param.path);
     if (layer && typeof layer === 'object') (layer as AnyRecord).cl = `${LAYER_CLASS} ${layerClassFor(param.key)}`;
   }
+  // M56: "make it bigger" is a text animator on the word's characters, in the Lottie itself.
+  for (const param of schema) {
+    if (param.kind !== 'text') continue;
+    const raw = values[calloutKey(param.key)];
+    if (!isCalloutValue(raw) || raw.style !== 'bigger') continue;
+    const layer = resolvePointer(result, param.path) as AnyRecord | null;
+    if (!layer || typeof layer !== 'object' || !layer.t || typeof layer.t !== 'object') continue;
+    const text = String(values[param.key] ?? param.default ?? '');
+    const animator = biggerAnimator(text, raw.word, Number(layer.ip ?? 0));
+    if (!animator) continue;
+    const t = layer.t as AnyRecord;
+    t.a = [...(Array.isArray(t.a) ? (t.a as unknown[]) : []), animator];
+  }
+
   // M39: tag every text layer and every accent-coloured layer too, so a
   // treatment can address them (glow is a shadow on these; the opaque
   // plate is an SVG filter on the text). Changes no pixel.

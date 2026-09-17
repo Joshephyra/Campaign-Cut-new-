@@ -53,6 +53,16 @@ export function treatmentFor(name: Treatment | string | null | undefined, elemen
   return { name: 'glow', accent: DEFAULT_ACCENT };
 }
 
+/** The accent colour an element carries (its "accent" role's value, else the authored one, else the campaign blue). */
+export function accentOf(schema: TemplateParam[], values: ParamValues): string {
+  for (const p of schema) {
+    if (p.kind !== 'color' || p.role !== 'accent') continue;
+    const v = values[p.key] ?? p.default;
+    if (typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v)) return v.toUpperCase();
+  }
+  return DEFAULT_ACCENT;
+}
+
 /** The CSS filter a treatment puts on each element's whole design (not its footage). */
 export function treatmentLayerFilter(t: TreatmentProps | undefined): string | undefined {
   if (!t) return undefined;

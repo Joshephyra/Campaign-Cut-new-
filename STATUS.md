@@ -4,6 +4,20 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M56 Animated callouts on one word · DONE
+
+**What exists now**
+
+- `composition/src/callouts.ts` (styles, the `<key>.callout` value, `calloutsFrom` with the element's accent via `accentOf`, `biggerAnimator`) and `composition/src/CalloutOverlay.tsx` (measures the word's characters in the layer's SVG group, draws a path or a rect with a frame-driven draw-on, holds the render until lottie-web has built the text). `ElementProps.callouts`; both runners build it the same way.
+- The panel's text fields: "Call out a word", word chips and a style segmented; the disclaimer has none.
+- Tests: 4 callouts, 2 real-render (circle, underline and highlight in the pixels at frame 40; none without a callout; none before the draw-on), 2 inspector. 553 tests green.
+
+**Verified**
+
+- Real browser on spot 9: the Headline's field lists Maria · Rivera · will · lower · your · costs; "lower" pressed drew a path in #1D4ED8 (the client's accent) round the word in the monitor, fully drawn on (dash offset 0), and saved headline.callout { word: 3, style: circle }. Export parity at frame 200 (the headline, callout on): within threshold, mean 0.41, the circle in both the preview frame and the export frame (media/parity/project-9-1789657359559).
+
+---
+
 ## 2026-09-17 · M55 Transitions between the chips · DONE
 
 **What exists now**

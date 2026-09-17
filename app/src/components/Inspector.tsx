@@ -11,6 +11,12 @@ import {
   type ParamValues,
   type TemplateParam,
   type TransformValue,
+  CALLOUT_LABELS,
+  CALLOUT_STYLES,
+  calloutKey,
+  isCalloutValue,
+  wordRanges,
+  type CalloutValue,
 } from '@campaigncut/composition';
 import { ImageUp, Lock, RotateCcw } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
@@ -57,7 +63,15 @@ export function Inspector({ schema, values, onChange, assets = [], templateSlug 
               data-active={active ? 'true' : 'false'}
               className={`rounded-lg -mx-2 px-2 py-1 transition-colors ${active ? 'bg-blue-tint ring-1 ring-blue/60' : ''}`}
             >
-              {param.kind === 'text' && <TextControl param={param} value={valueOf(param, values)} onChange={(v) => set(param.key, v)} />}
+              {param.kind === 'text' && (
+                <TextControl
+                  param={param}
+                  value={valueOf(param, values)}
+                  onChange={(v) => set(param.key, v)}
+                  callout={isCalloutValue(values[calloutKey(param.key)]) ? (values[calloutKey(param.key)] as CalloutValue) : null}
+                  onCallout={param.locked ? undefined : (c) => set(calloutKey(param.key), c)}
+                />
+              )}
               {param.kind === 'color' && <ColorControl param={param} value={valueOf(param, values)} onChange={(v) => set(param.key, v)} />}
               {param.kind === 'image' && (
                 <ImageControl param={param} value={valueOf(param, values)} imageBase={imageBase} onChange={(v) => set(param.key, v)} />
@@ -129,15 +143,59 @@ function valueOf(param: TemplateParam, values: ParamValues): string {
 
 // ---- text --------------------------------------------------------------
 
-function TextControl({ param, value, onChange }: { param: TemplateParam; value: string; onChange: (v: string) => void }) {
+function TextControl({
+  param,
+  value,
+  onChange,
+  callout = null,
+  onCallout,
+}: {
+  param: TemplateParam;
+  value: string;
+  onChange: (v: string) => void;
+  /** M56: the callout on one word of this text, if any. */
+  callout?: CalloutValue | null;
+  /** M56: absent for text that takes no callout (the disclaimer). null clears it. */
+  onCallout?: (c: CalloutValue | null) => void;
+}) {
   const max = param.maxChars;
   const id = `param-${param.key}-input`;
+  const words = wordRanges(value).map((w) => w.word);
+  const chosen = callout && callout.word < words.length ? callout : null;
   return (
     <div>
       <FieldLabel htmlFor={id} right={max ? `${value.length}/${max}` : undefined}>
         {param.label}
       </FieldLabel>
       <input id={id} type="text" value={value} maxLength={max} onChange={(e) => onChange(max ? e.target.value.slice(0, max) : e.target.value)} className="field" />
+      {onCallout && words.length > 0 && (
+        <div className="mt-2" data-testid={`callout-${param.key}`}>
+          <div className="text-[11px] text-fg-3 mb-1">Call out a word</div>
+          <div role="group" aria-label={`Call out a word of ${param.label}`} className="flex flex-wrap gap-1 mb-1.5">
+            {words.map((w, i) => (
+              <button
+                key={`${i}-${w}`}
+                type="button"
+                aria-pressed={chosen?.word === i}
+                onClick={() => onCallout(chosen?.word === i ? null : { word: i, style: chosen?.style ?? 'circle' })}
+                className={`h-6 px-2 rounded-md text-[11px] font-medium transition-colors ${chosen?.word === i ? 'bg-blue text-white' : 'bg-raised border border-line text-fg-2 hover:text-fg hover:bg-hover'}`}
+              >
+                {w}
+              </button>
+            ))}
+          </div>
+          {chosen && (
+            <Segmented
+              label={`How to call out ${words[chosen.word]}`}
+              size="sm"
+              value={chosen.style}
+              options={CALLOUT_STYLES.map((s) => ({ value: s, label: CALLOUT_LABELS[s] }))}
+              onChange={(style) => onCallout({ word: chosen.word, style })}
+              className="w-full [&>button]:flex-1 [&>button]:justify-center"
+            />
+          )}
+        </div>
+      )}
       {param.locked && (
         <p className="text-[11px] text-fg-3 mt-1.5 inline-flex items-center gap-1">
           <Lock size={11} strokeWidth={ICON.strokeWidth} aria-hidden="true" />

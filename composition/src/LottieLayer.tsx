@@ -1,5 +1,7 @@
 import { Lottie } from '@remotion/lottie';
-import type { CSSProperties } from 'react';
+import { useRef, type CSSProperties } from 'react';
+import { CalloutOverlay } from './CalloutOverlay';
+import type { Callout } from './callouts';
 import { LOTTIE_RENDERER, type LottieAnimationData } from './config';
 
 export type LottieLayerProps = {
@@ -8,6 +10,10 @@ export type LottieLayerProps = {
   elementId?: string;
   /** M39: a CSS filter a treatment puts on the design (never on the footage). */
   filter?: string;
+  /** M56: callouts drawn on words of this design's text layers. */
+  callouts?: Callout[];
+  /** M56: the element's start, so a callout's draw-on counts from it. */
+  startFrame?: number;
 };
 
 /**
@@ -27,9 +33,11 @@ const fullFrame: CSSProperties = {
   overflow: 'hidden',
 };
 
-export function LottieLayer({ animationData, elementId, filter }: LottieLayerProps) {
+export function LottieLayer({ animationData, elementId, filter, callouts = [], startFrame = 0 }: LottieLayerProps) {
+  const wrap = useRef<HTMLDivElement>(null);
   return (
-    <div data-testid="lottie-wrapper" data-cc-element={elementId} style={filter ? { ...fullFrame, filter } : fullFrame}>
+    <div ref={wrap} data-testid="lottie-wrapper" data-cc-element={elementId} style={filter ? { ...fullFrame, filter } : fullFrame}>
+      {callouts.length > 0 && <CalloutOverlay host={wrap} callouts={callouts} startFrame={startFrame} version={animationData} />}
       <Lottie
         // @remotion/lottie's type is the lottie-web AnimationItem data shape;
         // ours is a structural subset with the fields we read.

@@ -91,3 +91,28 @@ describe('Inspector (generated from the schema)', () => {
     expect(screen.getAllByTestId(/^param-/)).toHaveLength(2);
   });
 });
+
+
+/** M56: a text field offers a callout on one of its words; the disclaimer does not. */
+describe('call out a word (M56)', () => {
+  it('pressing a word emits <key>.callout as a circle, a style press changes it, pressing the word again clears it', () => {
+    const onChange = vi.fn();
+    render(<Inspector schema={schema} values={{ headline: 'LOWER COSTS NOW' }} onChange={onChange} />);
+    const group = screen.getByRole('group', { name: 'Call out a word of Headline' });
+    expect(Array.from(group.querySelectorAll('button')).map((b) => b.textContent)).toEqual(['LOWER', 'COSTS', 'NOW']);
+    fireEvent.click(screen.getByRole('button', { name: 'COSTS' }));
+    expect(onChange).toHaveBeenLastCalledWith({ headline: 'LOWER COSTS NOW', 'headline.callout': { word: 1, style: 'circle' } });
+    cleanup();
+    render(<Inspector schema={schema} values={{ headline: 'LOWER COSTS NOW', 'headline.callout': { word: 1, style: 'circle' } }} onChange={onChange} />);
+    expect(screen.getByRole('button', { name: 'COSTS' }).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Make it bigger' }));
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ 'headline.callout': { word: 1, style: 'bigger' } }));
+    fireEvent.click(screen.getByRole('button', { name: 'COSTS' }));
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ 'headline.callout': null }));
+  });
+
+  it('the disclaimer takes no callout', () => {
+    render(<Inspector schema={schema} values={{}} onChange={() => {}} />);
+    expect(screen.queryByRole('group', { name: /Call out a word of Disclaimer/ })).toBeNull();
+  });
+});

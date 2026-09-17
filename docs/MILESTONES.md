@@ -899,6 +899,19 @@ Josh (2026-09-17): timing should be locked; spots are exactly :30, :15 and so on
 
 ---
 
+## M56 · Animated callouts on one word · DONE
+
+Josh (2026-09-17): animated callouts that circle one word, underline it, highlight it, or make it bigger.
+
+**Build**
+- A text field in the panel gets "Call out a word": press a word, pick Circle it · Underline it · Highlight it · Make it bigger (or none). Stored beside the text as `<key>.callout` ({ word, style }); never on the disclaimer.
+- The composition draws it, so both runners agree: circle, underline and highlight are drawn inside the text layer's own SVG group (`CalloutOverlay`), on the word's measured box, in the spot's accent, drawing on over 12 frames from 15 frames into the element; "bigger" is a Lottie text animator on the word's characters (`biggerAnimator`), scaling to 135%. The overlay holds the frame until lottie-web has built the text, so a still render carries it.
+
+**Tests**
+- Word ranges, the value, the accent, the animator; applyLottieValues; a real render: red pixels for circle, underline and highlight at frame 40, none without a callout, none before the draw-on; the inspector control.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

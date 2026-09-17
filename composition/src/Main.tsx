@@ -95,10 +95,10 @@ function ElementView({ element, frame, treatment }: { element: ElementProps; fra
       {element.media && <MediaSlot media={element.media} box={box} />}
       {box ? (
         <div data-testid="autofit" style={{ position: 'absolute', left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height: `${box.height}px`, overflow: 'hidden' }}>
-          <LottieLayer animationData={element.lottie} elementId={element.id} filter={filter} />
+          <LottieLayer animationData={element.lottie} elementId={element.id} filter={filter} callouts={element.callouts} startFrame={0} />
         </div>
       ) : (
-        <LottieLayer animationData={element.lottie} elementId={element.id} filter={filter} />
+        <LottieLayer animationData={element.lottie} elementId={element.id} filter={filter} callouts={element.callouts} startFrame={0} />
       )}
     </>
   );

@@ -52,6 +52,10 @@ Under Footage, "Find stock footage" now offers Pexels, Shutterstock, Filmpac, Fi
 
 Between two scene chips under the video sits a small marker: a bar for a cut, or the transition's name. Press it and pick Cut, Fade, Wipe or Slide right there.
 
+## 12. Call out a word (M56)
+
+Select a scene with a headline. Under its text field, "Call out a word": press a word, then Circle it, Underline it, Highlight it or Make it bigger. It draws on in the spot's accent, in the monitor and in the export alike.
+
 ## For you to do
 
 - Close After Effects (File > Exit); an unattended run left it open on an empty project.
