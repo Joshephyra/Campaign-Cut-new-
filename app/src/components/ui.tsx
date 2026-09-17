@@ -213,13 +213,13 @@ export function Section({
               type="button"
               aria-expanded={!collapsed}
               onClick={() => setCollapsed(!collapsed)}
-              className="inline-flex items-center gap-2 max-w-full text-left rounded-sm -ml-1 pl-1 pr-1 hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-blue"
+              className="inline-flex items-center gap-2 max-w-full whitespace-nowrap text-left rounded-sm -ml-1 pl-1 pr-1 hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-blue"
             >
               <ChevronDown size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" className={`shrink-0 text-fg-3 transition-transform duration-150 ${collapsed ? '-rotate-90' : ''}`} />
               {label}
             </button>
           ) : (
-            <span className="inline-flex items-center gap-2">{label}</span>
+            <span className="inline-flex items-center gap-2 whitespace-nowrap">{label}</span>
           )}
         </Heading>
         {action}

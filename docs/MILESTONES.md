@@ -887,6 +887,12 @@ Josh (2026-09-17): timing should be locked; spots are exactly :30, :15 and so on
 
 ---
 
+## M54 · Stock outlets · DONE
+
+- Find stock footage offers the outlets a campaign buys from: Pexels (live, M34), Shutterstock, Filmpac, Filmsupply and Envato. The choice is remembered per browser. An outlet with no key is designed in and marked not connected: its search answers "Shutterstock is not connected yet. Once its API key is in .env, this search runs against it." and its licence line says so. No keys are asked for (Josh, 2026-09-17: for design purposes).
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

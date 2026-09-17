@@ -44,6 +44,10 @@ The small caret beside **Export MP4** offers "All four versions": 16:9, 1:1, 4:5
 
 The length chips (:06 :15 :30 :60) sit beside the version chips. Under the video the facts read "14.0 s of 30.0 s". There is no length slider any more: scenes are the length their designer gave them, and the list beside Export says what to add or cut. Switch a :30 to :15 and press "Cut down to :15" in that list: proof points come out from the end until it fits. The starter pack's pieces add up: a :30 is Opening + three proof points + Vote end card; a :15 is Short opening + two short footage backgrounds + Learn more end card.
 
+## 10. Stock outlets (M54)
+
+Under Footage, "Find stock footage" now offers Pexels, Shutterstock, Filmpac, Filmsupply and Envato. Pexels searches for real once its key is in .env; the others are there to see and say "not connected yet" when searched.
+
 ## For you to do
 
 - Close After Effects (File > Exit); an unattended run left it open on an empty project.

@@ -54,3 +54,29 @@ describe('StockPanel', () => {
     await waitFor(() => expect(screen.getByText(/nothing matched/i)).toBeTruthy());
   });
 });
+
+
+/** M54: the outlets are there to choose; only Pexels searches for real until the other keys arrive. */
+describe('stock outlets (M54)', () => {
+  it('lists the five outlets, remembers the choice, and says an unconnected one is not connected instead of searching', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response('[]', { status: 200 }));
+    const { unmount } = render(<StockPanel onImported={() => {}} />);
+    const group = screen.getByRole('group', { name: 'Stock outlet' });
+    expect(Array.from(group.querySelectorAll('button')).map((b) => b.textContent?.replace(' (not connected)', ''))).toEqual(['Pexels', 'Shutterstock', 'Filmpac', 'Filmsupply', 'Envato']);
+    expect(screen.getByRole('button', { name: 'Pexels' }).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: /Shutterstock/ }));
+    expect(screen.getByTestId('stock-licence').textContent).toContain('Not connected yet');
+    fireEvent.change(screen.getByLabelText('Search stock footage'), { target: { value: 'rally' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+    await waitFor(() => expect(screen.getByText(/Shutterstock is not connected yet/)).toBeTruthy());
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes('/stock/search'))).toBe(false);
+    unmount();
+    render(<StockPanel onImported={() => {}} />);
+    expect(screen.getByRole('button', { name: /Shutterstock/ }).getAttribute('aria-pressed')).toBe('true'); // remembered
+    try {
+      window.localStorage.removeItem('cc.stock.outlet');
+    } catch {
+      /* no storage */
+    }
+  });
+});

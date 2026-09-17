@@ -3,6 +3,30 @@ import { useState } from 'react';
 import { api, type MediaAsset, type StockResult } from '../api';
 import { Button, ICON } from './ui';
 
+/**
+ * M54: the outlets a campaign buys footage from. Pexels searches for real
+ * (M34, with its key in .env). The others are designed in and marked not
+ * connected until their keys arrive: the search is there to press, the
+ * answer says what it would take.
+ */
+export const STOCK_OUTLETS = [
+  { id: 'pexels', name: 'Pexels', connected: true, licence: 'Clips come from Pexels under its licence; the photographer is credited in the clip\'s name.' },
+  { id: 'shutterstock', name: 'Shutterstock', connected: false, licence: 'Licensed per clip through the campaign\'s Shutterstock account.' },
+  { id: 'filmpac', name: 'Filmpac', connected: false, licence: 'Licensed through the campaign\'s Filmpac subscription.' },
+  { id: 'filmsupply', name: 'Filmsupply', connected: false, licence: 'Licensed per clip through Filmsupply.' },
+  { id: 'envato', name: 'Envato', connected: false, licence: 'Licensed through the campaign\'s Envato Elements subscription.' },
+] as const;
+export type StockOutlet = (typeof STOCK_OUTLETS)[number]['id'];
+
+function rememberedOutlet(): StockOutlet {
+  try {
+    const saved = window.localStorage.getItem('cc.stock.outlet');
+    return STOCK_OUTLETS.some((o) => o.id === saved) ? (saved as StockOutlet) : 'pexels';
+  } catch {
+    return 'pexels';
+  }
+}
+
 type Props = {
   /** The clip is in the footage now; the caller reloads its list. */
   onImported: (asset: MediaAsset) => void;
@@ -22,6 +46,18 @@ export function StockPanel({ onImported, bare = false }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [importing, setImporting] = useState<string | null>(null);
   const [imported, setImported] = useState<Set<string>>(new Set());
+  const [outletId, setOutletId] = useState<StockOutlet>(rememberedOutlet);
+  const outlet = STOCK_OUTLETS.find((o) => o.id === outletId) ?? STOCK_OUTLETS[0];
+  const chooseOutlet = (id: StockOutlet) => {
+    setOutletId(id);
+    setResults(null);
+    setError(null);
+    try {
+      window.localStorage.setItem('cc.stock.outlet', id);
+    } catch {
+      /* no storage: the choice lasts the session */
+    }
+  };
 
   const search = async () => {
     const q = query.trim();
@@ -29,6 +65,11 @@ export function StockPanel({ onImported, bare = false }: Props) {
     setSearching(true);
     setError(null);
     try {
+      if (!outlet.connected) {
+        setResults(null);
+        setError(`${outlet.name} is not connected yet. Once its API key is in .env, this search runs against it.`);
+        return;
+      }
       setResults(await api.searchStock(q));
     } catch (e) {
       setResults(null);
@@ -54,11 +95,26 @@ export function StockPanel({ onImported, bare = false }: Props) {
   return (
     <div className={bare ? '' : 'mt-4 pt-4 border-t border-line'}>
       {!bare && <h3 className="text-xs font-semibold text-fg-2 mb-2">Find stock footage</h3>}
+      <div role="group" aria-label="Stock outlet" className="flex flex-wrap gap-1 mb-2">
+        {STOCK_OUTLETS.map((o) => (
+          <button
+            key={o.id}
+            type="button"
+            aria-pressed={o.id === outletId}
+            title={o.connected ? `Search ${o.name}` : `${o.name}: not connected yet`}
+            onClick={() => chooseOutlet(o.id)}
+            className={`h-6 px-2 rounded-md text-[11px] font-medium transition-colors ${o.id === outletId ? 'bg-blue text-white' : 'bg-raised border border-line text-fg-2 hover:text-fg hover:bg-hover'}`}
+          >
+            {o.name}
+            {!o.connected && <span className="sr-only"> (not connected)</span>}
+          </button>
+        ))}
+      </div>
       <div className="flex items-center gap-2">
         <input
           aria-label="Search stock footage"
           value={query}
-          placeholder="rally crowd, capitol, farm…"
+          placeholder={outlet.connected ? 'rally crowd, capitol, farm…' : `Search ${outlet.name} (not connected yet)`}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') void search();
@@ -103,7 +159,10 @@ export function StockPanel({ onImported, bare = false }: Props) {
           })}
         </ul>
       )}
-      <p className="text-[11px] text-fg-3 mt-2">Clips come from Pexels under its licence; the photographer is credited in the clip's name.</p>
+      <p className="text-[11px] text-fg-3 mt-2" data-testid="stock-licence">
+        {outlet.licence}
+        {!outlet.connected && ' Not connected yet.'}
+      </p>
     </div>
   );
 }

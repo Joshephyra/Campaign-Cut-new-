@@ -4,6 +4,19 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M54 Stock outlets · DONE
+
+**What exists now**
+
+- `STOCK_OUTLETS` in `app/src/components/StockPanel.tsx`: Pexels (connected), Shutterstock, Filmpac, Filmsupply, Envato (designed in, not connected). Outlet chips above the search, remembered under `cc.stock.outlet`; an unconnected outlet's search answers with what it would take rather than calling the server; the licence line names the outlet.
+- Tests: 1. 545 tests green.
+
+**Verified**
+
+- Real browser: Pexels, Shutterstock, Filmpac, Filmsupply, Envato as chips under Find stock footage; Filmsupply chosen, the field reads "Search Filmsupply (not connected yet)", the licence line names Filmsupply and says not connected, and a search answers "Filmsupply is not connected yet." without calling the server. Section titles kept to one line after the capture showed them wrapping. Capture in .impeccable/review/m52-m54.png.
+
+---
+
 ## 2026-09-17 · M52 Timing locked; a spot is exactly its length · DONE
 
 **Why**
@@ -15,7 +28,7 @@ Josh's tweaks: timing locked, spots exactly :30 or :15, a :30 convertible to a :
 - `project.length_s` (migrated: a template's spot takes the template's seconds, a spot from nothing 30); `PATCH /projects/:id { lengthS }`; render props carry `lengthFrames`; `spotDurationFrames` in the composition gives both runners exactly the length.
 - The editor: length chips in the top bar, "14.0 s of 30.0 s" under the monitor, no Length slider, the readiness list's length row (blocking) with "Cut down to :15" when over (`cutDownToFit`: proof points hidden from the end with their overlays, gaps closed, opening and end card kept).
 - A headline is an overlay now (`SCENE_TYPES` without headline).
-- The starter pack re-authored at standard lengths (nineteen elements; VERIFIED_PACK).
+- The starter pack re-authored at standard lengths: nineteen elements (Opening 5 s, Short opening 3 s, Headline overlay 4 s, Short footage background 4 s added; footage backgrounds, stats and the pull quote at 6 s; Vote end card 7 s, Learn more end card 4 s), rebuilt in After Effects unattended, exported, rendered (a 90 s reference) and re-ingested; fidelity 12 of 12 within threshold, worst mean 3.09.
 - Tests: 1 server, 1 transitions, 2 compliance, 3 cut-down, 2 editor, 1 pack. The M30 Length-slider test is gone; the M35 test reads the list. 545 tests green (the M30 transport test flaked once under the full parallel run and passed alone, as before).
 
 **Verified**
