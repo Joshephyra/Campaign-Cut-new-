@@ -17,7 +17,7 @@ export function isElementType(v: unknown): v is ElementType {
  * library element lands when added, and where the playhead goes after,
  * follow from this.
  */
-export const SCENE_TYPES: readonly ElementType[] = ['open', 'headline', 'stat', 'background', 'end-card'];
+export const SCENE_TYPES: readonly ElementType[] = ['open', 'stat', 'background', 'end-card'];
 
 export function isSceneType(type: string): boolean {
   return (SCENE_TYPES as readonly string[]).includes(type);

@@ -4,10 +4,12 @@
   Run inside After Effects (File > Scripts > Run Script File), or unattended:
     node tools/ae-preflight/run-unattended.mjs --script tools/ae-preflight/starter-pack.jsx
 
-  It builds, from nothing, the "Starter pack": sixteen tagged comps, one per
-  element, covering every type the library offers (headline, lower thirds,
-  captions, callouts, stats, an overlay, backgrounds, end cards,
-  disclaimers). The handover folder on the Desktop gets numbered
+  It builds, from nothing, the "Starter pack": nineteen tagged comps, one per
+  element, covering every type the library offers, at the lengths a spot
+  adds up from (M52): openings at 5 s and 3 s, proof points at 6 s and 4 s,
+  end cards at 7 s and 4 s, so a :30 is 5 + 6 + 6 + 6 + 7 and a :15 is
+  3 + 4 + 4 + 4. Lower thirds, headlines, captions, callouts, bars and
+  disclaimers sit on those. The handover folder on the Desktop gets numbered
   sub-folders, fonts/ (Arial Regular, Arial Bold and Arial Narrow Bold
   copied from Windows with clean names), an elements.json marked
   libraryOnly (the pack feeds the picker; nobody starts a spot from it), an
@@ -61,7 +63,7 @@ var CC_PACK = (function () {
     ],
     comps: [
       {
-        slug: 'headline', name: 'Headline', type: 'headline', folder: '01-headline', seconds: 4,
+        slug: 'opening', name: 'Opening', type: 'open', folder: '01-opening', seconds: 5,
         layers: [
           { kind: 'solid', name: 'cc.mediaFill', rect: [0, 0, 1920, 1080], color: SLOT },
           { kind: 'shape', name: 'shade', rect: [0, 620, 1920, 460], fill: BLACK, opacity: 60, anim: { fadeIn: [0, 0.4] } },
@@ -70,7 +72,23 @@ var CC_PACK = (function () {
         ]
       },
       {
-        slug: 'lower-third-bar', name: 'Bar lower third', type: 'lower-third', folder: '02-lower-third-bar', seconds: 5,
+        slug: 'opening-short', name: 'Short opening', type: 'open', folder: '02-opening-short', seconds: 3,
+        layers: [
+          { kind: 'solid', name: 'cc.mediaFill', rect: [0, 0, 1920, 1080], color: SLOT },
+          { kind: 'shape', name: 'shade', rect: [0, 620, 1920, 460], fill: BLACK, opacity: 60, anim: { fadeIn: [0, 0.3] } },
+          { kind: 'shape', name: 'cc.accent', rect: [160, 690, 180, 14], fill: BLUE, anim: { scaleX: [0.1, 0.5] } },
+          { kind: 'text', name: 'cc.headline', text: 'A NEW DIRECTION', font: HEAD, size: 116, box: [1600, 300], pos: [160, 730], color: WHITE, anim: { fadeIn: [0.2, 0.6], slideY: [50, 0.2, 0.6] } }
+        ]
+      },
+      {
+        slug: 'headline', name: 'Headline', type: 'headline', folder: '03-headline', seconds: 4,
+        layers: [
+          { kind: 'shape', name: 'cc.accent', rect: [160, 690, 180, 14], fill: BLUE, anim: { scaleX: [0.2, 0.7], fadeOut: [3.6, 4] } },
+          { kind: 'text', name: 'cc.headline', text: 'LOWER COSTS. HIGHER WAGES.', font: HEAD, size: 116, box: [1600, 300], pos: [160, 730], color: WHITE, anim: { fadeIn: [0.3, 0.9], slideY: [50, 0.3, 0.9], fadeOut: [3.6, 4] } }
+        ]
+      },
+      {
+        slug: 'lower-third-bar', name: 'Bar lower third', type: 'lower-third', folder: '04-lower-third-bar', seconds: 5,
         layers: [
           { kind: 'shape', name: 'cc.surface', rect: [120, 860, 980, 130], fill: NAVY, anim: { slideX: [-1200, 0, 0.5], fadeOut: [4.5, 5] } },
           { kind: 'shape', name: 'cc.accent', rect: [120, 860, 14, 130], fill: BLUE, anim: { slideX: [-1200, 0, 0.5], fadeOut: [4.5, 5] } },
@@ -79,7 +97,7 @@ var CC_PACK = (function () {
         ]
       },
       {
-        slug: 'lower-third-stack', name: 'Stacked lower third', type: 'lower-third', folder: '03-lower-third-stack', seconds: 5,
+        slug: 'lower-third-stack', name: 'Stacked lower third', type: 'lower-third', folder: '05-lower-third-stack', seconds: 5,
         layers: [
           { kind: 'shape', name: 'cc.accent', rect: [120, 820, 700, 80], fill: BLUE, anim: { scaleX: [0, 0.4], fadeOut: [4.5, 5] } },
           { kind: 'text', name: 'cc.subhead', text: 'JANE EXAMPLE', font: HEAD, size: 60, box: [660, 70], pos: [140, 826], color: WHITE, anim: { fadeIn: [0.3, 0.6], fadeOut: [4.5, 5] } },
@@ -88,7 +106,7 @@ var CC_PACK = (function () {
         ]
       },
       {
-        slug: 'caption-boxed', name: 'Boxed caption', type: 'caption', folder: '04-caption-boxed', seconds: 4,
+        slug: 'caption-boxed', name: 'Boxed caption', type: 'caption', folder: '06-caption-boxed', seconds: 4,
         layers: [
           { kind: 'shape', name: 'cc.surface', rect: [360, 900, 1200, 110], fill: BLACK, opacity: 85, anim: { fadeIn: [0, 0.3], fadeOut: [3.6, 4] } },
           { kind: 'shape', name: 'cc.accent', rect: [360, 900, 1200, 6], fill: BLUE, anim: { scaleX: [0, 0.4], fadeOut: [3.6, 4] } },
@@ -96,14 +114,14 @@ var CC_PACK = (function () {
         ]
       },
       {
-        slug: 'caption-pop', name: 'Pop-on caption', type: 'caption', folder: '05-caption-pop', seconds: 3,
+        slug: 'caption-pop', name: 'Pop-on caption', type: 'caption', folder: '07-caption-pop', seconds: 3,
         layers: [
           { kind: 'shape', name: 'cc.accent', rect: [520, 460, 880, 160], fill: BLUE, anchor: 'center', anim: { pop: [0, 0.35], fadeOut: [2.6, 3] } },
           { kind: 'text', name: 'cc.headline', text: 'LOWER COSTS', font: HEAD, size: 104, box: [840, 130], pos: [540, 476], color: WHITE, align: 'center', anim: { pop: [0.05, 0.4], fadeOut: [2.6, 3] } }
         ]
       },
       {
-        slug: 'callout', name: 'Callout', type: 'callout', folder: '06-callout', seconds: 4,
+        slug: 'callout', name: 'Callout', type: 'callout', folder: '08-callout', seconds: 4,
         layers: [
           { kind: 'shape', name: 'cc.surface', rect: [1180, 120, 620, 250], fill: NAVY, anim: { slideX: [760, 0, 0.5], fadeOut: [3.5, 4] } },
           { kind: 'shape', name: 'cc.accent', rect: [1180, 120, 10, 250], fill: BLUE, anim: { slideX: [760, 0, 0.5], fadeOut: [3.5, 4] } },
@@ -112,7 +130,7 @@ var CC_PACK = (function () {
         ]
       },
       {
-        slug: 'stat-big', name: 'Big stat', type: 'stat', folder: '07-stat-big', seconds: 5,
+        slug: 'stat-big', name: 'Big stat', type: 'stat', folder: '09-stat-big', seconds: 6,
         layers: [
           { kind: 'shape', name: 'cc.surface', rect: [0, 0, 1920, 1080], fill: NAVY },
           { kind: 'text', name: 'cc.stat.1', text: '$1,200', font: HEAD, size: 320, box: [1600, 340], pos: [160, 250], color: WHITE, anim: { fadeIn: [0.2, 0.8], slideY: [40, 0.2, 0.8] } },
@@ -121,7 +139,7 @@ var CC_PACK = (function () {
         ]
       },
       {
-        slug: 'stat-pair', name: 'Two stats', type: 'stat', folder: '08-stat-pair', seconds: 5,
+        slug: 'stat-pair', name: 'Two stats', type: 'stat', folder: '10-stat-pair', seconds: 6,
         layers: [
           { kind: 'shape', name: 'cc.surface', rect: [0, 0, 1920, 1080], fill: NAVY },
           { kind: 'text', name: 'cc.stat.1', text: '3x', font: HEAD, size: 260, box: [760, 280], pos: [160, 300], color: WHITE, align: 'center', anim: { fadeIn: [0.2, 0.8], slideY: [40, 0.2, 0.8] } },
@@ -131,7 +149,7 @@ var CC_PACK = (function () {
         ]
       },
       {
-        slug: 'quote', name: 'Pull quote', type: 'callout', folder: '09-quote', seconds: 5,
+        slug: 'quote', name: 'Pull quote', type: 'background', folder: '11-quote', seconds: 6,
         layers: [
           { kind: 'solid', name: 'cc.mediaFill', rect: [0, 0, 1920, 1080], color: SLOT },
           { kind: 'shape', name: 'shade', rect: [0, 0, 1920, 1080], fill: BLACK, opacity: 60 },
@@ -141,14 +159,14 @@ var CC_PACK = (function () {
         ]
       },
       {
-        slug: 'top-bar', name: 'Top bar', type: 'overlay', folder: '10-top-bar', seconds: 4,
+        slug: 'top-bar', name: 'Top bar', type: 'overlay', folder: '12-top-bar', seconds: 4,
         layers: [
           { kind: 'shape', name: 'cc.accent', rect: [0, 0, 1920, 88], fill: BLUE, anim: { slideY: [-100, 0, 0.4], fadeOut: [3.5, 4] } },
           { kind: 'text', name: 'cc.subhead', text: 'BREAKING: NEW VOTING RECORD RELEASED', font: HEAD, size: 48, box: [1800, 60], pos: [60, 14], color: WHITE, anim: { fadeIn: [0.3, 0.6], fadeOut: [3.5, 4] } }
         ]
       },
       {
-        slug: 'background-split', name: 'Split background', type: 'background', folder: '11-background-split', seconds: 5,
+        slug: 'background-split', name: 'Split background', type: 'background', folder: '13-background-split', seconds: 6,
         layers: [
           { kind: 'solid', name: 'cc.mediaFill', rect: [960, 0, 960, 1080], color: SLOT },
           { kind: 'shape', name: 'cc.surface', rect: [0, 0, 960, 1080], fill: NAVY },
@@ -156,14 +174,21 @@ var CC_PACK = (function () {
         ]
       },
       {
-        slug: 'background-footage', name: 'Footage background', type: 'background', folder: '12-background-footage', seconds: 5,
+        slug: 'background-footage', name: 'Footage background', type: 'background', folder: '14-background-footage', seconds: 6,
         layers: [
           { kind: 'solid', name: 'cc.mediaFill', rect: [0, 0, 1920, 1080], color: SLOT },
           { kind: 'shape', name: 'cc.surface', rect: [0, 0, 1920, 1080], fill: NAVY, opacity: 45 }
         ]
       },
       {
-        slug: 'end-card-vote', name: 'Vote end card', type: 'end-card', folder: '13-end-card-vote', seconds: 5,
+        slug: 'background-footage-short', name: 'Short footage background', type: 'background', folder: '15-background-footage-short', seconds: 4,
+        layers: [
+          { kind: 'solid', name: 'cc.mediaFill', rect: [0, 0, 1920, 1080], color: SLOT },
+          { kind: 'shape', name: 'cc.surface', rect: [0, 0, 1920, 1080], fill: NAVY, opacity: 45 }
+        ]
+      },
+      {
+        slug: 'end-card-vote', name: 'Vote end card', type: 'end-card', folder: '16-end-card-vote', seconds: 7,
         layers: [
           { kind: 'shape', name: 'cc.surface', rect: [0, 0, 1920, 1080], fill: NAVY },
           { kind: 'text', name: 'cc.headline', text: 'VOTE NOVEMBER 3', font: HEAD, size: 160, box: [1600, 190], pos: [160, 290], color: WHITE, align: 'center', anim: { fadeIn: [0.2, 0.8], slideY: [40, 0.2, 0.8] } },
@@ -174,7 +199,7 @@ var CC_PACK = (function () {
         ]
       },
       {
-        slug: 'end-card-learn', name: 'Learn more end card', type: 'end-card', folder: '14-end-card-learn', seconds: 5,
+        slug: 'end-card-learn', name: 'Learn more end card', type: 'end-card', folder: '17-end-card-learn', seconds: 4,
         layers: [
           { kind: 'solid', name: 'cc.mediaFill', rect: [1056, 0, 864, 1080], color: SLOT },
           { kind: 'shape', name: 'cc.surface', rect: [0, 0, 1056, 1080], fill: NAVY },
@@ -186,14 +211,14 @@ var CC_PACK = (function () {
         ]
       },
       {
-        slug: 'disclaimer-bar', name: 'Disclaimer bar', type: 'disclaimer', folder: '15-disclaimer-bar', seconds: 4,
+        slug: 'disclaimer-bar', name: 'Disclaimer bar', type: 'disclaimer', folder: '18-disclaimer-bar', seconds: 4,
         layers: [
           { kind: 'shape', name: 'cc.surface', rect: [0, 1000, 1920, 80], fill: BLACK, opacity: 80, anim: { fadeIn: [0, 0.3] } },
           { kind: 'text', name: 'cc.safe.disclaimer', text: 'Paid for by Example Committee. Approved by Jane Example.', font: TEXT, size: 28, box: [1800, 40], pos: [60, 1020], color: WHITE, anim: { fadeIn: [0.1, 0.4] } }
         ]
       },
       {
-        slug: 'disclaimer-card', name: 'Disclaimer card', type: 'disclaimer', folder: '16-disclaimer-card', seconds: 4,
+        slug: 'disclaimer-card', name: 'Disclaimer card', type: 'disclaimer', folder: '19-disclaimer-card', seconds: 4,
         layers: [
           { kind: 'shape', name: 'cc.surface', rect: [0, 0, 1920, 1080], fill: NAVY },
           { kind: 'image', name: 'cc.logo', file: 'logo', pos: [860, 300], scale: 100, anim: { fadeIn: [0.1, 0.5] } },

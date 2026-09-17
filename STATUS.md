@@ -4,6 +4,26 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M52 Timing locked; a spot is exactly its length · DONE
+
+**Why**
+
+Josh's tweaks: timing locked, spots exactly :30 or :15, a :30 convertible to a :15.
+
+**What exists now**
+
+- `project.length_s` (migrated: a template's spot takes the template's seconds, a spot from nothing 30); `PATCH /projects/:id { lengthS }`; render props carry `lengthFrames`; `spotDurationFrames` in the composition gives both runners exactly the length.
+- The editor: length chips in the top bar, "14.0 s of 30.0 s" under the monitor, no Length slider, the readiness list's length row (blocking) with "Cut down to :15" when over (`cutDownToFit`: proof points hidden from the end with their overlays, gaps closed, opening and end card kept).
+- A headline is an overlay now (`SCENE_TYPES` without headline).
+- The starter pack re-authored at standard lengths (nineteen elements; VERIFIED_PACK).
+- Tests: 1 server, 1 transitions, 2 compliance, 3 cut-down, 2 editor, 1 pack. The M30 Length-slider test is gone; the M35 test reads the list. 545 tests green (the M30 transport test flaked once under the full parallel run and passed alone, as before).
+
+**Verified**
+
+- Real browser on spot 9 (14 s of content): chips :06 :15 :30 :60 with :30 pressed, the gauge "14.0 s of 30.0 s", no Timing section, the pill "3 to check" blocked, the length row "The spot is 14.0 s; a :30 must be exactly 30.0 s. Add 16.0 s of scenes."; pressing :15 saved 15 and the gauge read "14.0 s of 15.0 s" with "Add 1.0 s of scenes"; back to :30 saved 30.
+
+---
+
 ## 2026-09-17 · M53 Collapsible sections · DONE
 
 **What exists now**

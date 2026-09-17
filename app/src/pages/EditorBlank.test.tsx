@@ -26,7 +26,7 @@ const item = (id: number, slug: string, type: string, frames: number) => ({
   id, slug, name: slug, type, durationInFrames: frames, templateId: 2, templateSlug: 'pack', templateName: 'Starter pack', thumbUrl: '',
   lottieUrl: `/templates/pack/elements/${slug}/template.json`, schema: schema('headline'), fontFiles: [],
 });
-const library = [item(20, 'background', 'background', 150), item(21, 'headline', 'headline', 120), item(22, 'lower-third', 'lower-third', 150)];
+const library = [item(20, 'background', 'background', 150), item(21, 'stat', 'stat', 120), item(22, 'lower-third', 'lower-third', 150)];
 
 function mockApi() {
   const adds: { elementId: number; startFrame: number }[] = [];
@@ -67,7 +67,7 @@ describe('Editor: a spot from nothing (M41)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add a scene' }));
     await waitFor(() => expect(screen.getByRole('dialog', { name: 'Add to the spot' })).toBeTruthy());
-    fireEvent.click(screen.getByRole('button', { name: 'Add headline from Starter pack' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add stat from Starter pack' }));
     await waitFor(() => expect(adds).toHaveLength(2));
     expect(adds[1]).toEqual({ elementId: 21, startFrame: 150 });
     await waitFor(() => expect(screen.getByTestId('player').getAttribute('data-seek')).toBe('270'));

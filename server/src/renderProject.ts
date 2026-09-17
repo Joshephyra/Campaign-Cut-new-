@@ -111,7 +111,10 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase, run
   // M39: the treatment across the spot; glow takes the spot's accent from its values.
   const treatment = treatmentFor(project.treatment, rows.map((e) => ({ schema: files.get(e.id)!.schema, values: valuesFor(e.id) }))) ?? null;
 
-  return { background, audio, elements, transitions, fonts, frame, treatment };
+  // M52: the spot plays exactly its length.
+  const lengthFrames = project.lengthS > 0 ? Math.round(project.lengthS * compositionConfig.fps) : null;
+
+  return { background, audio, elements, transitions, fonts, frame, treatment, lengthFrames };
 }
 
 /**

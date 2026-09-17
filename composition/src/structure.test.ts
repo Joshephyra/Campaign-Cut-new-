@@ -9,7 +9,7 @@ describe('structureOf', () => {
     const s = structureOf([
       el(1, 'background', 0, 150),
       el(2, 'lower-third', 30, 150),
-      el(3, 'headline', 150, 270),
+      el(3, 'stat', 150, 270),
       el(4, 'caption', 150, 240),
       el(5, 'stat', 270, 420),
       el(6, 'end-card', 420, 570),

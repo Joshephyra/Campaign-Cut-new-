@@ -42,7 +42,7 @@ describe('landingFrame', () => {
 
 describe('frameAfterLanding', () => {
   it('moves the playhead on after a scene and leaves it on the scene after an overlay', () => {
-    expect(frameAfterLanding('headline', { startFrame: 120, endFrame: 240 }, 150)).toBe(240);
+    expect(frameAfterLanding('stat', { startFrame: 120, endFrame: 240 }, 150)).toBe(240);
     expect(frameAfterLanding('lower-third', { startFrame: 120, endFrame: 240 }, 150)).toBe(150);
   });
 });

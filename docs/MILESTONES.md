@@ -870,6 +870,23 @@ Josh (2026-09-17): a political spot is an opening, three or four proof points in
 
 ---
 
+## M52 · Timing locked; a spot is exactly its length · DONE
+
+Josh (2026-09-17): timing should be locked; spots are exactly :30, :15 and so on; a :30 must be convertible to a :15.
+
+**Build**
+- A spot has a length (`project.length_s`: a template's spot takes the template's; a spot from nothing is a :30; PATCH changes it, 1 to 120 whole seconds). Both runners play exactly that long (`lengthFrames` in the props; `spotDurationFrames`).
+- Timing is the designer's: the Length slider is gone. Scenes keep the lengths they were authored at.
+- Top bar: length chips :06 · :15 · :30 · :60 beside the version chips. Under the monitor the facts read "14.0 s of 30.0 s". The readiness list leads with the length and blocks until the content is exact ("Add 16.0 s of scenes" / "Cut 15.0 s of scenes, or make it longer").
+- Cut down: on the length row when the content runs over, "Cut down to :15" hides proof points from the end, each with the overlays on it, closing the gaps, until the content fits (`app/src/cutdown.ts`); the opening and a closing end card stay; undo and Show bring scenes back.
+- A headline is text on a scene, not a scene: `SCENE_TYPES` is open, stat, background, end card.
+- The starter pack is re-authored at standard lengths so spots add up: openings 5 s and 3 s, proof points 6 s and 4 s, end cards 7 s and 4 s (a :30 is 5 + 6 + 6 + 6 + 7; a :15 is 3 + 4 + 4 + 4), with a Headline overlay and a Short opening and Short footage background added.
+
+**Tests**
+- Length on the project (default, PATCH, duplicate, render props); the spot's duration; the readiness length rule; the cut-down; the editor's chips, gauge, block and cut-down; the pack's sums.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

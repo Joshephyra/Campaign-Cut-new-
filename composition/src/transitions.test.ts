@@ -100,3 +100,15 @@ describe('transitions skip overlapping elements (M31)', () => {
     expect(out.chains.map((c) => c.elementIds)).toEqual([['open'], ['lower']]);
   });
 });
+
+
+describe('spotDurationFrames (M52)', () => {
+  it('plays exactly the spot\'s length when it has one, else the content\'s end', async () => {
+    const { spotDurationFrames } = await import('./transitions');
+    const elements = [{ id: 'a', lottie: { fr: 30, ip: 0, op: 1, w: 1920, h: 1080, layers: [] }, startFrame: 0, endFrame: 120, zIndex: 0, enabled: true }];
+    expect(spotDurationFrames(elements, [], 900)).toBe(900);
+    expect(spotDurationFrames(elements, [], 90)).toBe(90);
+    expect(spotDurationFrames(elements, [], null)).toBe(120);
+    expect(spotDurationFrames(elements, [], undefined)).toBe(120);
+  });
+});

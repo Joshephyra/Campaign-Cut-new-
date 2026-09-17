@@ -106,7 +106,7 @@ export type RenderJob = {
 export type ProjectTransition = { afterElementId: number; preset: TransitionPreset; durationInFrames: number };
 
 export type ProjectDetail = {
-  project: { id: number; name: string; templateId: number; templateSlug: string; templateName: string; clientId?: number | null; clientName?: string | null; aspect?: string; treatment?: string };
+  project: { id: number; name: string; templateId: number; templateSlug: string; templateName: string; clientId?: number | null; clientName?: string | null; aspect?: string; treatment?: string; lengthS?: number };
   template: TemplateSummary;
   /** M36: the frame this version renders at. Absent means 16:9. */
   frame?: { width: number; height: number };
@@ -226,6 +226,9 @@ export const api = {
       body: JSON.stringify({ name }),
     }).then((r) => json<ProjectRow>(r)),
 
+  /** M52: the spot's length in seconds. */
+  setLength: (id: number, lengthS: number) =>
+    fetch(`${API}/projects/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ lengthS }) }).then((r) => json<ProjectRow>(r)),
   /** M39: the style treatment across the spot. */
   setTreatment: (id: number, treatment: string) =>
     fetch(`${API}/projects/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ treatment }) }).then((r) => json<ProjectRow>(r)),

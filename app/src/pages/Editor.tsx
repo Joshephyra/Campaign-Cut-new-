@@ -10,7 +10,10 @@ import {
   isAspect,
   type Aspect,
   type Frame,
-  compositionDurationWithTransitions,
+  contentSeconds,
+  lengthLabel,
+  SPOT_LENGTHS,
+  spotDurationFrames,
   DEFAULT_TRANSFORM,
   DEFAULT_TRANSITION_FRAMES,
   ELEMENT_TYPE_LABELS,
@@ -62,6 +65,7 @@ import { StylePanel } from '../components/StylePanel';
 import { ElementPreview, previewValues } from '../components/ElementPreview';
 import { frameAfterLanding, landingFrame } from '../landing';
 import { moveOverlayToScene, reorderScenes } from '../reorder';
+import { cutDownToFit } from '../cutdown';
 import { ExportHistory } from '../components/ExportHistory';
 import { ExportPanel } from '../components/ExportPanel';
 import { Inspector } from '../components/Inspector';
@@ -204,6 +208,35 @@ export function Editor({ projectId, onBack }: Props) {
   // M39: the style treatment across the spot. Applied at once in the
   // Player; saved through the project route. Both runners read it from props.
   const [treatment, setTreatment] = useState<Treatment>('clean');
+  // M52: the spot's length. Timing is the designer's; the length is the spot's, and the content must fit it exactly.
+  const [lengthS, setLengthS] = useState<number>(30);
+  useEffect(() => {
+    const saved = loaded?.detail.project.lengthS;
+    setLengthS(typeof saved === 'number' && saved > 0 ? saved : 30);
+  }, [loaded]);
+  const changeLength = async (next: number) => {
+    if (next === lengthS) return;
+    setLengthS(next);
+    setSaveState('saving');
+    try {
+      await api.setLength(projectId, next);
+      setSaveState('saved');
+    } catch (e) {
+      setError((e as Error).message);
+      setSaveState('error');
+    }
+  };
+  /** M52: hide proof points from the end until the content fits the length; what follows moves back. Undo brings them back. */
+  const cutDown = () => {
+    const { hide, patches } = cutDownToFit(elements, Math.round(lengthS * compositionConfig.fps));
+    if (hide.length === 0 && patches.size === 0) return;
+    changeKey.current = `cutdown:${lengthS}`;
+    setElements((prev) => prev.map((e) => (hide.includes(e.id) ? { ...e, enabled: false, ...(patches.get(e.id) ?? {}) } : patches.has(e.id) ? { ...e, ...patches.get(e.id) } : e)));
+    for (const id of hide) pendingPatches.current.set(id, { ...pendingPatches.current.get(id), enabled: false });
+    for (const [id, patch] of patches) pendingPatches.current.set(id, { ...pendingPatches.current.get(id), ...patch });
+    setSaveState('dirty');
+    flushPatches();
+  };
   useEffect(() => {
     const saved = loaded?.detail.project.treatment;
     setTreatment(isTreatment(saved) ? saved : 'clean');
@@ -308,30 +341,6 @@ export function Editor({ projectId, onBack }: Props) {
     changeKey.current = `element:${id}`;
     setElements((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
     pendingPatches.current.set(id, { ...pendingPatches.current.get(id), ...patch });
-    setSaveState('dirty');
-    flushPatches();
-  };
-
-  /**
-   * M30: make an element longer or shorter. Everything that started after
-   * it ended moves with its end, so the spot stays as the designer paced
-   * it; an element that overlapped it keeps its place.
-   */
-  const onLengthChange = (id: number, frames: number) => {
-    const target = elements.find((e) => e.id === id);
-    if (!target) return;
-    const oldEnd = target.endFrame;
-    const newEnd = target.startFrame + Math.max(1, Math.round(frames));
-    const delta = newEnd - oldEnd;
-    if (delta === 0) return;
-    changeKey.current = `length:${id}`;
-    const patches = new Map<number, ElementPatch>();
-    patches.set(id, { startFrame: target.startFrame, endFrame: newEnd });
-    for (const e of elements) {
-      if (e.id !== id && e.startFrame >= oldEnd) patches.set(e.id, { startFrame: e.startFrame + delta, endFrame: e.endFrame + delta });
-    }
-    setElements((prev) => prev.map((e) => (patches.has(e.id) ? { ...e, ...patches.get(e.id) } : e)));
-    for (const [elementId, patch] of patches) pendingPatches.current.set(elementId, { ...pendingPatches.current.get(elementId), ...patch });
     setSaveState('dirty');
     flushPatches();
   };
@@ -522,8 +531,8 @@ export function Editor({ projectId, onBack }: Props) {
   // M35: the one compliance check, the same rule the export enforces.
   // M49: everything to check before an export, in one list (the disclaimer blocks; footage, logo and words are notes).
   const ready = useMemo(
-    () => readiness(elements.map((e) => ({ name: e.name, enabled: e.enabled, startFrame: e.startFrame, endFrame: e.endFrame, schema: e.schema, values: values[e.id] ?? {} })), compositionConfig.fps),
-    [elements, values],
+    () => readiness(elements.map((e) => ({ name: e.name, enabled: e.enabled, startFrame: e.startFrame, endFrame: e.endFrame, schema: e.schema, values: values[e.id] ?? {} })), compositionConfig.fps, lengthS),
+    [elements, values, lengthS],
   );
 
 
@@ -712,6 +721,22 @@ export function Editor({ projectId, onBack }: Props) {
         />
         <div className="flex items-center gap-3 shrink-0 justify-end">
           {loaded && (
+            <div role="group" aria-label="Spot length" title="A spot is exactly its length. Change it and the list beside Export says what to add or cut." className="inline-flex items-center rounded-md bg-raised border border-line p-0.5">
+              {[...new Set<number>([...SPOT_LENGTHS, lengthS])].sort((a, b) => a - b).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  aria-label={`Length ${lengthLabel(s)}`}
+                  aria-pressed={s === lengthS}
+                  onClick={() => void changeLength(s)}
+                  className={`h-7 px-2.5 rounded-[6px] text-xs font-medium tabular-nums transition-colors ${s === lengthS ? 'bg-blue text-white' : 'text-fg-2 hover:text-fg hover:bg-hover'}`}
+                >
+                  {lengthLabel(s)}
+                </button>
+              ))}
+            </div>
+          )}
+          {loaded && (
             <div role="group" aria-label="Version" className="inline-flex items-center rounded-md bg-raised border border-line p-0.5">
               {ASPECTS.map((a) => (
                 <button
@@ -735,7 +760,7 @@ export function Editor({ projectId, onBack }: Props) {
             </span>
           )}
           <span className="text-xs w-20 text-right">{loaded && <SaveIndicator state={saveState} />}</span>
-          {loaded && <ExportPanel projectId={projectId} onFinished={() => setExportsTick((t) => t + 1)} readiness={ready} aspect={aspect} projectName={loaded.detail.project.name} />}
+          {loaded && <ExportPanel projectId={projectId} onFinished={() => setExportsTick((t) => t + 1)} readiness={ready} aspect={aspect} projectName={loaded.detail.project.name} onCutDown={cutDown} lengthLabel={lengthLabel(lengthS)} />}
         </div>
       </header>
 
@@ -801,6 +826,7 @@ export function Editor({ projectId, onBack }: Props) {
             onSelect={setSelectedId}
             frameSize={frame}
             treatment={treatment}
+            lengthS={lengthS}
             schemaFor={schemaFor}
             onPress={onPress}
             onDrag={onDrag}
@@ -871,19 +897,6 @@ export function Editor({ projectId, onBack }: Props) {
                     activeKey={active && active.elementId === selected.id ? active.key : null}
                   />
                 </div>
-                <Section title="Timing" id="timing">
-                  <Slider
-                    label={`${selected.name} length`}
-                    name="Length"
-                    min={1}
-                    max={Math.max(10, Math.ceil(seconds(selected.endFrame - selected.startFrame) * 2))}
-                    step={0.5}
-                    value={Math.round(seconds(selected.endFrame - selected.startFrame) * 2) / 2}
-                    format={(v) => `${v.toFixed(1)} s`}
-                    onChange={(s) => onLengthChange(selected.id, s * compositionConfig.fps)}
-                  />
-                  <p className="text-[11px] text-fg-3 mt-1.5">Lengthen it when the footage needs more room. What follows moves with it.</p>
-                </Section>
                 {boundaries.has(selected.id) && (
                   <Section title="How it ends" id="how-it-ends">
                     <TransitionControl element={selected} transition={transitions.find((t) => t.afterElementId === selected.id)} onChange={(t) => void onTransitionChange(selected.id, t)} />
@@ -1233,6 +1246,7 @@ function Monitor({
   onSelect,
   frameSize,
   treatment,
+  lengthS,
   schemaFor,
   onPress,
   onDrag,
@@ -1257,6 +1271,8 @@ function Monitor({
   frameSize: Frame;
   /** M39: the style treatment across the spot. */
   treatment: Treatment;
+  /** M52: the spot's length in seconds; it plays exactly this long. */
+  lengthS: number;
   /** M28: an element's schema, to know which layers on screen are placements. */
   schemaFor: (elementId: number) => TemplateParam[] | undefined;
   /** M28: a press on an editable layer: select its element and make that placement the active one. */
@@ -1490,10 +1506,12 @@ function Monitor({
       frame: frameSize,
       // M39: the treatment, with the spot's accent for glow, the way the export runner builds it
       treatment: treatmentFor(treatment, elements.map((e) => ({ schema: e.schema, values: values[e.id] ?? {} }))) ?? null,
+      lengthFrames: Math.round(lengthS * compositionConfig.fps),
     }),
-    [detail.meta, audioProps, elementProps, transitionProps, fonts, frameSize, treatment, elements, values],
+    [detail.meta, audioProps, elementProps, transitionProps, fonts, frameSize, treatment, elements, values, lengthS],
   );
-  const durationInFrames = compositionDurationWithTransitions(elementProps, transitionProps);
+  const durationInFrames = spotDurationFrames(elementProps, transitionProps, Math.round(lengthS * compositionConfig.fps));
+  const contentS = contentSeconds(elements, compositionConfig.fps);
 
   // Playhead: follow the Player, and drive it from the scene strip and the
   // transport. The Player's own chrome is off: the transport is drawn under
@@ -1793,7 +1811,9 @@ function Monitor({
                 {frameSize.width}×{frameSize.height}
               </span>
               <span>{compositionConfig.fps} fps</span>
-              <span>{seconds(durationInFrames).toFixed(1)} s</span>
+              <span data-testid="length-gauge" title={contentS === lengthS ? 'The content is exactly the length' : contentS < lengthS ? `${(lengthS - contentS).toFixed(1)} s to fill` : `${(contentS - lengthS).toFixed(1)} s over`}>
+                {contentS.toFixed(1)} s of {lengthS.toFixed(1)} s
+              </span>
               {hasFootage && <span>preview at proxy quality</span>}
             </span>
             {perf && (

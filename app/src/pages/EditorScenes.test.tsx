@@ -12,9 +12,9 @@ afterEach(() => {
 /**
  * M30: there is no timeline. The elements are a strip of scene chips under
  * the monitor: pressing one selects it and moves the player to its start so
- * the user sees what they are about to edit. Timing is the designer's,
- * except a Length slider in the element's panel that ripples the elements
- * that follow. Show/hide and "how it ends" live in the panel too.
+ * the user sees what they are about to edit. Timing is the designer's
+ * (M52: the length is the spot's). Show/hide and "how it ends" live in the
+ * panel.
  */
 const textLottie = (text: string) => ({ fr: 30, ip: 0, op: 90, w: 1920, h: 1080, layers: [{ ty: 5, nm: 'cc.headline', t: { d: { k: [{ s: { t: text, f: 'X', s: 10 }, t: 0 }] } } }] });
 
@@ -122,25 +122,6 @@ describe('Editor scenes (M30)', () => {
     await waitFor(() => expect(screen.queryByRole('group', { name: /Transition after/ })).toBeNull()); // the last element ends the spot
   });
 
-  it('the Length slider changes an element\'s length in seconds and ripples the elements that start after it', async () => {
-    const calls = mockApi();
-    await open();
-    const length = screen.getByLabelText('Open length') as HTMLInputElement;
-    expect(length.type).toBe('range');
-    expect(length.value).toBe('3');
-    fireEvent.change(length, { target: { value: '4' } });
-    await waitFor(() =>
-      expect(playerElements()).toEqual([
-        ['3', 0, 120, true],
-        ['4', 60, 120, true], // overlaps the open: untouched
-        ['5', 210, 300, true], // started after the open ended: moved by a second
-      ]),
-    );
-    await waitFor(() => {
-      const patches = calls.filter((c) => c.init?.method === 'PUT' && c.url.includes('/elements/')).map((c) => [c.url, JSON.parse(c.init!.body as string)]);
-      expect(patches).toEqual(expect.arrayContaining([['/api/projects/7/elements/3', { startFrame: 0, endFrame: 120 }], ['/api/projects/7/elements/5', { startFrame: 210, endFrame: 300 }]]));
-    });
-  });
 });
 
 

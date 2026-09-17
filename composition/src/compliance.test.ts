@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DISCLAIMER_MIN_SECONDS, disclaimerCheck, disclaimerSeconds, emptySlots, readiness } from './compliance';
+import { DISCLAIMER_MIN_SECONDS, disclaimerCheck, disclaimerSeconds, emptySlots, readiness, SPOT_LENGTHS, lengthLabel, contentSeconds } from './compliance';
 
 /**
  * M35: the one compliance check. A disclaimer must be on screen for at
@@ -87,5 +87,28 @@ describe('readiness (M49)', () => {
     const scene = (name: string, i: number) => ({ name, enabled: true, startFrame: i * 10, endFrame: i * 10 + 10, schema: [text('headline', 'X')], values: {} });
     const r = readiness(['A', 'B', 'C', 'D', 'E'].map(scene), 30);
     expect(r.items.find((i) => i.key === 'words')!.message).toBe("Still the designer's words in 5 scenes: A, B, C and 2 more");
+  });
+});
+
+
+describe('readiness: the spot\'s length (M52)', () => {
+  const disclaimer = { kind: 'text', role: 'safe.disclaimer', key: 'disclaimer', default: 'Paid for by Example' };
+  const scene = (name: string, startFrame: number, endFrame: number) => ({ name, enabled: true, startFrame, endFrame, schema: [disclaimer], values: { disclaimer: 'Paid for by Us' } });
+
+  it('blocks until the content is exactly the length, and says whether to add or cut', () => {
+    expect(readiness([scene('a', 0, 900)], 30, 30).items[0]).toMatchObject({ key: 'length', ok: true, blocking: true, message: 'Exactly 30.0 s, a :30' });
+    const short = readiness([scene('a', 0, 810)], 30, 30);
+    expect(short.items[0]).toMatchObject({ key: 'length', ok: false, blocking: true, message: 'The spot is 27.0 s; a :30 must be exactly 30.0 s. Add 3.0 s of scenes.' });
+    expect(short.blocked).toBe(true);
+    const long = readiness([scene('a', 0, 990)], 30, 15);
+    expect(long.items[0]).toMatchObject({ key: 'length', ok: false, over: true, message: 'The spot is 33.0 s; a :15 must be exactly 15.0 s. Cut 18.0 s of scenes, or make it longer.' });
+    expect(readiness([scene('a', 0, 900)], 30, null).items.map((i) => i.key)).toEqual(['disclaimer']);
+  });
+
+  it('labels lengths and measures content from the last enabled end', () => {
+    expect(SPOT_LENGTHS).toEqual([6, 15, 30, 60]);
+    expect(lengthLabel(6)).toBe(':06');
+    expect(lengthLabel(30)).toBe(':30');
+    expect(contentSeconds([{ enabled: true, endFrame: 450 }, { enabled: false, endFrame: 900 }], 30)).toBe(15);
   });
 });

@@ -63,13 +63,10 @@ describe('the starter pack plan obeys the ingest rules', () => {
     expect(PLAN.name).toBe('Starter pack');
   });
 
-  it('has at least fourteen elements covering every library type but "open"', () => {
-    expect(PLAN.comps.length).toBeGreaterThanOrEqual(14);
+  it('has at least eighteen elements covering every library type', () => {
+    expect(PLAN.comps.length).toBeGreaterThanOrEqual(18);
     const types = new Set(PLAN.comps.map((c) => c.type));
-    for (const type of ELEMENT_TYPES) {
-      if (type === 'open') continue;
-      expect(types.has(type), `no element of type ${type}`).toBe(true);
-    }
+    for (const type of ELEMENT_TYPES) expect(types.has(type), `no element of type ${type}`).toBe(true);
     for (const c of PLAN.comps) expect((ELEMENT_TYPES as readonly string[]).includes(c.type), `${c.slug}: type ${c.type}`).toBe(true);
   });
 
@@ -117,6 +114,15 @@ describe('the starter pack plan obeys the ingest rules', () => {
       if (comp.type === 'background') expect(tags, `${comp.slug} needs footage or a surface`).toEqual(expect.arrayContaining([expect.stringMatching(/^cc\.(mediaFill|surface)$/)]));
       expect(tags.some((t) => t === 'cc.accent' || t === 'cc.surface'), `${comp.slug} has no colour role`).toBe(true);
     }
+  });
+
+  it('adds up to a :30 and a :15 from its standard lengths (M52)', () => {
+    const by = (slug: string) => PLAN.comps.find((c) => c.slug === slug)!.seconds;
+    expect(by('opening') + by('background-footage') + by('stat-big') + by('quote') + by('end-card-vote')).toBe(30);
+    expect(by('opening-short') + by('background-footage-short') + by('background-footage-short') + by('end-card-learn')).toBe(15);
+    expect(PLAN.comps.filter((c) => c.type === 'open').map((c) => c.seconds).sort()).toEqual([3, 5]);
+    expect(PLAN.comps.filter((c) => c.type === 'background').map((c) => c.seconds).sort()).toEqual([4, 6, 6, 6]);
+    expect(PLAN.comps.filter((c) => c.type === 'end-card').map((c) => c.seconds).sort()).toEqual([4, 7]);
   });
 
   it('keeps every disclaimer on screen for the four seconds the rule needs', () => {

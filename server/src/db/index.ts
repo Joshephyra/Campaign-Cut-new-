@@ -50,7 +50,7 @@ export type LibraryElement = {
 
 export type ProjectValue = { elementId: number; key: string; value: unknown };
 
-export type ProjectInput = { templateId: number; name: string; values: ProjectValue[]; clientId?: number | null };
+export type ProjectInput = { templateId: number; name: string; values: ProjectValue[]; clientId?: number | null; /** M52: seconds; 30 when not given. */ lengthS?: number };
 
 export type ProjectRow = {
   id: number;
@@ -65,6 +65,8 @@ export type ProjectRow = {
   aspect: string;
   /** M39: the style treatment across the spot; clean by default. */
   treatment: string;
+  /** M52: the spot's length in seconds (a :30 is 30). */
+  lengthS: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -193,6 +195,8 @@ export type Db = Database.Database & {
   setProjectAspect(id: number, aspect: string): void;
   /** M39: the style treatment across the spot. */
   setProjectTreatment(id: number, treatment: string): void;
+  /** M52: the spot's length in seconds. */
+  setProjectLength(id: number, lengthS: number): void;
   /** M22: copy values, timeline overrides, transitions and the music bed into a new project. */
   duplicateProject(id: number, name: string): { id: number };
   /** M22: the project and everything that hangs off it (rendered files stay on disk). */
@@ -352,6 +356,12 @@ export function openDb(file: string): Db {
   if (!projectColumns.includes('aspect')) db.exec(`ALTER TABLE project ADD COLUMN aspect TEXT NOT NULL DEFAULT '16:9'`);
   // M39: a project has a style treatment; everything before was clean.
   if (!projectColumns.includes('treatment')) db.exec(`ALTER TABLE project ADD COLUMN treatment TEXT NOT NULL DEFAULT 'clean'`);
+  // M52: a spot has a fixed length; spots before then take their template's length, 30 for one from nothing.
+  if (!projectColumns.includes('length_s')) {
+    db.exec(`ALTER TABLE project ADD COLUMN length_s INTEGER NOT NULL DEFAULT 30`);
+    db.exec(`UPDATE project SET length_s = MAX(1, ROUND((SELECT t.duration_frames * 1.0 / t.fps FROM template t WHERE t.id = project.template_id)))
+             WHERE (SELECT t.duration_frames FROM template t WHERE t.id = project.template_id) > 0`);
+  }
   // M45: scenes replaced per-project element rows. A scene's id is its element's id the first time (so nothing
   // else needs translating); the old rows move over with scene_id = element_id.
   const hadElementRows = (db.prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'project_element'`).get() as { name: string } | undefined) !== undefined;
@@ -403,6 +413,7 @@ export function openDb(file: string): Db {
     renameProject: (id: number, name: string) => renameProject(db, id, name),
     setProjectAspect: (id: number, aspect: string) => setProjectAspect(db, id, aspect),
     setProjectTreatment: (id: number, treatment: string) => setProjectTreatment(db, id, treatment),
+    setProjectLength: (id: number, lengthS: number) => setProjectLength(db, id, lengthS),
     duplicateProject: (id: number, name: string) => duplicateProject(db, id, name),
     deleteProject: (id: number) => deleteProject(db, id),
     setProjectValues: (projectId: number, values: ProjectValue[]) => setProjectValues(db, projectId, values),
@@ -816,12 +827,12 @@ function deleteTemplateElementsExcept(db: Database.Database, templateId: number,
 // ---- projects ----------------------------------------------------------
 
 function createProject(db: Database.Database, p: ProjectInput): { id: number } {
-  const insertProject = db.prepare(`INSERT INTO project (template_id, name, client_id) VALUES (?, ?, ?)`);
+  const insertProject = db.prepare(`INSERT INTO project (template_id, name, client_id, length_s) VALUES (?, ?, ?, ?)`);
   const insertValue = db.prepare(
     `INSERT INTO project_value (project_id, element_id, param_key, value_json) VALUES (?, ?, ?, ?)`,
   );
   const run = db.transaction((): { id: number } => {
-    const id = Number(insertProject.run(p.templateId, p.name, p.clientId ?? null).lastInsertRowid);
+    const id = Number(insertProject.run(p.templateId, p.name, p.clientId ?? null, Math.max(1, Math.round(p.lengthS ?? 30))).lastInsertRowid);
     for (const v of p.values) insertValue.run(id, v.elementId, v.key, JSON.stringify(v.value ?? null));
     return { id };
   });
@@ -830,7 +841,7 @@ function createProject(db: Database.Database, p: ProjectInput): { id: number } {
 
 const PROJECT_SELECT = `
   SELECT p.id, p.template_id AS templateId, t.slug AS templateSlug, t.name AS templateName,
-         p.name, p.client_id AS clientId, c.name AS clientName, p.aspect AS aspect, p.treatment AS treatment, p.created_at AS createdAt, p.updated_at AS updatedAt
+         p.name, p.client_id AS clientId, c.name AS clientName, p.aspect AS aspect, p.treatment AS treatment, p.length_s AS lengthS, p.created_at AS createdAt, p.updated_at AS updatedAt
   FROM project p JOIN template t ON t.id = p.template_id LEFT JOIN client c ON c.id = p.client_id`;
 
 function getProject(db: Database.Database, id: number): ProjectDetail | undefined {
@@ -862,11 +873,15 @@ function setProjectTreatment(db: Database.Database, id: number, treatment: strin
   db.prepare(`UPDATE project SET treatment = ?, updated_at = datetime('now') WHERE id = ?`).run(treatment, id);
 }
 
+function setProjectLength(db: Database.Database, id: number, lengthS: number): void {
+  db.prepare(`UPDATE project SET length_s = ?, updated_at = datetime('now') WHERE id = ?`).run(Math.max(1, Math.round(lengthS)), id);
+}
+
 function duplicateProject(db: Database.Database, id: number, name: string): { id: number } {
   const run = db.transaction((): { id: number } => {
-    const source = db.prepare(`SELECT template_id AS templateId, client_id AS clientId, aspect, treatment FROM project WHERE id = ?`).get(id) as { templateId: number; clientId: number | null; aspect: string; treatment: string } | undefined;
+    const source = db.prepare(`SELECT template_id AS templateId, client_id AS clientId, aspect, treatment, length_s AS lengthS FROM project WHERE id = ?`).get(id) as { templateId: number; clientId: number | null; aspect: string; treatment: string; lengthS: number } | undefined;
     if (!source) throw new Error(`No project ${id}`);
-    const copy = Number(db.prepare(`INSERT INTO project (template_id, name, client_id, aspect, treatment) VALUES (?, ?, ?, ?, ?)`).run(source.templateId, name, source.clientId, source.aspect, source.treatment).lastInsertRowid);
+    const copy = Number(db.prepare(`INSERT INTO project (template_id, name, client_id, aspect, treatment, length_s) VALUES (?, ?, ?, ?, ?, ?)`).run(source.templateId, name, source.clientId, source.aspect, source.treatment, source.lengthS).lastInsertRowid);
     db.prepare(`INSERT INTO project_value (project_id, element_id, param_key, value_json) SELECT ?, element_id, param_key, value_json FROM project_value WHERE project_id = ?`).run(copy, id);
     db.prepare(`INSERT INTO project_scene (project_id, scene_id, element_id, start_frame, end_frame, enabled) SELECT ?, scene_id, element_id, start_frame, end_frame, enabled FROM project_scene WHERE project_id = ?`).run(copy, id);
     db.prepare(`INSERT INTO project_transition (project_id, after_element_id, preset, duration_frames) SELECT ?, after_element_id, preset, duration_frames FROM project_transition WHERE project_id = ?`).run(copy, id);

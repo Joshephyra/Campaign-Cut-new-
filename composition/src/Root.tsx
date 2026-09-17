@@ -2,7 +2,7 @@ import { Composition } from 'remotion';
 import { frameFor } from './aspect';
 import { compositionConfig, defaultProps, type MainProps } from './config';
 import { Main } from './Main';
-import { compositionDurationWithTransitions } from './transitions';
+import { compositionDurationWithTransitions, spotDurationFrames } from './transitions';
 
 /**
  * What the props decide about the composition: its length (from the
@@ -11,7 +11,7 @@ import { compositionDurationWithTransitions } from './transitions';
  */
 export function metadataFor(props: MainProps): { durationInFrames: number; width: number; height: number } {
   const frame = props.frame ?? frameFor('16:9');
-  return { durationInFrames: compositionDurationWithTransitions(props.elements, props.transitions ?? []), width: frame.width, height: frame.height };
+  return { durationInFrames: spotDurationFrames(props.elements, props.transitions ?? [], props.lengthFrames), width: frame.width, height: frame.height };
 }
 
 /**

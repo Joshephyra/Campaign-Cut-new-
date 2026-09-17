@@ -97,6 +97,8 @@ export type MainProps = {
   frame?: { width: number; height: number };
   /** M39: the style treatment over the whole spot. Absent means clean. */
   treatment?: TreatmentProps | null;
+  /** M52: the spot's fixed length in frames (a :30 is 900). Absent means the content's own length. */
+  lengthFrames?: number | null;
 };
 
 /** A valid, empty Lottie for tests and placeholders. */

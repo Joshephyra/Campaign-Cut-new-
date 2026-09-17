@@ -16,13 +16,17 @@ type Props = {
   aspect?: string;
   /** The spot's name, for the downloaded file's name. */
   projectName?: string | null;
+  /** M52: hide proof points from the end until the content fits the spot's length. */
+  onCutDown?: () => void;
+  /** M52: ":30", for the cut-down button. */
+  lengthLabel?: string;
 };
 
 /**
  * Export: queue a server-side render of THE composition with the original
  * footage, poll until it is done, then offer the MP4. AT-5 is watching it.
  */
-export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, readiness, aspect = '16:9', projectName = null }: Props) {
+export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, readiness, aspect = '16:9', projectName = null, onCutDown, lengthLabel = '' }: Props) {
   // M50: one job for this version, or one per version for a batch.
   const [jobs, setJobs] = useState<RenderJob[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -113,7 +117,14 @@ export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, read
                 {readiness.items.map((i) => (
                   <li key={i.key} data-testid={`check-${i.key}`} data-ok={i.ok ? 'true' : 'false'} className={`flex items-start gap-2 text-xs leading-snug ${i.ok ? 'text-fg-2' : i.blocking ? 'text-red' : 'text-fg'}`}>
                     {i.ok ? <CircleCheck size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" className="text-green shrink-0 mt-0.5" /> : i.blocking ? <ShieldAlert size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" className="shrink-0 mt-0.5" /> : <Circle size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" className="text-fg-3 shrink-0 mt-0.5" />}
-                    <span>{i.message}</span>
+                    <span>
+                      {i.message}
+                      {i.key === 'length' && i.over && onCutDown && (
+                        <button type="button" onClick={onCutDown} className="ml-2 inline-flex items-center h-6 px-2 rounded-md bg-raised border border-line text-xs font-medium text-fg hover:bg-hover">
+                          Cut down to {lengthLabel}
+                        </button>
+                      )}
+                    </span>
                   </li>
                 ))}
               </ul>

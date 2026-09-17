@@ -90,6 +90,17 @@ export function effectiveTimeline(
 }
 
 /** The composition lasts until the latest chain ends. Never less than one frame. */
+/**
+ * M52: how long the spot plays. A spot has a fixed length (:06, :15, :30,
+ * :60); it plays exactly that long in both runners, whatever the content
+ * does (the readiness list says when the content does not fit). Without a
+ * length, the content's own end.
+ */
+export function spotDurationFrames(elements: ElementProps[], transitions: TransitionProps[], lengthFrames?: number | null): number {
+  if (lengthFrames && lengthFrames > 0) return Math.round(lengthFrames);
+  return compositionDurationWithTransitions(elements, transitions);
+}
+
 export function compositionDurationWithTransitions(elements: ElementProps[], transitions: TransitionProps[]): number {
   const { chains } = effectiveTimeline(elements, transitions);
   let end = 0;

@@ -27,7 +27,7 @@ describe('reorderScenes', () => {
   });
 
   it('keeps an end-to-end spot end to end', () => {
-    const built = [el(10, 'background', 0, 150), el(11, 'headline', 150, 270), el(12, 'end-card', 270, 420)];
+    const built = [el(10, 'background', 0, 150), el(11, 'stat', 150, 270), el(12, 'end-card', 270, 420)];
     expect([...reorderScenes(built, 12, 10, 'before').entries()]).toEqual([
       [12, { startFrame: 0, endFrame: 150 }],
       [10, { startFrame: 150, endFrame: 300 }],

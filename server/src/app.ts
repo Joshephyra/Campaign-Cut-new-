@@ -181,7 +181,7 @@ export function buildApp(options: AppOptions = {}) {
 
   // ---- project management (M22) ---------------------------------------
 
-  app.patch<{ Params: { id: string }; Body: { name?: string; aspect?: string; treatment?: string } }>('/projects/:id', async (req, reply) => {
+  app.patch<{ Params: { id: string }; Body: { name?: string; aspect?: string; treatment?: string; lengthS?: number } }>('/projects/:id', async (req, reply) => {
     const id = Number(req.params.id);
     if (!db.getProject(id)) return reply.code(404).send({ error: `No project ${id}` });
     if (req.body?.name !== undefined) {
@@ -195,11 +195,17 @@ export function buildApp(options: AppOptions = {}) {
       db.setProjectAspect(id, req.body.aspect);
     }
     // M39: the style treatment across the spot.
+    // M52: the spot's length, whole seconds, 1 to 120.
+    if (req.body?.lengthS !== undefined) {
+      const lengthS = Number(req.body.lengthS);
+      if (!Number.isInteger(lengthS) || lengthS < 1 || lengthS > 120) return reply.code(400).send({ error: 'lengthS must be a whole number of seconds from 1 to 120' });
+      db.setProjectLength(id, lengthS);
+    }
     if (req.body?.treatment !== undefined) {
       if (!isTreatment(req.body.treatment)) return reply.code(400).send({ error: `Unknown treatment "${String(req.body.treatment)}"; use one of ${TREATMENTS.join(', ')}` });
       db.setProjectTreatment(id, req.body.treatment);
     }
-    if (req.body?.name === undefined && req.body?.aspect === undefined && req.body?.treatment === undefined) return reply.code(400).send({ error: 'Send a name, an aspect or a treatment' });
+    if (req.body?.name === undefined && req.body?.aspect === undefined && req.body?.treatment === undefined && req.body?.lengthS === undefined) return reply.code(400).send({ error: 'Send a name, an aspect, a treatment or a length' });
     const { values: _values, ...project } = db.getProject(id)!;
     return project;
   });
@@ -242,7 +248,10 @@ export function buildApp(options: AppOptions = {}) {
     }
 
     const baseName = t.slug === BLANK_TEMPLATE.slug ? 'New spot' : t.name;
+    // M52: a template's spot is as long as the template; a spot from nothing is a :30 until told otherwise.
+    const lengthS = t.slug === BLANK_TEMPLATE.slug || t.durationFrames <= 0 ? 30 : Math.max(1, Math.round(t.durationFrames / t.fps));
     const { id } = db.createProject({
+      lengthS,
       templateId: t.id,
       name: req.body?.name?.trim() || (client ? `${client.name}: ${baseName}` : t.slug === BLANK_TEMPLATE.slug ? baseName : `${t.name} project`),
       clientId: client?.id ?? null,

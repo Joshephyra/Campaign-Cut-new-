@@ -81,15 +81,39 @@ export type ReadinessScene = {
   values: Record<string, unknown>;
 };
 
-export type ReadinessItem = { key: 'disclaimer' | 'footage' | 'logo' | 'words'; ok: boolean; blocking: boolean; message: string; scenes: string[] };
+export type ReadinessItem = { key: 'disclaimer' | 'length' | 'footage' | 'logo' | 'words'; ok: boolean; blocking: boolean; message: string; scenes: string[]; /** M52: the content runs past the spot's length; a cut-down would fit it. */ over?: boolean };
+
+/** M52: the lengths a spot comes in. */
+export const SPOT_LENGTHS = [6, 15, 30, 60] as const;
+
+/** ":30" for 30. */
+export function lengthLabel(lengthS: number): string {
+  return `:${String(Math.round(lengthS)).padStart(2, '0')}`;
+}
+
+/** The content's length in seconds: where the last enabled element ends. */
+export function contentSeconds(scenes: { enabled: boolean; endFrame: number }[], fps: number): number {
+  const end = scenes.filter((s) => s.enabled).reduce((m, s) => Math.max(m, s.endFrame), 0);
+  return Math.round((end / fps) * 10) / 10;
+}
 
 export type Readiness = { ok: boolean; blocked: boolean; todo: number; items: ReadinessItem[] };
 
 const names = (list: string[]) => (list.length <= 3 ? list.join(', ') : `${list.slice(0, 3).join(', ')} and ${list.length - 3} more`);
 
-export function readiness(scenes: ReadinessScene[], fps: number): Readiness {
+export function readiness(scenes: ReadinessScene[], fps: number, lengthS?: number | null): Readiness {
   const live = scenes.filter((s) => s.enabled).sort((a, b) => a.startFrame - b.startFrame);
   const items: ReadinessItem[] = [];
+
+  // M52: a spot is exactly its length. Timing is the designer's; the fit comes from which scenes are in.
+  if (lengthS && lengthS > 0) {
+    const content = contentSeconds(scenes, fps);
+    const gap = Math.round((lengthS - content) * 10) / 10;
+    const label = lengthLabel(lengthS);
+    if (Math.abs(gap) < 0.05) items.push({ key: 'length', ok: true, blocking: true, message: `Exactly ${lengthS.toFixed(1)} s, a ${label}`, scenes: [] });
+    else if (gap > 0) items.push({ key: 'length', ok: false, blocking: true, message: `The spot is ${content.toFixed(1)} s; a ${label} must be exactly ${lengthS.toFixed(1)} s. Add ${gap.toFixed(1)} s of scenes.`, scenes: [] });
+    else items.push({ key: 'length', ok: false, blocking: true, over: true, message: `The spot is ${content.toFixed(1)} s; a ${label} must be exactly ${lengthS.toFixed(1)} s. Cut ${(-gap).toFixed(1)} s of scenes, or make it longer.`, scenes: [] });
+  }
 
   const disclaimer = disclaimerCheck(scenes.map((s) => ({ startFrame: s.startFrame, endFrame: s.endFrame, enabled: s.enabled, hasDisclaimer: carriesDisclaimer(s.schema, s.values) })), fps);
   items.push({ key: 'disclaimer', ok: disclaimer.ok, blocking: true, message: disclaimer.ok ? `Disclaimer on screen ${disclaimer.seconds.toFixed(1)} s` : disclaimer.message, scenes: [] });
