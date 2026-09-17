@@ -90,3 +90,45 @@ describe('ready to export (M49)', () => {
     expect(screen.getByTestId('readiness').getAttribute('data-ok')).toBe('true');
   });
 });
+
+
+/** M50: every version in one go. The menu beside Export queues one render per version and follows them all. */
+describe('export every version (M50)', () => {
+  it('"All four versions" posts the four aspects, shows the batch progress, then says they are in Exports', async () => {
+    const jobs = (status: string, progress: number) => [1, 2, 3, 4].map((id, i) => ({ id, projectId: 1, status, progress, outputUrl: status === 'done' ? `/media/renders/project-1-${id}.mp4` : null, error: null, aspect: ['16:9', '1:1', '4:5', '9:16'][i] }));
+    let polls = 0;
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === '/api/render' && init?.method === 'POST') return new Response(JSON.stringify({ ...jobs('queued', 0)[0], jobs: jobs('queued', 0) }), { status: 202 });
+      const m = url.match(/\/api\/render\/(\d+)$/);
+      if (m) {
+        polls += 1;
+        const round = polls <= 4 ? jobs('rendering', 0.5) : jobs('done', 1);
+        return new Response(JSON.stringify(round[Number(m[1]) - 1]), { status: 200 });
+      }
+      return new Response('not found', { status: 404 });
+    });
+    const onFinished = vi.fn();
+    render(<ExportPanel projectId={1} pollIntervalMs={10} aspect="16:9" onFinished={onFinished} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Export options' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /All four versions/ }));
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST')!;
+    expect(JSON.parse((post[1] as RequestInit).body as string)).toEqual({ projectId: 1, aspects: ['16:9', '1:1', '4:5', '9:16'] });
+    await waitFor(() => expect(screen.getByTestId('batch-progress').textContent).toMatch(/Exporting 1 of 4/));
+    await waitFor(() => expect(screen.getByTestId('batch-done').textContent).toBe('4 versions exported · in Exports below'), { timeout: 3000 });
+    expect(onFinished).toHaveBeenCalled();
+  });
+
+  it('"This version" posts only the project, as the main button does', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      if (String(input) === '/api/render' && init?.method === 'POST') return new Response(JSON.stringify({ id: 9, projectId: 1, status: 'done', progress: 1, outputUrl: '/media/renders/project-1-9.mp4', error: null, aspect: '9:16' }), { status: 202 });
+      return new Response('not found', { status: 404 });
+    });
+    render(<ExportPanel projectId={1} aspect="9:16" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Export options' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'This version (9:16)' }));
+    await waitFor(() => expect(screen.getByRole('link', { name: /download/i })).toBeTruthy());
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST')!;
+    expect(JSON.parse((post[1] as RequestInit).body as string)).toEqual({ projectId: 1 });
+  });
+});

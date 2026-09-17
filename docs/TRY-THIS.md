@@ -36,6 +36,10 @@ Add **Boxed caption** again: the picker says "in the spot ×2" and the second ca
 
 Pick **Rivera for Senate** under "New spots for" before **Start from nothing**: every scene you add arrives in that client's colours with its disclaimer. Next to Export MP4 one pill says "Ready to export" or "2 to check"; press it for the list: the disclaimer (which blocks), footage slots with no clip, the designer's stand-in logo, and lines still in the designer's words.
 
+## 8. Every version at once (M50)
+
+The small caret beside **Export MP4** offers "All four versions": 16:9, 1:1, 4:5 and 9:16 render one after another and land in Exports, each named for its version.
+
 ## For you to do
 
 - Close After Effects (File > Exit); an unattended run left it open on an empty project.

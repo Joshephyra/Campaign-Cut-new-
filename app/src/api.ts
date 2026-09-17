@@ -97,6 +97,8 @@ export type RenderJob = {
   progress: number;
   outputUrl: string | null;
   error: string | null;
+  /** M50: the version this render is of. */
+  aspect?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -267,12 +269,13 @@ export const api = {
       body: JSON.stringify(audio ?? { assetId: null }),
     }).then((r) => json<ProjectAudio | null>(r)),
 
-  startRender: (projectId: number) =>
+  /** M50: with `aspects`, one render per version; the answer is the first job with every job in `jobs`. */
+  startRender: (projectId: number, aspects?: string[]) =>
     fetch(`${API}/render`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ projectId }),
-    }).then((r) => json<RenderJob>(r)),
+      body: JSON.stringify(aspects ? { projectId, aspects } : { projectId }),
+    }).then((r) => json<RenderJob & { jobs?: RenderJob[] }>(r)),
 
   renderStatus: (id: number) => fetch(`${API}/render/${id}`).then((r) => json<RenderJob>(r)),
 

@@ -36,7 +36,10 @@ export function ExportHistory({ projectId, refreshKey = 0 }: Props) {
         <ul data-testid="export-history" className="flex flex-col gap-1 text-xs">
           {renders.map((r) => (
             <li key={r.id} className="flex items-center justify-between gap-3 h-9 px-3 rounded-md bg-raised">
-              <span className="text-fg-2 tabular-nums">{(r.updatedAt ?? r.createdAt ?? '').slice(0, 16) || `render ${r.id}`}</span>
+              <span className="text-fg-2 tabular-nums">
+                {(r.updatedAt ?? r.createdAt ?? '').slice(0, 16) || `render ${r.id}`}
+                {r.aspect && <span className="ml-2 text-fg-3">{r.aspect}</span>}
+              </span>
               {r.status === 'done' && r.outputUrl ? (
                 <a href={api.fileUrl(r.outputUrl)} download className="inline-flex items-center gap-1.5 text-blue hover:text-blue-hover font-medium">
                   <Download size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" />

@@ -842,6 +842,19 @@ A spot from nothing needs two captions and two lower thirds. Until now a scene's
 
 ---
 
+## M50 · Export every version in one go · DONE
+
+Versions of a spot (M36) are the deliverable; exporting them one chip switch at a time was not.
+
+**Build**
+- A render is of one version: `render.aspect` is fixed when the job is queued (old rows read as 16:9); the queue renders each job at its own frame and names the file for it. `POST /render { projectId, aspects }` queues one job per version and answers them all; without `aspects` it renders the spot's current version as before.
+- Beside Export MP4, a caret opens a menu: "This version (16:9)" or "All four versions". A batch shows "Exporting 2 of 4 · 40%" and ends with "4 versions exported · in Exports below"; the export history names each render's version.
+
+**Tests**
+- A queued job carries its version (props frame and file name); the route queues one per version and refuses an unknown one; the menu posts the four aspects, follows the batch and hands off to the history.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

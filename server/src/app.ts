@@ -680,14 +680,21 @@ export function buildApp(options: AppOptions = {}) {
     progress: r.progress,
     outputUrl: r.status === 'done' && r.outputPath ? `/media/${r.outputPath}` : null,
     error: r.error,
+    aspect: r.aspect,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
   });
 
   /** Queue an export of a project. One render at a time; poll GET /render/:id. */
-  app.post<{ Body: { projectId?: number } }>('/render', async (req, reply) => {
+  app.post<{ Body: { projectId?: number; aspects?: unknown } }>('/render', async (req, reply) => {
     const projectId = Number(req.body?.projectId);
     if (!projectId) return reply.code(400).send({ error: 'projectId is required' });
+    // M50: one render per version asked for; none asked for means the spot's current version.
+    const asked = req.body?.aspects;
+    if (asked !== undefined && (!Array.isArray(asked) || asked.length === 0 || !asked.every(isAspect))) {
+      return reply.code(400).send({ error: `aspects must be a list of ${ASPECTS.join(', ')}` });
+    }
+    const aspects: string[] = Array.isArray(asked) ? [...new Set(asked as string[])] : [];
     const project = db.getProject(projectId);
     if (!project) return reply.code(404).send({ error: `No project ${projectId}` });
     // M35: the one compliance check. A disclaimer must be on screen for four seconds.
@@ -699,8 +706,8 @@ export function buildApp(options: AppOptions = {}) {
     });
     const check = disclaimerCheck(scenes, template.fps);
     if (!check.ok) return reply.code(400).send({ error: check.message });
-    const { id } = queue.enqueue(projectId);
-    return reply.code(202).send(renderJson(db.getRender(id)!));
+    const jobs = (aspects.length > 0 ? aspects : [undefined]).map((a) => renderJson(db.getRender(queue.enqueue(projectId, a).id)!));
+    return reply.code(202).send({ ...jobs[0]!, jobs });
   });
 
   app.get<{ Params: { id: string } }>('/render/:id', async (req, reply) => {

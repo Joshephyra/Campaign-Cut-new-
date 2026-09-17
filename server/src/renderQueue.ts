@@ -30,11 +30,12 @@ export class RenderQueue {
     fs.mkdirSync(options.rendersDir, { recursive: true });
   }
 
-  /** Queue a render of a project. Throws if the project does not exist. */
-  enqueue(projectId: number): { id: number } {
+  /** Queue a render of a project, of its current version or (M50) the given one. Throws if the project does not exist. */
+  enqueue(projectId: number, aspect?: string): { id: number } {
     const { db } = this.options;
-    if (!db.getProject(projectId)) throw new Error(`No project ${projectId}`);
-    const { id } = db.insertRender(projectId);
+    const project = db.getProject(projectId);
+    if (!project) throw new Error(`No project ${projectId}`);
+    const { id } = db.insertRender(projectId, aspect ?? project.aspect ?? '16:9');
     this.pending.push(id);
     // Start on the next tick so the caller sees the job as 'queued' first.
     setTimeout(() => void this.pump(), 0);
@@ -79,9 +80,9 @@ export class RenderQueue {
     if (!job) return;
     this.update(id, { status: 'rendering', progress: 0 });
     try {
-      const props = buildProjectProps({ db, templatesDir, projectId: job.projectId, serverBase });
-      // M36: a version in another ratio says so in its file name.
-      const aspect = db.getProject(job.projectId)?.aspect ?? '16:9';
+      // M36/M50: the job is of one version; a version in another ratio says so in its file name.
+      const aspect = job.aspect || '16:9';
+      const props = buildProjectProps({ db, templatesDir, projectId: job.projectId, serverBase, aspect });
       const suffix = aspect === '16:9' ? '' : `-${aspect.replace(':', 'x')}`;
       const fileName = `project-${job.projectId}-${id}${suffix}.mp4`;
       const outputPath = path.join(rendersDir, fileName);

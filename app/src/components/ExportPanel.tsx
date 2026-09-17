@@ -1,8 +1,8 @@
-import type { Readiness } from '@campaigncut/composition';
-import { Circle, CircleCheck, Download, Loader2, Share, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { ASPECTS, type Readiness } from '@campaigncut/composition';
+import { ChevronDown, Circle, CircleCheck, Download, Loader2, Share, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { api, type RenderJob } from '../api';
-import { Button, ICON } from './ui';
+import { Button, ICON, IconButton } from './ui';
 
 type Props = {
   projectId: number;
@@ -11,14 +11,19 @@ type Props = {
   onFinished?: () => void;
   /** M49: everything to check before an export, in one list; the disclaimer blocks, the rest are notes. */
   readiness?: Readiness;
+  /** M50: the spot's current version, named on the export menu. */
+  aspect?: string;
 };
 
 /**
  * Export: queue a server-side render of THE composition with the original
  * footage, poll until it is done, then offer the MP4. AT-5 is watching it.
  */
-export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, readiness }: Props) {
-  const [job, setJob] = useState<RenderJob | null>(null);
+export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, readiness, aspect = '16:9' }: Props) {
+  // M50: one job for this version, or one per version for a batch.
+  const [jobs, setJobs] = useState<RenderJob[]>([]);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const job = jobs.length === 1 ? jobs[0]! : null;
   const [listOpen, setListOpen] = useState(false);
   const listWrap = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -42,25 +47,28 @@ export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, read
   const finished = useRef(onFinished);
   finished.current = onFinished;
 
-  const start = async () => {
+  const start = async (aspects?: string[]) => {
     setError(null);
+    setMenuOpen(false);
     try {
-      const started = await api.startRender(projectId);
-      setJob(started);
+      const started = await api.startRender(projectId, aspects);
+      setJobs(started.jobs ?? [started]);
     } catch (e) {
       setError((e as Error).message);
     }
   };
 
+  const unfinished = jobs.filter((j) => j.status === 'queued' || j.status === 'rendering');
   useEffect(() => {
-    if (!job) return;
-    if (job.status === 'done' || job.status === 'failed') {
+    if (jobs.length === 0) return;
+    if (unfinished.length === 0) {
       finished.current?.();
       return;
     }
     timer.current = setTimeout(async () => {
       try {
-        setJob(await api.renderStatus(job.id));
+        const fresh = await Promise.all(unfinished.map((j) => api.renderStatus(j.id)));
+        setJobs((prev) => prev.map((j) => fresh.find((f) => f.id === j.id) ?? j));
       } catch (e) {
         setError((e as Error).message);
       }
@@ -68,9 +76,14 @@ export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, read
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [job, pollIntervalMs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- unfinished derives from jobs
+  }, [jobs, pollIntervalMs]);
 
-  const busy = job !== null && (job.status === 'queued' || job.status === 'rendering');
+  const busy = unfinished.length > 0;
+  const batch = jobs.length > 1 ? jobs : null;
+  const batchDone = batch ? batch.filter((j) => j.status === 'done').length : 0;
+  const batchFailed = batch ? batch.filter((j) => j.status === 'failed').length : 0;
+  const batchProgress = batch ? batch.reduce((sum, j) => sum + (j.status === 'done' ? 1 : j.status === 'rendering' ? j.progress : 0), 0) / batch.length : 0;
 
   return (
     <div className="flex items-center gap-3 text-xs">
@@ -106,6 +119,17 @@ export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, read
           )}
         </div>
       )}
+      {batch && busy && (
+        <span className="inline-flex items-center gap-2 text-fg-2" data-testid="batch-progress">
+          <Loader2 size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" className="animate-spin text-blue" />
+          Exporting {batchDone + 1} of {batch.length} <span className="text-fg tabular-nums">{`${Math.round(batchProgress * 100)}%`}</span>
+        </span>
+      )}
+      {batch && !busy && (
+        <span className="text-fg-2" data-testid="batch-done">
+          {batchFailed === 0 ? `${batchDone} versions exported · in Exports below` : `${batchDone} of ${batch.length} versions exported · ${batchFailed} failed`}
+        </span>
+      )}
       {job?.status === 'queued' && <span className="text-fg-2">Queued</span>}
       {job?.status === 'rendering' && (
         <span className="inline-flex items-center gap-2 text-fg-2">
@@ -121,9 +145,33 @@ export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, read
       )}
       {job?.status === 'failed' && <span className="text-red max-w-64 truncate" title={job.error ?? ''}>Export failed: {job.error ?? 'unknown error'}</span>}
       {error && <span className="text-red">{error}</span>}
-      <Button variant="primary" icon={Share} onClick={() => void start()} disabled={busy || blocking !== undefined} title={blocking?.message} className={busy ? 'cursor-wait' : ''}>
-        Export MP4
-      </Button>
+      <div className="relative inline-flex items-stretch">
+        <Button variant="primary" icon={Share} onClick={() => void start()} disabled={busy || blocking !== undefined} title={blocking?.message} className={`${busy ? 'cursor-wait' : ''} rounded-r-none`}>
+          Export MP4
+        </Button>
+        <IconButton
+          label="Export options"
+          icon={ChevronDown}
+          disabled={busy || blocking !== undefined}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((o) => !o)}
+          className="!h-9 !w-8 !rounded-l-none border-l border-white/20 bg-blue text-white hover:bg-blue-hover"
+        />
+        {menuOpen && (
+          <ul role="menu" aria-label="Export options" className="absolute right-0 top-10 z-20 w-64 rounded-lg bg-panel border border-line shadow-float p-1 cc-appear text-[13px]">
+            <li role="none">
+              <button type="button" role="menuitem" onClick={() => void start()} className="w-full text-left rounded-md px-3 py-2 hover:bg-hover">
+                This version ({aspect})
+              </button>
+            </li>
+            <li role="none">
+              <button type="button" role="menuitem" onClick={() => void start([...ASPECTS])} className="w-full text-left rounded-md px-3 py-2 hover:bg-hover">
+                All four versions <span className="text-fg-3">({ASPECTS.join(', ')})</span>
+              </button>
+            </li>
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

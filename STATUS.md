@@ -4,6 +4,20 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M50 Export every version in one go · DONE
+
+**What exists now**
+
+- `render.aspect` (migrated, 16:9 for older rows); `RenderQueue.enqueue(projectId, aspect?)`; `buildProjectProps({ aspect })`; `POST /render { projectId, aspects? }` answers the first job with every job in `jobs`; every render JSON carries `aspect`.
+- Export MP4 gained a caret: "This version (16:9)" / "All four versions (16:9, 1:1, 4:5, 9:16)". The panel follows every job of a batch and reports "Exporting n of 4 · p%", then "4 versions exported · in Exports below"; the history shows each render's version beside its time.
+- Tests: 2 server, 2 export panel. 526 tests green.
+
+**Verified**
+
+- Real browser on spot 9: the caret offered "This version (16:9)" and "All four versions"; the batch read "Exporting 1 of 4 0%" and ended "4 versions exported · in Exports below"; the history lists 9:16, 4:5, 1:1 and 16:9 with a download each. ffprobe: project-9-4.mp4 1920×1080, -5-1x1 1080×1080, -6-4x5 1080×1350, -7-9x16 1080×1920.
+
+---
+
 ## 2026-09-17 · Finish review of the M43–M49 surfaces · DONE
 
 The Impeccable finish reviewer went over the drag-to-reorder chips, the Scene section, the readiness pill and list, the picker's ×N suffix and the hint line. Disposition: fix, one round, then ship. Applied: the drop edge no longer blinks when the pointer crosses a chip's own children; an overlay's drop target is tinted blue as well as ringed, so it reads apart from the selection; the panel section says "Overlay … on the same scene. Drag its chip onto another scene" and "Duplicate" for overlays instead of promising "right after it"; the readiness list is a region that closes on Escape or a press anywhere else; hidden chips show no grab cursor and say "Hidden scene · switch Show on to drag"; the Add chip is sticky at the strip's right edge so it stays in view when the strip scrolls. Done straight after: Move earlier / Move later in the panel's Scene section, the keyboard's route to what a chip drag does, disabled at the ends (real browser: Headline moved before the background and back, saved). Carried to a later round: a custom drag image. Capture: .impeccable/review/review2-editor.png.

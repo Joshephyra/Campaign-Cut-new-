@@ -153,3 +153,63 @@ describe('render API', () => {
     expect((await app.inject({ method: 'POST', url: '/render', payload: { projectId: 999 } })).statusCode).toBe(404);
   });
 });
+
+
+/** M50: a render is of one version. A batch queues one job per version, each with its own frame and file name. */
+describe('render versions (M50)', () => {
+  let tmp: string;
+  let db: Db;
+  let projectId: number;
+
+  beforeEach(() => {
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-rv-'));
+    fs.mkdirSync(path.join(tmp, 'templates', 't'), { recursive: true });
+    fs.writeFileSync(path.join(tmp, 'templates', 't', 'template.json'), JSON.stringify(lottie));
+    fs.writeFileSync(path.join(tmp, 'templates', 't', 'schema.json'), JSON.stringify([{ key: 'disclaimer', role: 'safe.disclaimer', kind: 'text', label: 'Disclaimer', default: 'Paid for by Example Committee', path: '/layers/0', locked: true }]));
+    db = openDb(':memory:');
+    const t = db.upsertTemplate({ slug: 't', name: 'T', adType: 'Bio', durationFrames: 30, fps: 30, width: 1920, height: 1080, thumbPath: '' });
+    db.upsertTemplateElement({ templateId: t.id, slug: 't', zIndex: 0, startFrame: 0, endFrame: 150 });
+    projectId = db.createProject({ templateId: t.id, name: 'P', values: [] }).id;
+  });
+
+  afterEach(() => {
+    db.close();
+    fs.rmSync(tmp, { recursive: true, force: true });
+  });
+
+  it('a queued job carries its version: the props frame and the file name follow it, not the spot\'s current aspect', async () => {
+    const frames: Record<number, { width: number; height: number } | undefined> = {};
+    const queue = new RenderQueue({
+      db, templatesDir: path.join(tmp, 'templates'), rendersDir: path.join(tmp, 'renders'), serverBase: 'http://x',
+      render: async ({ props, outputPath }) => { frames[Number(/^project-\d+-(\d+)/.exec(path.basename(outputPath))![1])] = props.frame; fs.writeFileSync(outputPath, 'x'); },
+    });
+    const wide = queue.enqueue(projectId).id;
+    const tall = queue.enqueue(projectId, '9:16').id;
+    expect(db.getRender(wide)!.aspect).toBe('16:9');
+    expect(db.getRender(tall)!.aspect).toBe('9:16');
+    await queue.idle();
+    expect(frames[wide]).toEqual({ width: 1920, height: 1080 });
+    expect(frames[tall]).toEqual({ width: 1080, height: 1920 });
+    expect(db.getRender(wide)!.outputPath).toBe(`renders/project-${projectId}-${wide}.mp4`);
+    expect(db.getRender(tall)!.outputPath).toBe(`renders/project-${projectId}-${tall}-9x16.mp4`);
+    expect(db.prepare(`PRAGMA table_info(render)`).all().map((c) => (c as { name: string }).name)).toContain('aspect');
+  });
+
+  it('POST /render with aspects queues one job per version and answers them all; a bad aspect is refused', async () => {
+    const app = buildApp({ db, templatesDir: path.join(tmp, 'templates'), mediaDir: path.join(tmp, 'media'), render: fakeRender, serverBase: 'http://x' });
+    try {
+      const res = await app.inject({ method: 'POST', url: '/render', payload: { projectId, aspects: ['16:9', '1:1', '4:5', '9:16'] } });
+      expect(res.statusCode).toBe(202);
+      const body = res.json() as { id: number; aspect: string; jobs: { id: number; aspect: string; status: string }[] };
+      expect(body.jobs.map((j) => j.aspect)).toEqual(['16:9', '1:1', '4:5', '9:16']);
+      expect(body.jobs.every((j) => j.status === 'queued')).toBe(true);
+      expect(body.id).toBe(body.jobs[0]!.id);
+      expect((await app.inject({ method: 'POST', url: '/render', payload: { projectId, aspects: ['3:2'] } })).statusCode).toBe(400);
+      const one = (await app.inject({ method: 'POST', url: '/render', payload: { projectId } })).json() as { aspect: string; jobs: unknown[] };
+      expect(one.aspect).toBe('16:9');
+      expect(one.jobs).toHaveLength(1);
+    } finally {
+      await app.close();
+    }
+  });
+});

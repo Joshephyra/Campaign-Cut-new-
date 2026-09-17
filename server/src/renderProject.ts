@@ -32,6 +32,8 @@ export type BuildProjectPropsOptions = {
   serverBase: string;
   /** 'export' (default) hands the composition the original footage; 'preview' the proxy, as the Player does. */
   runner?: 'preview' | 'export';
+  /** M50: render this version rather than the spot's current aspect (a batch export of every version). */
+  aspect?: string;
 };
 
 /**
@@ -43,7 +45,7 @@ export type BuildProjectPropsOptions = {
  * Footage comes from the first element, in start order, that has a media
  * slot and a clip chosen.
  */
-export function buildProjectProps({ db, templatesDir, projectId, serverBase, runner = 'export' }: BuildProjectPropsOptions): MainProps {
+export function buildProjectProps({ db, templatesDir, projectId, serverBase, runner = 'export', aspect: wanted }: BuildProjectPropsOptions): MainProps {
   const project = db.getProject(projectId);
   if (!project) throw new Error(`No project ${projectId}`);
 
@@ -54,7 +56,7 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase, run
   const background = meta.background ?? DEFAULT_BACKGROUND;
 
   // M36: the spot's aspect picks each element's files (a designer variant where one exists) and the frame.
-  const aspect = isAspect(project.aspect) ? project.aspect : '16:9';
+  const aspect = isAspect(wanted) ? wanted : isAspect(project.aspect) ? project.aspect : '16:9';
   const frame = frameFor(aspect);
   const files = new Map(rows.map((e) => [e.id, loadElementFiles(templatesDir, e.templateSlug, e.slug, aspect)] as const));
   const valuesFor = (elementId: number): ParamValues => {

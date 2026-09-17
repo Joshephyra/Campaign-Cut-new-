@@ -731,7 +731,7 @@ export function Editor({ projectId, onBack }: Props) {
             </span>
           )}
           <span className="text-xs w-20 text-right">{loaded && <SaveIndicator state={saveState} />}</span>
-          {loaded && <ExportPanel projectId={projectId} onFinished={() => setExportsTick((t) => t + 1)} readiness={ready} />}
+          {loaded && <ExportPanel projectId={projectId} onFinished={() => setExportsTick((t) => t + 1)} readiness={ready} aspect={aspect} />}
         </div>
       </header>
 

@@ -110,6 +110,8 @@ export type RenderStatus = 'queued' | 'rendering' | 'done' | 'failed';
 export type RenderRow = {
   id: number;
   projectId: number;
+  /** M50: the version this render is of. */
+  aspect: string;
   status: RenderStatus;
   progress: number;
   /** Relative to the media directory, e.g. renders/project-1-5.mp4. Empty until done. */
@@ -147,7 +149,8 @@ export type ThemeInput = { name: string; colors: Record<string, string> };
 export type ThemeRow = ThemeInput & { id: number; createdAt: string };
 
 export type Db = Database.Database & {
-  insertRender(projectId: number): { id: number };
+  /** M50: a render is of one version; the aspect is fixed when it is queued. */
+  insertRender(projectId: number, aspect?: string): { id: number };
   updateRender(id: number, patch: RenderPatch): void;
   getRender(id: number): RenderRow | undefined;
   listRenders(projectId?: number): RenderRow[];
@@ -374,6 +377,9 @@ export function openDb(file: string): Db {
              ALTER TABLE ${table}_new RENAME TO ${table};`);
     db.pragma('foreign_keys = ON');
   }
+  // M50: a render is of one version. Renders before then were of the spot's aspect at the time; 16:9 is the safe reading.
+  const renderColumns = (db.prepare(`PRAGMA table_info(render)`).all() as { name: string }[]).map((c) => c.name);
+  if (!renderColumns.includes('aspect')) db.exec(`ALTER TABLE render ADD COLUMN aspect TEXT NOT NULL DEFAULT '16:9'`);
   // M20: media assets gained a kind (video or audio).
   const mediaColumns = (db.prepare(`PRAGMA table_info(media_asset)`).all() as { name: string }[]).map((c) => c.name);
   if (!mediaColumns.includes('kind')) db.exec(`ALTER TABLE media_asset ADD COLUMN kind TEXT NOT NULL DEFAULT 'video'`);
@@ -406,7 +412,7 @@ export function openDb(file: string): Db {
     getProjectTransitions: (projectId: number) => getProjectTransitions(db, projectId),
     setProjectTransition: (projectId: number, afterElementId: number, t: { preset: string; durationInFrames: number }) =>
       setProjectTransition(db, projectId, afterElementId, t),
-    insertRender: (projectId: number) => insertRender(db, projectId),
+    insertRender: (projectId: number, aspect?: string) => insertRender(db, projectId, aspect),
     updateRender: (id: number, patch: RenderPatch) => updateRender(db, id, patch),
     getRender: (id: number) => getRender(db, id),
     listRenders: (projectId?: number) => listRenders(db, projectId),
@@ -651,12 +657,12 @@ function setProjectTransition(
 // ---- renders -----------------------------------------------------------
 
 const RENDER_SELECT = `
-  SELECT id, project_id AS projectId, status, progress, output_path AS outputPath, error,
+  SELECT id, project_id AS projectId, status, progress, output_path AS outputPath, error, aspect,
          created_at AS createdAt, updated_at AS updatedAt
   FROM render`;
 
-function insertRender(db: Database.Database, projectId: number): { id: number } {
-  const info = db.prepare(`INSERT INTO render (project_id, status) VALUES (?, 'queued')`).run(projectId);
+function insertRender(db: Database.Database, projectId: number, aspect = '16:9'): { id: number } {
+  const info = db.prepare(`INSERT INTO render (project_id, status, aspect) VALUES (?, 'queued', ?)`).run(projectId, aspect);
   return { id: Number(info.lastInsertRowid) };
 }
 
