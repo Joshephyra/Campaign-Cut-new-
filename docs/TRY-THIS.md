@@ -30,7 +30,7 @@ Drag a scene chip under the video onto another scene chip: left half puts it bef
 
 ## 6. The same element twice (M45)
 
-Add **Boxed caption** again: the picker says "in the spot ×2" and the second caption is its own scene, with its own words and timing.
+Add **Boxed caption** again: the picker says "in the spot ×2" and the second caption is its own scene, with its own words and timing. Or select any scene and press **Duplicate scene** in the panel: a copy with the same words lands right after it.
 
 ## For you to do
 

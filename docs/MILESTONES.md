@@ -817,6 +817,12 @@ A spot from nothing needs two captions and two lower thirds. Until now a scene's
 
 ---
 
+## M46 · Duplicate a scene · DONE
+
+- A "Scene" section in the panel with **Duplicate scene**: a second copy of the selected scene, with its words and colours, right after it. A scene lands at its source's end and everything from there on moves on by the copy's length; an overlay lands where the source is, to be dragged onto another scene. The copy is a new scene of the same element (M45), selected, and saved.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

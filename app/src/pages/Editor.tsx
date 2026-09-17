@@ -44,7 +44,7 @@ import {
   type TransitionProps,
 } from '@campaigncut/composition';
 import { Player, type PlayerRef } from '@remotion/player';
-import { ChevronLeft, EyeOff, Maximize2, Pause, Pencil, Play, Plus, Redo2, Trash2, Undo2, Volume2, VolumeX, X } from 'lucide-react';
+import { ChevronLeft, Copy, EyeOff, Maximize2, Pause, Pencil, Play, Plus, Redo2, Trash2, Undo2, Volume2, VolumeX, X } from 'lucide-react';
 import {
   useCallback,
   useEffect,
@@ -622,6 +622,45 @@ export function Editor({ projectId, onBack }: Props) {
     }
   };
 
+  /**
+   * M46: a second copy of a scene, with its words and colours, right after
+   * it: a scene lands at the source's end and everything that starts there
+   * or later moves on by the copy's length; an overlay lands where the
+   * source is, to be dragged onto another scene.
+   */
+  const duplicateScene = async (sceneId: number) => {
+    const source = elements.find((e) => e.id === sceneId);
+    if (!source) return;
+    setLibraryError(null);
+    try {
+      const scene = isSceneType(source.type);
+      const at = scene ? source.endFrame : source.startFrame;
+      const copy = await api.addElement(projectId, source.elementId ?? source.id, at);
+      const lottie = await api.elementLottie(copy.lottieUrl);
+      setLoaded((prev) => (prev ? { ...prev, lotties: { ...prev.lotties, [copy.id]: lottie } } : prev));
+      changeKey.current = `duplicate:${copy.id}`;
+      const words = { ...(values[source.id] ?? {}) };
+      setValues((prev) => ({ ...prev, [copy.id]: { ...(prev[copy.id] ?? {}), ...words } }));
+      const entries = Object.entries(words).map(([key, value]) => ({ elementId: copy.id, key, value }));
+      if (entries.length > 0) await api.saveValues(projectId, entries);
+      const length = copy.endFrame - copy.startFrame;
+      const patches = new Map<number, ElementPatch>();
+      if (scene) {
+        for (const e of elements) if (e.id !== source.id && e.startFrame >= source.endFrame) patches.set(e.id, { startFrame: e.startFrame + length, endFrame: e.endFrame + length });
+      }
+      setElements((prev) => [...prev.filter((e) => e.id !== copy.id).map((e) => (patches.has(e.id) ? { ...e, ...patches.get(e.id) } : e)), { ...copy, enabled: true }]);
+      for (const [elementId, patch] of patches) pendingPatches.current.set(elementId, { ...pendingPatches.current.get(elementId), ...patch });
+      if (patches.size > 0) {
+        setSaveState('dirty');
+        flushPatches();
+      }
+      setSelectedId(copy.id);
+      seekRef.current(holdFrame(copy));
+    } catch (e) {
+      setLibraryError((e as Error).message);
+    }
+  };
+
   const removeFromSpot = async (elementId: number) => {
     try {
       await api.removeElement(projectId, elementId);
@@ -811,6 +850,12 @@ export function Editor({ projectId, onBack }: Props) {
                     <TransitionControl element={selected} transition={transitions.find((t) => t.afterElementId === selected.id)} onChange={(t) => void onTransitionChange(selected.id, t)} />
                   </Section>
                 )}
+                <Section title="Scene">
+                  <p className="text-[11px] text-fg-3 mb-2">A second copy of this scene, with its words and colours, right after it.</p>
+                  <Button variant="ghost" size="sm" icon={Copy} onClick={() => void duplicateScene(selected.id)}>
+                    Duplicate scene
+                  </Button>
+                </Section>
                 {selected.added && (
                   <Section title="From the library">
                     <p className="text-[11px] text-fg-3 mb-2">Added from another template. Removing it puts the spot back as it was.</p>

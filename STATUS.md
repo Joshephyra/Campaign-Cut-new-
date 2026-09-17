@@ -4,6 +4,19 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M46 Duplicate a scene · DONE
+
+**What exists now**
+
+- The panel's "Scene" section has **Duplicate scene**. The copy is a new scene of the same element with the source's values copied and saved; a scene lands at its source's end and everything from there on moves on by the copy's length; an overlay lands where its source is. The copy is selected and the playhead moves to it.
+- Tests: 1 editor. 514 tests green. Export parity on the spot from nothing after M43–M45 (reordered, one element used twice): all within threshold, worst mean 0.58.
+
+**Verified**
+
+- Real browser on the spot from nothing: Headline (5.0 s) selected, Duplicate scene made scene 10000001 at 9.0 s with the same words, selected, saved; the first try had landed at the end of the spot (the re-lay rule keeps gaps), which is why the rule became "at the source's end, everything after moves on".
+
+---
+
 ## 2026-09-17 · M45 The same element, twice · DONE
 
 **Why**
