@@ -35,3 +35,17 @@ export function reorderScenes(elements: Placed[], movedId: number, targetId: num
   });
   return patches;
 }
+
+/**
+ * M44: put an overlay on a scene. The overlay keeps its length and starts
+ * where the scene starts; nothing else moves. Nothing happens for a scene,
+ * a hidden element, or a target that is not a scene.
+ */
+export function moveOverlayToScene(elements: Placed[], overlayId: number, sceneId: number): Map<number, { startFrame: number; endFrame: number }> {
+  const patches = new Map<number, { startFrame: number; endFrame: number }>();
+  const overlay = elements.find((e) => e.id === overlayId && e.enabled && !isSceneType(e.type));
+  const scene = elements.find((e) => e.id === sceneId && e.enabled && isSceneType(e.type));
+  if (!overlay || !scene || overlay.startFrame === scene.startFrame) return patches;
+  patches.set(overlay.id, { startFrame: scene.startFrame, endFrame: scene.startFrame + (overlay.endFrame - overlay.startFrame) });
+  return patches;
+}

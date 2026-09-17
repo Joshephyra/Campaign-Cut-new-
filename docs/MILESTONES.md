@@ -796,6 +796,13 @@ A spot built from nothing needs its scenes moved; until now the only way was to 
 
 ---
 
+## M44 · Move an overlay onto a scene · DONE
+
+- An overlay chip (lower third, caption, callout, bar, disclaimer) drags too. Dropped on a scene chip, which rings blue while you hover, the overlay starts where that scene starts and keeps its length. Nothing else moves. Scene chips are the only drop targets.
+- Chips keep their 144 px minimum and the strip scrolls sideways when a spot has more scenes than fit, instead of squeezing names.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

@@ -4,6 +4,20 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M44 Move an overlay onto a scene · DONE
+
+**What exists now**
+
+- Every enabled chip drags. A scene chip dropped on a scene chip reorders (M43); an overlay chip dropped on a scene chip lands on that scene, keeping its length (`moveOverlayToScene` in `app/src/reorder.ts`), and the target rings blue while you hover. Overlay chips take no drops.
+- Chips keep a 144 px minimum; the strip scrolls sideways past that instead of squeezing names.
+- Tests: 2 helper, 1 editor. 510 tests green.
+
+**Verified**
+
+- Real browser on the spot from nothing: every chip reports draggable; Boxed caption dragged over Headline rang it ("on") and, dropped, moved from 1.0 s to 5.0 s with the other four chips unmoved and the spot saved. In the narrow pane the strip scrolls (scroll width 769 px against 256 px) with every chip at its minimum.
+
+---
+
 ## 2026-09-17 · M43 Reorder scenes by dragging chips · DONE
 
 **Why**

@@ -60,7 +60,7 @@ import { API, api, type LibraryElement, type MediaAsset, type ProjectAudio, type
 import { StylePanel } from '../components/StylePanel';
 import { ElementPreview, previewValues } from '../components/ElementPreview';
 import { frameAfterLanding, landingFrame } from '../landing';
-import { reorderScenes } from '../reorder';
+import { moveOverlayToScene, reorderScenes } from '../reorder';
 import { ExportHistory } from '../components/ExportHistory';
 import { ExportPanel } from '../components/ExportPanel';
 import { Inspector } from '../components/Inspector';
@@ -336,8 +336,8 @@ export function Editor({ projectId, onBack }: Props) {
   };
 
   /** M43: a scene chip dropped before or after another scene: the scenes are re-laid in the new order; overlays stay put. */
-  const onReorder = (movedId: number, targetId: number, place: 'before' | 'after') => {
-    const patches = reorderScenes(elements, movedId, targetId, place);
+  const onReorder = (movedId: number, targetId: number, place: DropPlace) => {
+    const patches = place === 'on' ? moveOverlayToScene(elements, movedId, targetId) : reorderScenes(elements, movedId, targetId, place);
     if (patches.size === 0) return;
     changeKey.current = `reorder:${movedId}`;
     setElements((prev) => prev.map((e) => (patches.has(e.id) ? { ...e, ...patches.get(e.id) } : e)));
@@ -1097,8 +1097,10 @@ function useDebounced<T>(value: T, delay: number): T {
 
 type Outline = { left: number; top: number; width: number; height: number };
 
-/** M43: the drag type a scene chip carries, so only scene chips take the drop. */
+/** M43: the drag type a scene chip carries; M44: the one an overlay chip carries. Only scene chips take a drop. */
 const SCENE_DRAG_TYPE = 'application/x-campaigncut-scene';
+const OVERLAY_DRAG_TYPE = 'application/x-campaigncut-overlay';
+type DropPlace = 'before' | 'after' | 'on';
 
 /**
  * The PREVIEW RUNNER's props. Same composition as the server, handed the
@@ -1150,7 +1152,7 @@ function Monitor({
   /** M31: the Add chip at the end of the scene strip. */
   onAdd: () => void;
   /** M43: a scene chip dropped before or after another scene. */
-  onReorder: (movedId: number, targetId: number, place: 'before' | 'after') => void;
+  onReorder: (movedId: number, targetId: number, place: DropPlace) => void;
   /** M31: the playhead, for adding at the current frame. */
   onFrame: (frame: number) => void;
   /** M31: the editor seeks through this after adding. */
@@ -1174,7 +1176,7 @@ function Monitor({
   const swallowClick = useRef(false);
   const [outline, setOutline] = useState<Outline | null>(null);
   // M43: which scene chip a dragged scene would land before or after.
-  const [dropEdge, setDropEdge] = useState<{ id: number; place: 'before' | 'after' } | null>(null);
+  const [dropEdge, setDropEdge] = useState<{ id: number; place: DropPlace } | null>(null);
   const relative = (box: Box, monitor: DOMRect, dx = 0, dy = 0): Outline => ({ left: box.left - monitor.left + dx, top: box.top - monitor.top + dy, width: box.width, height: box.height });
   const layerAt = (monitor: HTMLElement, x: number, y: number) => pickLayer(findLayerBoxes(monitor, schemaFor), x, y);
 
@@ -1618,34 +1620,41 @@ function Monitor({
                 seek(holdFrame(e));
               }}
               style={{ flexGrow: Math.max(1, seconds(e.endFrame - e.startFrame)) }}
-              draggable={isSceneType(e.type)}
+              draggable={e.enabled}
               data-drop-edge={dropEdge?.id === e.id ? dropEdge.place : undefined}
               onDragStart={(ev) => {
-                if (!isSceneType(e.type)) return;
-                ev.dataTransfer.setData(SCENE_DRAG_TYPE, String(e.id));
+                // M43: a scene drags to reorder; M44: an overlay drags onto a scene.
+                ev.dataTransfer.setData(isSceneType(e.type) ? SCENE_DRAG_TYPE : OVERLAY_DRAG_TYPE, String(e.id));
                 ev.dataTransfer.effectAllowed = 'move';
               }}
               onDragOver={(ev) => {
-                if (!isSceneType(e.type) || !Array.from(ev.dataTransfer.types).includes(SCENE_DRAG_TYPE)) return;
+                const types = Array.from(ev.dataTransfer.types);
+                const carried = types.includes(SCENE_DRAG_TYPE) ? 'scene' : types.includes(OVERLAY_DRAG_TYPE) ? 'overlay' : null;
+                if (!isSceneType(e.type) || !carried) return;
                 ev.preventDefault();
                 ev.dataTransfer.dropEffect = 'move';
                 const box = ev.currentTarget.getBoundingClientRect();
-                const place = ev.clientX < box.left + box.width / 2 ? 'before' : 'after';
+                const place: DropPlace = carried === 'overlay' ? 'on' : ev.clientX < box.left + box.width / 2 ? 'before' : 'after';
                 setDropEdge((prev) => (prev?.id === e.id && prev.place === place ? prev : { id: e.id, place }));
               }}
               onDragLeave={() => setDropEdge((prev) => (prev?.id === e.id ? null : prev))}
               onDrop={(ev) => {
-                const movedId = Number(ev.dataTransfer.getData(SCENE_DRAG_TYPE));
+                const sceneId = Number(ev.dataTransfer.getData(SCENE_DRAG_TYPE));
+                const overlayId = Number(ev.dataTransfer.getData(OVERLAY_DRAG_TYPE));
                 setDropEdge(null);
-                if (!movedId || !isSceneType(e.type)) return;
+                if (!isSceneType(e.type) || (!sceneId && !overlayId)) return;
                 ev.preventDefault();
+                if (overlayId) {
+                  onReorder(overlayId, e.id, 'on');
+                  return;
+                }
                 const box = ev.currentTarget.getBoundingClientRect();
-                onReorder(movedId, e.id, ev.clientX < box.left + box.width / 2 ? 'before' : 'after');
+                onReorder(sceneId, e.id, ev.clientX < box.left + box.width / 2 ? 'before' : 'after');
               }}
-              className={`group relative basis-0 min-w-36 min-w-0 overflow-hidden flex items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors ${
+              className={`group relative basis-0 min-w-36 overflow-hidden flex items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors ${
                 onScreen ? 'bg-blue text-white' : 'bg-raised text-fg hover:bg-hover'
-              } ${isSelected ? 'ring-2 ring-blue ring-offset-2 ring-offset-panel' : ''} ${e.enabled ? '' : 'opacity-60'} ${
-                dropEdge?.id === e.id ? (dropEdge.place === 'before' ? 'shadow-[inset_3px_0_0_0_var(--color-blue)]' : 'shadow-[inset_-3px_0_0_0_var(--color-blue)]') : ''
+              } ${isSelected || dropEdge?.id === e.id && dropEdge.place === 'on' ? 'ring-2 ring-blue ring-offset-2 ring-offset-panel' : ''} ${e.enabled ? '' : 'opacity-60'} ${
+                dropEdge?.id === e.id && dropEdge.place !== 'on' ? (dropEdge.place === 'before' ? 'shadow-[inset_3px_0_0_0_var(--color-blue)]' : 'shadow-[inset_-3px_0_0_0_var(--color-blue)]') : ''
               }`}
             >
               {/* M37: the scene as it stands, drawn at its hold frame with its own values. */}

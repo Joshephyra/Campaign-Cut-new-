@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { reorderScenes } from './reorder';
+import { moveOverlayToScene, reorderScenes } from './reorder';
 
 /** M43: scenes move in the play order; lengths and the gaps between positions stay; overlays stay put. */
 const el = (id: number, type: string, startFrame: number, endFrame: number, enabled = true) => ({ id, type, startFrame, endFrame, enabled });
@@ -40,5 +40,19 @@ describe('reorderScenes', () => {
     expect(reorderScenes(spot, 2, 1, 'before').size).toBe(0);
     expect(reorderScenes([...spot, el(5, 'open', 900, 960, false)], 5, 1, 'before').size).toBe(0);
     expect(reorderScenes(spot, 99, 1, 'before').size).toBe(0);
+  });
+});
+
+describe('moveOverlayToScene (M44)', () => {
+  it('starts the overlay where the scene starts, keeping its length, and moves nothing else', () => {
+    const patches = moveOverlayToScene(spot, 2, 3);
+    expect([...patches.entries()]).toEqual([[2, { startFrame: 300, endFrame: 450 }]]);
+  });
+
+  it('does nothing for a scene, an overlay already on that scene, a hidden element, or a target that is not a scene', () => {
+    expect(moveOverlayToScene(spot, 1, 3).size).toBe(0);
+    expect(moveOverlayToScene([el(1, 'open', 0, 120), el(2, 'caption', 0, 60)], 2, 1).size).toBe(0);
+    expect(moveOverlayToScene([...spot, el(6, 'caption', 0, 30, false)], 6, 3).size).toBe(0);
+    expect(moveOverlayToScene(spot, 2, 2).size).toBe(0);
   });
 });

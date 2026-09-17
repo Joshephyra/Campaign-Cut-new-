@@ -26,7 +26,7 @@ Spot **New spot** in the projects list is one built this way, from the starter p
 
 ## 5. Move a scene (M43)
 
-Drag a scene chip under the video onto another scene chip: left half puts it before, right half after (a blue edge shows which). The scenes re-lay with their lengths; lower thirds and other overlays stay where they were.
+Drag a scene chip under the video onto another scene chip: left half puts it before, right half after (a blue edge shows which). The scenes re-lay with their lengths; lower thirds and other overlays stay where they were. Drag an overlay chip onto a scene chip to put that overlay on that scene.
 
 ## For you to do
 

@@ -64,12 +64,12 @@ function dragScene(from: HTMLElement, to: HTMLElement, place: 'before' | 'after'
 }
 
 describe('Editor: reorder scenes by dragging chips (M43)', () => {
-  it('only scene chips drag; dropping the end card before the open re-lays the scenes, leaves the lower third, and saves the moved ones', async () => {
+  it('dropping the end card before the open re-lays the scenes, leaves the lower third, and saves the moved ones', async () => {
     const puts = mockApi();
     render(<Editor projectId={7} onBack={() => {}} />);
     await waitFor(() => expect(screen.getByTestId('scene-5')).toBeTruthy());
     expect(screen.getByTestId('scene-3').getAttribute('draggable')).toBe('true');
-    expect(screen.getByTestId('scene-4').getAttribute('draggable')).toBe('false');
+    expect(screen.getByTestId('scene-4').getAttribute('draggable')).toBe('true'); // M44: an overlay drags onto a scene
 
     dragScene(screen.getByTestId('scene-5'), screen.getByTestId('scene-3'), 'before');
     // end card (90) first, then the gap of 90, then open (90): lower third untouched
@@ -91,5 +91,22 @@ describe('Editor: reorder scenes by dragging chips (M43)', () => {
     await new Promise((r) => setTimeout(r, 50));
     expect(playerOrder().map((e) => e[0])).toEqual(['5', '4', '3']);
     await waitFor(() => expect(puts.some((p) => p.url.includes('/elements/'))).toBe(true), { timeout: 4000 });
+  });
+});
+
+/** M44: an overlay chip dropped on a scene chip lands on that scene, keeping its length; a scene chip is the only drop target. */
+describe('Editor: move an overlay onto a scene (M44)', () => {
+  it('drops the lower third on the end card: it starts where the end card starts, nothing else moves, and it is saved', async () => {
+    const puts = mockApi();
+    render(<Editor projectId={7} onBack={() => {}} />);
+    await waitFor(() => expect(screen.getByTestId('scene-5')).toBeTruthy());
+    dragScene(screen.getByTestId('scene-4'), screen.getByTestId('scene-5'), 'after');
+    await waitFor(() => expect(playerOrder()).toEqual([['3', 0, 90], ['4', 180, 240], ['5', 180, 270]]));
+    await waitFor(() => expect(puts.find((p) => p.url === '/api/projects/7/elements/4')?.body).toMatchObject({ startFrame: 180, endFrame: 240 }), { timeout: 4000 });
+    expect(puts.find((p) => p.url === '/api/projects/7/elements/5')).toBeUndefined();
+    // an overlay is not a drop target: dropping the open on the lower third changes nothing
+    dragScene(screen.getByTestId('scene-3'), screen.getByTestId('scene-4'), 'before');
+    await new Promise((r) => setTimeout(r, 50));
+    expect(playerOrder()).toEqual([['3', 0, 90], ['4', 180, 240], ['5', 180, 270]]);
   });
 });
