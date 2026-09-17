@@ -23,7 +23,7 @@ export type { ChromaFilter, ChromaKey } from './chroma';
 export { applyTransform, DEFAULT_TRANSFORM, isTransformValue, LAYER_CLASS, layerClassFor, type TransformValue } from './transform';
 export { mediaTiming } from './media';
 export type { MainAudio } from './config';
-export { COLOR_ROLES, ELEMENT_TYPES, ELEMENT_TYPE_LABELS, inferElementType, isElementType, isSceneType, SCENE_TYPES } from './elementTypes';
+export { COLOR_ROLES, ELEMENT_TYPES, ELEMENT_TYPE_LABELS, inferElementType, isElementType, isSceneType, PICKER_ORDER, SCENE_TYPES } from './elementTypes';
 export type { ElementType } from './elementTypes';
 export { carriesDisclaimer, DISCLAIMER_MIN_SECONDS, disclaimerCheck, disclaimerSeconds, emptySlots, readiness, type Readiness, type ReadinessItem } from './compliance';
 export type { DisclaimerCheck, DisclaimerScene } from './compliance';
@@ -31,3 +31,4 @@ export { ASPECTS, aspectKey, autoFitBox, frameFor, isAspect, isFullBleed } from 
 export type { Aspect, AutoFitBox, Frame } from './aspect';
 export { metadataFor } from './Root';
 export { ACCENT_CLASS, DEFAULT_ACCENT, isTreatment, TREATMENT_LABELS, TREATMENTS, treatmentCss, treatmentFor, treatmentLayerFilter, type Treatment, type TreatmentProps } from './treatments';
+export { proofPointsFor, structureOf, type Structure, type StructureGroup } from './structure';

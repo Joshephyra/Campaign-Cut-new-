@@ -142,9 +142,9 @@ export function Switch({ label, checked, onChange }: { label: string; checked: b
 }
 
 /** A panel section: title on the left, an optional action on the right, then the content. */
-export function Section({ title, action, children, className = '' }: { title: ReactNode; action?: ReactNode; children: ReactNode; className?: string }) {
+export function Section({ title, action, children, className = '', id }: { title: ReactNode; action?: ReactNode; children: ReactNode; className?: string; id?: string }) {
   return (
-    <section className={`px-5 py-4 border-b border-line last:border-b-0 ${className}`}>
+    <section id={id} className={`px-5 py-4 border-b border-line last:border-b-0 ${className}`}>
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-[13px] font-semibold text-fg">{title}</h2>
         {action}

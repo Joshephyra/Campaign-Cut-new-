@@ -107,7 +107,7 @@ describe('Editor element library (M31)', () => {
     expect(picker.textContent).toContain('Lower third');
     expect(picker.textContent).toContain('End card');
     expect(picker.textContent).toContain('Contrast :30');
-    expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['Open', 'Lower thirds', 'End cards']);
+    expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['Openings', 'End cards', 'Lower thirds']); // M51: the spot's shape first, then what sits on a scene
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Lower third from Contrast :30' }));
     await waitFor(() => expect(screen.getByTestId('scene-9')).toBeTruthy());

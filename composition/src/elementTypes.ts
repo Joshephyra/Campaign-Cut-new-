@@ -46,17 +46,20 @@ export function inferElementType(slug: string): ElementType {
 
 /** "lower-third" -> "Lower thirds": the plural label the library groups under. */
 export const ELEMENT_TYPE_LABELS: Record<ElementType, string> = {
-  open: 'Open',
+  open: 'Openings',
   headline: 'Headlines',
   'lower-third': 'Lower thirds',
   caption: 'Captions',
   callout: 'Callouts',
   overlay: 'Overlays',
-  stat: 'Stats',
-  background: 'Backgrounds',
+  stat: 'Proof points: stats',
+  background: 'Proof points: footage',
   'end-card': 'End cards',
   disclaimer: 'Disclaimers',
 };
+
+/** M51: the order the picker lists the types in: the spot's shape first (opening, proof points, end cards), then what sits on a scene. */
+export const PICKER_ORDER: readonly ElementType[] = ['open', 'background', 'stat', 'end-card', 'lower-third', 'headline', 'caption', 'callout', 'overlay', 'disclaimer'];
 
 /**
  * M33: the colour roles a brand can set. The same list the ingest's role

@@ -855,6 +855,15 @@ Versions of a spot (M36) are the deliverable; exporting them one chip switch at 
 
 ---
 
+## M51 · The strip in the ad's own words · DONE
+
+Josh (2026-09-17): a political spot is an opening, three or four proof points in a :30 (fewer in a :15), and an end card; lower thirds and text on screen are parts of those.
+
+- `structureOf` in the composition names each scene for its place (Opening, Proof point n, End card) and hangs every overlay on the scene it starts on. The strip shows each scene under its label with its overlays as pills beneath it; overlays are no longer chips of their own. Chips still drag; pills still drag onto scenes.
+- The picker's shelves are named the same way and ordered as a spot is built: Openings, Proof points (footage, stats), End cards, then Lower thirds, Headlines, Captions, Callouts, Overlays, Disclaimers. The left column lists every shelf under "Add to the spot", one press from the picker open on that shelf, plus Transitions, which jumps to "How it ends".
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

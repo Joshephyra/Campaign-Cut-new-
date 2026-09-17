@@ -22,9 +22,9 @@ const detail = {
   project: { id: 7, name: 'Three part project', templateId: 1, templateSlug: 'three', templateName: 'Three' },
   template: { id: 1, slug: 'three', name: 'Three', durationFrames: 270, fps: 30, width: 1920, height: 1080, thumbUrl: '' },
   elements: [
-    { id: 3, slug: 'open', name: 'Open', zIndex: 0, startFrame: 0, endFrame: 90, enabled: true, lottieUrl: '/templates/three/elements/open/template.json', schema: [{ key: 'headline', role: 'headline', kind: 'text', label: 'Headline', default: 'OPEN', path: '/layers/0' }] },
-    { id: 4, slug: 'lower-third', name: 'Lower third', zIndex: 1, startFrame: 60, endFrame: 120, enabled: true, lottieUrl: '/templates/three/elements/lower/template.json', schema: [{ key: 'subhead', role: 'subhead', kind: 'text', label: 'Subhead', default: 'LOWER', path: '/layers/0' }] },
-    { id: 5, slug: 'end-card', name: 'End card', zIndex: 0, startFrame: 180, endFrame: 270, enabled: true, lottieUrl: '/templates/three/elements/end/template.json', schema: [{ key: 'headline', role: 'headline', kind: 'text', label: 'Headline', default: 'END', path: '/layers/0' }] },
+    { id: 3, slug: 'open', name: 'Open', type: 'open', zIndex: 0, startFrame: 0, endFrame: 90, enabled: true, lottieUrl: '/templates/three/elements/open/template.json', schema: [{ key: 'headline', role: 'headline', kind: 'text', label: 'Headline', default: 'OPEN', path: '/layers/0' }] },
+    { id: 4, slug: 'lower-third', name: 'Lower third', type: 'lower-third', zIndex: 1, startFrame: 60, endFrame: 120, enabled: true, lottieUrl: '/templates/three/elements/lower/template.json', schema: [{ key: 'subhead', role: 'subhead', kind: 'text', label: 'Subhead', default: 'LOWER', path: '/layers/0' }] },
+    { id: 5, slug: 'end-card', name: 'End card', type: 'end-card', zIndex: 0, startFrame: 180, endFrame: 270, enabled: true, lottieUrl: '/templates/three/elements/end/template.json', schema: [{ key: 'headline', role: 'headline', kind: 'text', label: 'Headline', default: 'END', path: '/layers/0' }] },
   ],
   transitions: [{ afterElementId: 4, preset: 'fade', durationInFrames: 15 }],
   meta: { fonts: [], fontFiles: [] },
@@ -40,6 +40,7 @@ function mockApi() {
     if (url === '/api/projects/7' && !init?.method) return new Response(JSON.stringify(detail), { status: 200 });
     if (url.endsWith('/template.json')) return new Response(JSON.stringify(textLottie('X')), { status: 200 });
     if (url === '/api/media') return new Response('[]', { status: 200 });
+    if (url === '/api/elements') return new Response(JSON.stringify([{ id: 4, slug: 'lower-third', name: 'Lower third', type: 'lower-third', durationInFrames: 60, templateId: 1, templateSlug: 'three', templateName: 'Three', thumbUrl: '', lottieUrl: '/templates/three/elements/lower/template.json', schema: [], fontFiles: [] }]), { status: 200 });
     if (init?.method === 'PUT' || init?.method === 'PATCH') return new Response(init.body as string, { status: 200 });
     return new Response('not found', { status: 404 });
   });
@@ -89,7 +90,7 @@ describe('Editor scenes (M30)', () => {
     const chips = screen.getAllByTestId(/^scene-[0-9]+$/);
     expect(chips.map((c) => c.textContent)).toEqual([expect.stringContaining('Open'), expect.stringContaining('Lower third'), expect.stringContaining('End card')]);
     expect(screen.getByTestId('scene-3').getAttribute('data-selected')).toBe('true');
-    expect(screen.getAllByTestId(/^scene-thumb-/)).toHaveLength(3); // M37: each chip draws its scene
+    expect(screen.getAllByTestId(/^scene-thumb-/)).toHaveLength(2); // M37: each scene chip draws its scene; M51: overlays are pills under it, with no still
 
     fireEvent.click(screen.getByLabelText('Select End card'));
     await waitFor(() => expect(screen.getByTestId('scene-5').getAttribute('data-selected')).toBe('true'));
@@ -139,5 +140,23 @@ describe('Editor scenes (M30)', () => {
       const patches = calls.filter((c) => c.init?.method === 'PUT' && c.url.includes('/elements/')).map((c) => [c.url, JSON.parse(c.init!.body as string)]);
       expect(patches).toEqual(expect.arrayContaining([['/api/projects/7/elements/3', { startFrame: 0, endFrame: 120 }], ['/api/projects/7/elements/5', { startFrame: 210, endFrame: 300 }]]));
     });
+  });
+});
+
+
+/** M51: the strip reads as a political spot: opening, proof points, end card, with lower thirds and captions under the scene they sit on. */
+describe('Editor strip structure (M51)', () => {
+  it('labels the scenes for their place and hangs the lower third under the opening', async () => {
+    mockApi();
+    await open();
+    const labels = Array.from(document.querySelectorAll('[data-testid^="group-"] > span')).map((s) => s.textContent);
+    expect(labels).toEqual(['Opening', 'End card']);
+    const opening = screen.getByTestId('group-3');
+    expect(opening.contains(screen.getByTestId('scene-4'))).toBe(true); // the lower third sits on the open
+    expect(screen.getByTestId('group-5').contains(screen.getByTestId('scene-4'))).toBe(false);
+    // the left column offers every shelf, and the shelf opens the picker on its group
+    fireEvent.click(screen.getByRole('button', { name: 'Add lower thirds' }));
+    await screen.findByRole('dialog', { name: 'Add to the spot' });
+    expect(document.getElementById('picker-lower-third')).toBeTruthy();
   });
 });

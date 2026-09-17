@@ -4,6 +4,28 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M51 The strip in the ad's own words · DONE
+
+**Why**
+
+Josh's tweaks (2026-09-17): the strip should read as political ads are built (opening, proof points, end card), with lower thirds and text on screen as parts of those; the libraries of lower thirds, headlines, captions, callouts, overlays and transitions should be one press away.
+
+**What exists now**
+
+- `composition/src/structure.ts`: `structureOf` (scenes labelled for their place, overlays hung on the scene they start on, stray overlays kept apart) and `proofPointsFor`.
+- The strip: OPENING / PROOF POINT 1 / END CARD above each scene chip, the scene's overlays as pills under it. Type labels in the picker read Openings, Proof points: footage, Proof points: stats, End cards, Lower thirds, Headlines, Captions, Callouts, Overlays, Disclaimers, in that order. The left column opens with "Add to the spot": one button per shelf, opening the picker on it, plus Transitions.
+- Tests: 3 structure, 1 strip. 532 tests green.
+
+**Verified**
+
+- Real browser on spot 9: the strip reads Opening (Footage background, with Bar lower third under it), Proof point 1 (Headline), End card (Vote end card, with Disclaimer bar under it); the shelves sit at the top of the left column. Capture in .impeccable/review/m51-strip.png.
+
+**Next**
+
+M52 (timing locked, spots exact), M53 (collapsible sections), M54 (stock outlets), M55 (transitions between chips), M56 (animated callouts on a word), from the same tweaks.
+
+---
+
 ## 2026-09-17 · Downloads named for the spot and its version · DONE
 
 A download now lands as "rivera-for-senate-new-spot-9x16.mp4" rather than "project-9-7-9x16.mp4" (`app/src/exportName.ts`, on the panel's and the history's links; the render keeps its own name on the server). Tests: 2.

@@ -18,6 +18,8 @@ import {
   EMPTY_LOTTIE,
   fontsFor,
   isSceneType,
+  PICKER_ORDER,
+  structureOf,
   isTreatment,
   treatmentFor,
   isChromaKey,
@@ -533,7 +535,9 @@ export function Editor({ projectId, onBack }: Props) {
   const [libraryError, setLibraryError] = useState<string | null>(null);
   const frameRef = useRef(0);
   const seekRef = useRef<(frame: number) => void>(() => {});
-  const openLibrary = () => {
+  const [pickerGroup, setPickerGroup] = useState<string | null>(null);
+  const openLibrary = (group: string | null = null) => {
+    setPickerGroup(typeof group === 'string' ? group : null);
     setPicking(true);
     if (library === null) {
       api
@@ -741,9 +745,34 @@ export function Editor({ projectId, onBack }: Props) {
         <div className="flex flex-1 min-h-0">
           <aside className="w-[280px] shrink-0 border-r border-line bg-panel overflow-y-auto">
             {picking ? (
-              <LibraryPicker library={library} error={libraryError} inSpot={usesByElement(elements)} onAdd={(item, copy) => void addFromLibrary(item, copy)} onClose={() => setPicking(false)} />
+              <LibraryPicker library={library} error={libraryError} inSpot={usesByElement(elements)} onAdd={(item, copy) => void addFromLibrary(item, copy)} onClose={() => setPicking(false)} openOn={pickerGroup} />
             ) : (
               <>
+                {/* M51: the library's shelves, one press from the spot. Transitions live between the chips and in the panel. */}
+                <section className="px-4 py-3 border-b border-line" aria-label="Add to the spot">
+                  <h2 className="text-[13px] font-semibold mb-2">Add to the spot</h2>
+                  <div className="flex flex-wrap gap-1.5">
+                    {PICKER_ORDER.map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        aria-label={`Add ${ELEMENT_TYPE_LABELS[type].toLowerCase()}`}
+                        onClick={() => openLibrary(type)}
+                        className="h-7 px-2.5 rounded-md bg-raised border border-line text-xs text-fg-2 hover:text-fg hover:bg-hover hover:border-line-strong transition-colors"
+                      >
+                        {ELEMENT_TYPE_LABELS[type]}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      aria-label="Choose a transition"
+                      onClick={() => document.getElementById('how-it-ends')?.scrollIntoView?.({ block: 'center' })}
+                      className="h-7 px-2.5 rounded-md bg-raised border border-line text-xs text-fg-2 hover:text-fg hover:bg-hover hover:border-line-strong transition-colors"
+                    >
+                      Transitions
+                    </button>
+                  </div>
+                </section>
                 <MediaPanel onSelect={selectFootage} selectedId={selectedAssetId} onChange={setAssets} audio={audio} onAudioChange={onAudioChange} />
                 {styleError && <p className="px-4 pt-3 text-xs text-red">{styleError}</p>}
                 <StylePanel
@@ -776,7 +805,7 @@ export function Editor({ projectId, onBack }: Props) {
             schemaFor={schemaFor}
             onPress={onPress}
             onDrag={onDrag}
-            onAdd={openLibrary}
+            onAdd={() => openLibrary()}
             onReorder={onReorder}
             onFrame={(f) => {
               frameRef.current = f;
@@ -807,7 +836,7 @@ export function Editor({ projectId, onBack }: Props) {
               <div className="px-5 py-6" data-testid="empty-panel">
                 <h2 className="text-lg font-semibold tracking-tight">Nothing on the video yet</h2>
                 <p className="mt-2 text-[13px] text-fg-2">Add a scene from the library: a headline, a background, an end card. Overlays sit on top of the scene under the playhead.</p>
-                <Button variant="ghost" className="mt-4" onClick={openLibrary}>
+                <Button variant="ghost" className="mt-4" onClick={() => openLibrary()}>
                   Add the first scene
                 </Button>
               </div>
@@ -857,7 +886,7 @@ export function Editor({ projectId, onBack }: Props) {
                   <p className="text-[11px] text-fg-3 mt-1.5">Lengthen it when the footage needs more room. What follows moves with it.</p>
                 </Section>
                 {boundaries.has(selected.id) && (
-                  <Section title="How it ends">
+                  <Section title="How it ends" id="how-it-ends">
                     <TransitionControl element={selected} transition={transitions.find((t) => t.afterElementId === selected.id)} onChange={(t) => void onTransitionChange(selected.id, t)} />
                   </Section>
                 )}
@@ -1026,15 +1055,18 @@ function LibraryPicker({
   inSpot,
   onAdd,
   onClose,
+  openOn = null,
 }: {
   library: LibraryElement[] | null;
   error: string | null;
+  /** M51: the group to scroll to when the picker opens (a type), from the left column's shortcuts. */
+  openOn?: string | null;
   /** M45: how many times each library element is already in the spot, by template element id. */
   inSpot: Map<number, number>;
   onAdd: (item: LibraryElement, copy: string) => void;
   onClose: () => void;
 }) {
-  const groups: { type: string; label: string; items: LibraryElement[] }[] = ELEMENT_TYPES.map((type) => ({ type, label: ELEMENT_TYPE_LABELS[type], items: (library ?? []).filter((e) => e.type === type) })).filter((g) => g.items.length > 0);
+  const groups: { type: string; label: string; items: LibraryElement[] }[] = PICKER_ORDER.map((type) => ({ type, label: ELEMENT_TYPE_LABELS[type], items: (library ?? []).filter((e) => e.type === type) })).filter((g) => g.items.length > 0);
   const untyped = (library ?? []).filter((e) => !(ELEMENT_TYPES as readonly string[]).includes(e.type));
   if (untyped.length > 0) groups.push({ type: 'other', label: 'Other', items: untyped });
 
@@ -1116,7 +1148,7 @@ function LibraryPicker({
       {library === null && !error && <p className="px-4 py-3 text-xs text-fg-3">Loading…</p>}
       {library !== null && library.length === 0 && <p className="px-4 py-3 text-xs text-fg-2">Nothing in the library yet. Add a template first.</p>}
       {groups.map((g) => (
-        <section key={g.type} className="px-4 py-3">
+        <section key={g.type} className="px-4 py-3" id={`picker-${g.type}`} ref={(node) => { if (node && openOn === g.type && library) node.scrollIntoView?.({ block: 'start' }); }}>
           <h3 className="text-xs font-semibold text-fg-2 mb-2">{g.label}</h3>
           <ul className="flex flex-col gap-1.5">
             {g.items.map((item) => {
@@ -1540,8 +1572,97 @@ function Monitor({
     return () => clearTimeout(t);
   }, [loaded]);
 
-  const scenes = inStartOrder(elements);
   const editorTop = editing ? Math.min(editing.box.top + editing.box.height + 8, Math.max(0, editing.box.top)) : 0;
+
+  /** One chip: a scene (with its still and label) or an overlay (a small pill under its scene). Both drag; only scene chips take drops. */
+  const chip = (e: ProjectElement, kind: 'scene' | 'overlay') => {
+          const isSelected = e.id === selectedId;
+          const onScreen = e.enabled && frame >= e.startFrame && frame < e.endFrame;
+    return (
+            <button
+              key={e.id}
+              type="button"
+              aria-label={`Select ${e.name}`}
+              data-testid={`scene-${e.id}`}
+              data-selected={isSelected ? 'true' : 'false'}
+              aria-pressed={isSelected}
+              onClick={() => {
+                onSelect(e.id);
+                seek(holdFrame(e));
+              }}
+              draggable={e.enabled}
+              title={!e.enabled ? 'Hidden scene · switch Show on to drag' : isSceneType(e.type) ? 'Drag to reorder' : 'Drag onto a scene'}
+              data-drop-edge={dropEdge?.id === e.id ? dropEdge.place : undefined}
+              onDragStart={(ev) => {
+                // M43: a scene drags to reorder; M44: an overlay drags onto a scene.
+                ev.dataTransfer.setData(isSceneType(e.type) ? SCENE_DRAG_TYPE : OVERLAY_DRAG_TYPE, String(e.id));
+                ev.dataTransfer.effectAllowed = 'move';
+              }}
+              onDragOver={(ev) => {
+                const types = Array.from(ev.dataTransfer.types);
+                const carried = types.includes(SCENE_DRAG_TYPE) ? 'scene' : types.includes(OVERLAY_DRAG_TYPE) ? 'overlay' : null;
+                if (!isSceneType(e.type) || !carried) return;
+                ev.preventDefault();
+                ev.dataTransfer.dropEffect = 'move';
+                const box = ev.currentTarget.getBoundingClientRect();
+                const place: DropPlace = carried === 'overlay' ? 'on' : ev.clientX < box.left + box.width / 2 ? 'before' : 'after';
+                setDropEdge((prev) => (prev?.id === e.id && prev.place === place ? prev : { id: e.id, place }));
+              }}
+              onDragLeave={(ev) => {
+                if (ev.relatedTarget instanceof Node && ev.currentTarget.contains(ev.relatedTarget)) return;
+                setDropEdge((prev) => (prev?.id === e.id ? null : prev));
+              }}
+              onDrop={(ev) => {
+                const sceneId = Number(ev.dataTransfer.getData(SCENE_DRAG_TYPE));
+                const overlayId = Number(ev.dataTransfer.getData(OVERLAY_DRAG_TYPE));
+                setDropEdge(null);
+                if (!isSceneType(e.type) || (!sceneId && !overlayId)) return;
+                ev.preventDefault();
+                if (overlayId) {
+                  onReorder(overlayId, e.id, 'on');
+                  return;
+                }
+                const box = ev.currentTarget.getBoundingClientRect();
+                onReorder(sceneId, e.id, ev.clientX < box.left + box.width / 2 ? 'before' : 'after');
+              }}
+              className={`group relative overflow-hidden flex items-center text-left transition-colors ${kind === 'scene' ? 'min-w-44 gap-3 rounded-lg px-2 py-2' : 'gap-1.5 rounded-md px-2 py-1 text-xs'} ${e.enabled ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'} ${
+                onScreen ? 'bg-blue text-white' : dropEdge?.id === e.id && dropEdge.place === 'on' ? 'bg-blue-tint text-fg' : 'bg-raised text-fg hover:bg-hover'
+              } ${isSelected || dropEdge?.id === e.id && dropEdge.place === 'on' ? 'ring-2 ring-blue ring-offset-2 ring-offset-panel' : ''} ${e.enabled ? '' : 'opacity-60'} ${
+                dropEdge?.id === e.id && dropEdge.place !== 'on' ? (dropEdge.place === 'before' ? 'shadow-[inset_3px_0_0_0_var(--color-blue)]' : 'shadow-[inset_-3px_0_0_0_var(--color-blue)]') : ''
+              }`}
+            >
+              {/* M37: the scene as it stands, drawn at its hold frame with its own values. */}
+              {kind === 'scene' && (
+              <div className="relative w-16 shrink-0 rounded-md bg-stage overflow-hidden" style={{ aspectRatio: `${frameSize.width} / ${frameSize.height}` }}>
+                {chipClip(e)?.thumbUrl && <img src={api.fileUrl(chipClip(e)!.thumbUrl!)} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+                {lotties[e.id] && (
+                  <ElementPreview
+                    testId={`scene-thumb-${e.id}`}
+                    lottie={lotties[e.id]!}
+                    schema={e.schema}
+                    values={renderedValues[e.id] ?? {}}
+                    frame={Number(lotties[e.id]!.ip) + (holdFrame(e) - e.startFrame)}
+                    assetBase={`${API}${e.lottieUrl.replace(/\/template\.json$/, '')}`}
+                    className="w-full h-full"
+                  />
+                )}
+              </div>
+              )}
+              <span className="flex flex-col items-start gap-0.5 min-w-0">
+              <span className={`flex items-center gap-1.5 font-medium whitespace-nowrap ${kind === 'scene' ? 'text-[13px]' : 'text-xs'}`}>
+                <span className="truncate">{e.name}</span>
+                {!e.enabled && <EyeOff size={12} strokeWidth={1.75} aria-hidden="true" className={onScreen ? 'text-white/70' : 'text-fg-3'} />}
+              </span>
+              {kind === 'scene' && (
+              <span className={`text-[11px] tabular-nums truncate max-w-full ${onScreen ? 'text-white/75' : 'text-fg-3'}`}>
+                {seconds(e.startFrame).toFixed(1)} s · {seconds(e.endFrame - e.startFrame).toFixed(1)} s long
+              </span>
+              )}
+              </span>
+            </button>
+    );
+  };
+  const structure = structureOf(elements);
 
   return (
     <section className="flex-1 min-w-0 flex flex-col bg-stage">
@@ -1685,92 +1806,20 @@ function Monitor({
         </div>
       </div>
 
-      {/* M30: the scene strip. Press a scene to see it and edit it. */}
+      {/* M30: the scene strip. M51: a spot's shape, opening, proof points, end card, each scene with what sits on it. */}
       <div className="shrink-0 border-t border-line bg-panel px-6 py-3 flex items-stretch gap-2 overflow-x-auto">
-        {scenes.map((e) => {
-          const isSelected = e.id === selectedId;
-          const onScreen = e.enabled && frame >= e.startFrame && frame < e.endFrame;
-          return (
-            <button
-              key={e.id}
-              type="button"
-              aria-label={`Select ${e.name}`}
-              data-testid={`scene-${e.id}`}
-              data-selected={isSelected ? 'true' : 'false'}
-              aria-pressed={isSelected}
-              onClick={() => {
-                onSelect(e.id);
-                seek(holdFrame(e));
-              }}
-              style={{ flexGrow: Math.max(1, seconds(e.endFrame - e.startFrame)) }}
-              draggable={e.enabled}
-              title={!e.enabled ? 'Hidden scene · switch Show on to drag' : isSceneType(e.type) ? 'Drag to reorder' : 'Drag onto a scene'}
-              data-drop-edge={dropEdge?.id === e.id ? dropEdge.place : undefined}
-              onDragStart={(ev) => {
-                // M43: a scene drags to reorder; M44: an overlay drags onto a scene.
-                ev.dataTransfer.setData(isSceneType(e.type) ? SCENE_DRAG_TYPE : OVERLAY_DRAG_TYPE, String(e.id));
-                ev.dataTransfer.effectAllowed = 'move';
-              }}
-              onDragOver={(ev) => {
-                const types = Array.from(ev.dataTransfer.types);
-                const carried = types.includes(SCENE_DRAG_TYPE) ? 'scene' : types.includes(OVERLAY_DRAG_TYPE) ? 'overlay' : null;
-                if (!isSceneType(e.type) || !carried) return;
-                ev.preventDefault();
-                ev.dataTransfer.dropEffect = 'move';
-                const box = ev.currentTarget.getBoundingClientRect();
-                const place: DropPlace = carried === 'overlay' ? 'on' : ev.clientX < box.left + box.width / 2 ? 'before' : 'after';
-                setDropEdge((prev) => (prev?.id === e.id && prev.place === place ? prev : { id: e.id, place }));
-              }}
-              onDragLeave={(ev) => {
-                if (ev.relatedTarget instanceof Node && ev.currentTarget.contains(ev.relatedTarget)) return;
-                setDropEdge((prev) => (prev?.id === e.id ? null : prev));
-              }}
-              onDrop={(ev) => {
-                const sceneId = Number(ev.dataTransfer.getData(SCENE_DRAG_TYPE));
-                const overlayId = Number(ev.dataTransfer.getData(OVERLAY_DRAG_TYPE));
-                setDropEdge(null);
-                if (!isSceneType(e.type) || (!sceneId && !overlayId)) return;
-                ev.preventDefault();
-                if (overlayId) {
-                  onReorder(overlayId, e.id, 'on');
-                  return;
-                }
-                const box = ev.currentTarget.getBoundingClientRect();
-                onReorder(sceneId, e.id, ev.clientX < box.left + box.width / 2 ? 'before' : 'after');
-              }}
-              className={`group relative basis-0 min-w-44 overflow-hidden flex items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors ${e.enabled ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'} ${
-                onScreen ? 'bg-blue text-white' : dropEdge?.id === e.id && dropEdge.place === 'on' ? 'bg-blue-tint text-fg' : 'bg-raised text-fg hover:bg-hover'
-              } ${isSelected || dropEdge?.id === e.id && dropEdge.place === 'on' ? 'ring-2 ring-blue ring-offset-2 ring-offset-panel' : ''} ${e.enabled ? '' : 'opacity-60'} ${
-                dropEdge?.id === e.id && dropEdge.place !== 'on' ? (dropEdge.place === 'before' ? 'shadow-[inset_3px_0_0_0_var(--color-blue)]' : 'shadow-[inset_-3px_0_0_0_var(--color-blue)]') : ''
-              }`}
-            >
-              {/* M37: the scene as it stands, drawn at its hold frame with its own values. */}
-              <div className="relative w-16 shrink-0 rounded-md bg-stage overflow-hidden" style={{ aspectRatio: `${frameSize.width} / ${frameSize.height}` }}>
-                {chipClip(e)?.thumbUrl && <img src={api.fileUrl(chipClip(e)!.thumbUrl!)} alt="" className="absolute inset-0 w-full h-full object-cover" />}
-                {lotties[e.id] && (
-                  <ElementPreview
-                    testId={`scene-thumb-${e.id}`}
-                    lottie={lotties[e.id]!}
-                    schema={e.schema}
-                    values={renderedValues[e.id] ?? {}}
-                    frame={Number(lotties[e.id]!.ip) + (holdFrame(e) - e.startFrame)}
-                    assetBase={`${API}${e.lottieUrl.replace(/\/template\.json$/, '')}`}
-                    className="w-full h-full"
-                  />
-                )}
-              </div>
-              <span className="flex flex-col items-start gap-0.5 min-w-0">
-              <span className="flex items-center gap-1.5 text-[13px] font-medium whitespace-nowrap">
-                <span className="truncate">{e.name}</span>
-                {!e.enabled && <EyeOff size={12} strokeWidth={1.75} aria-hidden="true" className={onScreen ? 'text-white/70' : 'text-fg-3'} />}
-              </span>
-              <span className={`text-[11px] tabular-nums truncate max-w-full ${onScreen ? 'text-white/75' : 'text-fg-3'}`}>
-                {seconds(e.startFrame).toFixed(1)} s · {seconds(e.endFrame - e.startFrame).toFixed(1)} s long
-              </span>
-              </span>
-            </button>
-          );
-        })}
+        {structure.stray.length > 0 && (
+          <div className="flex flex-col gap-1 justify-center" data-testid="stray-overlays">
+            {structure.stray.map((e) => chip(e, 'overlay'))}
+          </div>
+        )}
+        {structure.groups.map((g) => (
+          <div key={g.scene.id} data-testid={`group-${g.scene.id}`} className="flex flex-col gap-1 shrink-0" style={{ flexGrow: Math.max(1, seconds(g.scene.endFrame - g.scene.startFrame)), flexBasis: 0 }}>
+            <span className="text-[11px] font-medium text-fg-3 uppercase tracking-wide px-1">{g.label}</span>
+            {chip(g.scene, 'scene')}
+            {g.overlays.length > 0 && <div className="flex flex-wrap gap-1">{g.overlays.map((o) => chip(o, 'overlay'))}</div>}
+          </div>
+        ))}
         <button
           type="button"
           aria-label="Add a scene"
