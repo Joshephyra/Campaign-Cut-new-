@@ -7,6 +7,12 @@ vi.mock('@remotion/lottie', () => ({
   Lottie: () => null,
 }));
 
+// M37: the app draws still previews with lottie-web, which paints a canvas
+// at import time and parses real Lottie files, neither of which page tests
+// have. It draws nothing here; tests that care what was asked of it mock it
+// themselves with a recording stub.
+vi.mock('lottie-web', () => ({ default: { loadAnimation: () => ({ goToAndStop: () => {}, destroy: () => {} }) } }));
+
 // The Player is stubbed to expose the inputProps it was handed, so tests can
 // assert that typing reaches the composition without rendering video. Its
 // ref answers the PlayerRef calls the editor makes: a seek lands in

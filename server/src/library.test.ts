@@ -53,8 +53,19 @@ describe('element library routes (M31)', () => {
     const res = await app.inject({ method: 'GET', url: '/elements' });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual([
-      { id: bioOpen, slug: 'open', name: 'Open', type: 'open', durationInFrames: 150, templateId: expect.any(Number), templateSlug: 'bio', templateName: 'Bio :30', thumbUrl: '/templates/bio/thumb.png' },
-      { id: contrastLower, slug: 'lower-third', name: 'Lower third', type: 'lower-third', durationInFrames: 150, templateId: expect.any(Number), templateSlug: 'contrast', templateName: 'Contrast :30', thumbUrl: '/templates/contrast/thumb.png' },
+      {
+        id: bioOpen, slug: 'open', name: 'Open', type: 'open', durationInFrames: 150, templateId: expect.any(Number), templateSlug: 'bio', templateName: 'Bio :30', thumbUrl: '/templates/bio/thumb.png',
+        // M37: enough to draw a preview of the element with the user's copy
+        lottieUrl: '/templates/bio/elements/open/template.json',
+        schema: [expect.objectContaining({ key: 'headline' })],
+        fontFiles: [{ family: 'Plex', style: 'Regular', file: 'Plex.ttf', templateSlug: 'bio' }],
+      },
+      {
+        id: contrastLower, slug: 'lower-third', name: 'Lower third', type: 'lower-third', durationInFrames: 150, templateId: expect.any(Number), templateSlug: 'contrast', templateName: 'Contrast :30', thumbUrl: '/templates/contrast/thumb.png',
+        lottieUrl: '/templates/contrast/elements/lower-third/template.json',
+        schema: [expect.objectContaining({ key: 'subhead' })],
+        fontFiles: [{ family: 'Arial', style: 'Bold', file: 'Arial-Bold.ttf', templateSlug: 'contrast' }],
+      },
     ]);
   });
 

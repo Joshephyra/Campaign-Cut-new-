@@ -5,6 +5,7 @@ import {
   carriesDisclaimer,
   compositionConfig,
   disclaimerCheck,
+  fontFaceCss,
   frameFor,
   isAspect,
   type Aspect,
@@ -32,6 +33,7 @@ import {
   type MainMedia,
   type MainProps,
   type ParamValues,
+  type TemplateFontFile,
   type TemplateParam,
   type TransitionPreset,
   type TransitionProps,
@@ -51,6 +53,7 @@ import {
 } from 'react';
 import { API, api, type LibraryElement, type MediaAsset, type ProjectAudio, type ProjectDetail, type ProjectElement, type ProjectTransition, type Theme } from '../api';
 import { StylePanel } from '../components/StylePanel';
+import { ElementPreview, previewValues } from '../components/ElementPreview';
 import { ExportHistory } from '../components/ExportHistory';
 import { ExportPanel } from '../components/ExportPanel';
 import { Inspector } from '../components/Inspector';
@@ -894,13 +897,51 @@ function LibraryPicker({
   const groups = ELEMENT_TYPES.map((type) => ({ type, label: ELEMENT_TYPE_LABELS[type], items: (library ?? []).filter((e) => e.type === type) })).filter((g) => g.items.length > 0);
   const untyped = (library ?? []).filter((e) => !(ELEMENT_TYPES as readonly string[]).includes(e.type));
   if (untyped.length > 0) groups.push({ type: 'overlay', label: 'Other', items: untyped });
+
+  // M37: the composer. Type your copy once; every text element previews
+  // with it. Each element's Lottie is fetched once and drawn as a still.
+  const [copy, setCopy] = useState('');
+  const [previews, setPreviews] = useState<Record<number, LottieAnimationData>>({});
+  useEffect(() => {
+    let cancelled = false;
+    for (const item of library ?? []) {
+      if (previews[item.id]) continue;
+      api
+        .elementLottie(item.lottieUrl)
+        .then((l) => {
+          if (!cancelled) setPreviews((prev) => (prev[item.id] ? prev : { ...prev, [item.id]: l }));
+        })
+        .catch(() => {});
+    }
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch once per item; the cache guards repeats
+  }, [library]);
+  const fontCss = useMemo(() => {
+    const seen = new Map<string, TemplateFontFile>();
+    for (const item of library ?? []) for (const f of item.fontFiles ?? []) seen.set(`${f.templateSlug}/${f.file}`, f);
+    return fontFaceCss(fontsFor([...seen.values()], '', API));
+  }, [library]);
+  const holdFor = (item: LibraryElement, l: LottieAnimationData) => Number(l.ip) + Math.min(compositionConfig.fps, Math.floor(item.durationInFrames / 2));
+
   return (
     <div role="dialog" aria-label="Add to the spot" className="flex flex-col">
+      {fontCss && <style>{fontCss}</style>}
       <div className="px-4 py-3 border-b border-line flex items-center justify-between">
         <h2 className="text-[13px] font-semibold">Add to the spot</h2>
         <IconButton label="Close the library" icon={X} onClick={onClose} className="!w-7 !h-7" />
       </div>
-      <p className="px-4 pt-3 text-[11px] text-fg-3">Every element of every template. It lands at the playhead with its own length.</p>
+      <div className="px-4 pt-3">
+        <input
+          aria-label="Preview every text element with your copy"
+          value={copy}
+          placeholder="Type your copy to see it in every element"
+          onChange={(e) => setCopy(e.target.value)}
+          className="field !py-1.5"
+        />
+        <p className="mt-2 text-[11px] text-fg-3">Every element of every template, drawn with your words. It lands at the playhead with its own length.</p>
+      </div>
       {error && <p className="px-4 pt-2 text-xs text-red">{error}</p>}
       {library === null && !error && <p className="px-4 py-3 text-xs text-fg-3">Loading…</p>}
       {library !== null && library.length === 0 && <p className="px-4 py-3 text-xs text-fg-2">Nothing in the library yet. Add a template first.</p>}
@@ -919,8 +960,20 @@ function LibraryPicker({
                     onClick={() => onAdd(item)}
                     className="w-full flex items-center gap-3 rounded-lg bg-raised border border-line p-2 text-left transition-colors hover:bg-hover hover:border-line-strong disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue"
                   >
-                    <div className="w-16 aspect-video rounded-md bg-stage overflow-hidden shrink-0">
-                      {item.thumbUrl && <img src={api.fileUrl(item.thumbUrl)} alt="" className="w-full h-full object-cover block" />}
+                    <div className="w-24 aspect-video rounded-md bg-stage overflow-hidden shrink-0">
+                      {previews[item.id] ? (
+                        <ElementPreview
+                          testId={`element-preview-${item.id}`}
+                          lottie={previews[item.id]!}
+                          schema={item.schema}
+                          values={previewValues(item.schema, copy)}
+                          frame={holdFor(item, previews[item.id]!)}
+                          assetBase={`${API}${item.lottieUrl.replace(/\/template\.json$/, '')}`}
+                          className="w-full h-full"
+                        />
+                      ) : (
+                        item.thumbUrl && <img src={api.fileUrl(item.thumbUrl)} alt="" className="w-full h-full object-cover block" />
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-xs font-medium truncate">{item.name}</div>
@@ -1443,16 +1496,32 @@ function Monitor({
                 seek(holdFrame(e));
               }}
               style={{ flexGrow: Math.max(1, seconds(e.endFrame - e.startFrame)) }}
-              className={`group basis-0 min-w-28 flex flex-col items-start gap-0.5 rounded-lg px-3 py-2 text-left transition-colors ${
+              className={`group basis-0 min-w-36 flex items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors ${
                 onScreen ? 'bg-blue text-white' : 'bg-raised text-fg hover:bg-hover'
               } ${isSelected ? 'ring-2 ring-blue ring-offset-2 ring-offset-panel' : ''} ${e.enabled ? '' : 'opacity-60'}`}
             >
-              <span className="flex items-center gap-1.5 text-[13px] font-medium">
-                {e.name}
+              {/* M37: the scene as it stands, drawn at its hold frame with its own values. */}
+              <div className="w-16 shrink-0 rounded-md bg-stage overflow-hidden" style={{ aspectRatio: `${frameSize.width} / ${frameSize.height}` }}>
+                {lotties[e.id] && (
+                  <ElementPreview
+                    testId={`scene-thumb-${e.id}`}
+                    lottie={lotties[e.id]!}
+                    schema={e.schema}
+                    values={renderedValues[e.id] ?? {}}
+                    frame={Number(lotties[e.id]!.ip) + (holdFrame(e) - e.startFrame)}
+                    assetBase={`${API}${e.lottieUrl.replace(/\/template\.json$/, '')}`}
+                    className="w-full h-full"
+                  />
+                )}
+              </div>
+              <span className="flex flex-col items-start gap-0.5 min-w-0">
+              <span className="flex items-center gap-1.5 text-[13px] font-medium whitespace-nowrap">
+                <span className="truncate">{e.name}</span>
                 {!e.enabled && <EyeOff size={12} strokeWidth={1.75} aria-hidden="true" className={onScreen ? 'text-white/70' : 'text-fg-3'} />}
               </span>
-              <span className={`text-[11px] tabular-nums ${onScreen ? 'text-white/75' : 'text-fg-3'}`}>
+              <span className={`text-[11px] tabular-nums whitespace-nowrap ${onScreen ? 'text-white/75' : 'text-fg-3'}`}>
                 {seconds(e.startFrame).toFixed(1)} s · {seconds(e.endFrame - e.startFrame).toFixed(1)} s long
+              </span>
               </span>
             </button>
           );

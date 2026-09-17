@@ -2,6 +2,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Editor } from './Editor';
 
+vi.mock('lottie-web', () => ({ default: { loadAnimation: () => ({ goToAndStop: () => {}, destroy: () => {} }) } }));
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -84,9 +86,10 @@ describe('Editor scenes (M30)', () => {
     mockApi();
     await open();
     expect(screen.queryByTestId('timeline')).toBeNull();
-    const chips = screen.getAllByTestId(/^scene-/);
+    const chips = screen.getAllByTestId(/^scene-[0-9]+$/);
     expect(chips.map((c) => c.textContent)).toEqual([expect.stringContaining('Open'), expect.stringContaining('Lower third'), expect.stringContaining('End card')]);
     expect(screen.getByTestId('scene-3').getAttribute('data-selected')).toBe('true');
+    expect(screen.getAllByTestId(/^scene-thumb-/)).toHaveLength(3); // M37: each chip draws its scene
 
     fireEvent.click(screen.getByLabelText('Select End card'));
     await waitFor(() => expect(screen.getByTestId('scene-5').getAttribute('data-selected')).toBe('true'));

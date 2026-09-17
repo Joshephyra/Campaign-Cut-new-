@@ -4,6 +4,30 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M37 The composer · DONE
+
+**Why**
+
+The original prototype's strongest idea: type your copy once and see it in every element before you choose one. Also the scene strip: the chips now draw the scene as edited, not a stock thumbnail.
+
+**What exists now**
+
+- `GET /elements` carries each element's Lottie URL, schema and fonts (`server/src/app.ts`).
+- `app/src/components/ElementPreview.tsx`: a still of one element at one frame, values applied through the same `applyLottieValues` the composition uses, drawn once by lottie-web (svg renderer, no autoplay, destroyed on unmount). A preview that will not draw is logged, not fatal.
+- The library picker ("Add to the spot") opens with a composer field. Typing copy puts it in each element's first text role (never a disclaimer) and redraws every element at its hold frame; template fonts are loaded into the picker so the previews are set in the designer's type. The library's Lotties are fetched once and cached for the dialog's life.
+- Each scene chip under the monitor draws its scene with the spot's own values at the chip's hold frame, in the spot's aspect.
+- Tests: 6 ElementPreview, 1 library composer, 1 scenes thumbs, server library listing. lottie-web is mocked in the app test setup (jsdom has no canvas); the tests that care what was drawn record it. 455 tests green.
+
+**Verified**
+
+- Real browser on the Contrast :30 spot: four scene chips each draw an SVG of their scene with the current headline ("Hi yes hello"); the library opened with eight elements, "A NEW DIRECTION" typed in the composer appeared in all eight previews in the template's type. Headless capture at 1440 in `.impeccable/review/m37-editor.png`.
+
+**Next**
+
+M38, the starter element pack: a set of elements built in After Effects and ingested, so the library has real range (lower thirds, callouts, end cards, backgrounds) for the first user test. Then M39, style treatments.
+
+---
+
 ## 2026-09-17 · M36 Aspect-ratio versions · DONE
 
 **Why**

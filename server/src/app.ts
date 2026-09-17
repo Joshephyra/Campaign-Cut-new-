@@ -372,8 +372,16 @@ export function buildApp(options: AppOptions = {}) {
 
   // ---- the element library (M31) ---------------------------------------
 
-  /** Every element of every template, typed, with its template and thumbnail. */
-  app.get('/elements', async () => db.listLibraryElements().map(({ thumbPath, ...e }) => ({ ...e, thumbUrl: thumbPath ? `/${thumbPath.replace(/^\/+/, '')}` : '' })));
+  /** Every element of every template, typed, with its template and thumbnail, and (M37) what a preview needs: its Lottie URL, schema and fonts. */
+  app.get('/elements', async () =>
+    db.listLibraryElements().map(({ thumbPath, ...e }) => ({
+      ...e,
+      thumbUrl: thumbPath ? `/${thumbPath.replace(/^\/+/, '')}` : '',
+      lottieUrl: elementLottieUrl(templatesDir, e.templateSlug, e.slug),
+      schema: loadElementSchema(templatesDir, e.templateSlug, e.slug),
+      fontFiles: projectFontFiles(templatesDir, e.templateSlug, []),
+    })),
+  );
 
   /** Add a library element to a project at a frame, with its authored length and its schema defaults. */
   app.post<{ Params: { id: string }; Body: { elementId?: number; startFrame?: number } }>('/projects/:id/elements', async (req, reply) => {

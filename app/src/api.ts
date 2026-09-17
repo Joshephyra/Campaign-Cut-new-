@@ -81,6 +81,10 @@ export type LibraryElement = {
   templateSlug: string;
   templateName: string;
   thumbUrl: string;
+  /** M37: what a preview needs. */
+  lottieUrl: string;
+  schema: TemplateParam[];
+  fontFiles: TemplateFontFile[];
 };
 
 export type RenderJob = {

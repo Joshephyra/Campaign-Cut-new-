@@ -696,6 +696,23 @@ Josh's ruling on the prototype (2026-09-17): 16:9 is the master; a spot is versi
 
 ---
 
+## M37 · The composer · DONE
+
+The prototype's best idea: the user types their copy once and sees it in every element before choosing one. And the scene strip shows each scene as it actually stands, not a stock thumbnail.
+
+**Build**
+- `GET /elements` carries each element's Lottie URL, schema and fonts, so the app can draw it.
+- `ElementPreview`: a still of one element at one frame, values applied, drawn once by lottie-web into a box. No Player; a dozen stills are cheap.
+- The library picker has a composer field ("Preview every text element with your copy"): the copy goes into each element's first text role, disclaimers excepted, and every preview redraws with it at its hold frame. Template fonts load into the picker so the previews are set in the designer's type.
+- Each scene chip under the monitor draws its scene with the spot's own values at its hold frame.
+
+**Tests**
+- `previewValues` rules; ElementPreview draws with svg renderer, no autoplay, holds the frame, destroys on unmount; the library test asserts every text element is redrawn with the typed copy; the scenes test asserts a thumb per chip; the server test asserts the richer element listing.
+
+**Done when:** copy typed in the composer appears in every text element of the library, and the scene chips show the spot as edited.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

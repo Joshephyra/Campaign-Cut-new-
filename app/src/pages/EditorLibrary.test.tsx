@@ -2,6 +2,10 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Editor } from './Editor';
 
+/** M37: previews are drawn by lottie-web; here it only records what it was asked to draw. */
+const drawn: { animationData: { layers: { t?: { d: { k: { s: { t: string } }[] } } }[] } }[] = [];
+vi.mock('lottie-web', () => ({ default: { loadAnimation: (args: (typeof drawn)[number]) => { drawn.push(args); return { goToAndStop: () => {}, destroy: () => {} }; } } }));
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -26,10 +30,11 @@ const detail = {
   values: [],
 };
 
+const previewable = (lottieUrl: string, key: string) => ({ lottieUrl, schema: [{ key, role: key, kind: 'text', label: key, default: 'X', path: '/layers/0' }], fontFiles: [] });
 const library = [
-  { id: 3, slug: 'open', name: 'Open', type: 'open', durationInFrames: 90, templateId: 1, templateSlug: 'bio', templateName: 'Bio', thumbUrl: '/templates/bio/thumb.png' },
-  { id: 9, slug: 'lower-third', name: 'Lower third', type: 'lower-third', durationInFrames: 150, templateId: 2, templateSlug: 'contrast', templateName: 'Contrast :30', thumbUrl: '/templates/contrast/thumb.png' },
-  { id: 10, slug: 'end-card', name: 'End card', type: 'end-card', durationInFrames: 150, templateId: 2, templateSlug: 'contrast', templateName: 'Contrast :30', thumbUrl: '/templates/contrast/thumb.png' },
+  { id: 3, slug: 'open', name: 'Open', type: 'open', durationInFrames: 90, templateId: 1, templateSlug: 'bio', templateName: 'Bio', thumbUrl: '/templates/bio/thumb.png', ...previewable('/templates/bio/elements/open/template.json', 'headline') },
+  { id: 9, slug: 'lower-third', name: 'Lower third', type: 'lower-third', durationInFrames: 150, templateId: 2, templateSlug: 'contrast', templateName: 'Contrast :30', thumbUrl: '/templates/contrast/thumb.png', ...previewable('/templates/contrast/elements/lower-third/template.json', 'subhead') },
+  { id: 10, slug: 'end-card', name: 'End card', type: 'end-card', durationInFrames: 150, templateId: 2, templateSlug: 'contrast', templateName: 'Contrast :30', thumbUrl: '/templates/contrast/thumb.png', ...previewable('/templates/contrast/elements/end-card/template.json', 'headline') },
 ];
 
 const added = {
@@ -59,6 +64,21 @@ function mockApi() {
 const playerElementIds = () => (JSON.parse(screen.getByTestId('player').getAttribute('data-props')!) as { elements: { id: string }[] }).elements.map((e) => e.id);
 
 describe('Editor element library (M31)', () => {
+  it('previews every text element with the copy typed in the composer (M37)', async () => {
+    mockApi();
+    render(<Editor projectId={7} onBack={() => {}} />);
+    await waitFor(() => expect(screen.getByLabelText('Headline')).toBeTruthy());
+    fireEvent.click(screen.getByLabelText('Add a scene'));
+    await screen.findByRole('dialog', { name: 'Add to the spot' });
+    const composer = screen.getByLabelText('Preview every text element with your copy') as HTMLInputElement;
+    await waitFor(() => expect(screen.getByTestId('element-preview-9')).toBeTruthy());
+    drawn.length = 0;
+    fireEvent.change(composer, { target: { value: 'A NEW DIRECTION' } });
+    await waitFor(() => expect(drawn.length).toBeGreaterThanOrEqual(2));
+    const texts = drawn.map((d) => d.animationData.layers[0]!.t!.d.k[0]!.s.t);
+    expect(texts.every((t) => t === 'A NEW DIRECTION')).toBe(true);
+  });
+
   it('the Add chip opens the library grouped by type; pressing an element adds it at the playhead, selects it and shows its controls', async () => {
     const calls = mockApi();
     render(<Editor projectId={7} onBack={() => {}} />);
