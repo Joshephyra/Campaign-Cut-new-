@@ -26,9 +26,9 @@
 
 var CC_PREFLIGHT = (function () {
   var ROLES = {
-    'headline': { kind: 'text', label: 'Headline' },
-    'subhead': { kind: 'text', label: 'Subhead' },
-    'body': { kind: 'text', label: 'Body' },
+    'headline': { kind: 'text', label: 'Headline', lines: true },
+    'subhead': { kind: 'text', label: 'Subhead', lines: true },
+    'body': { kind: 'text', label: 'Body', lines: true },
     'stat': { kind: 'text', label: 'Stat', repeated: true },
     'accent': { kind: 'color', label: 'Accent colour' },
     'surface': { kind: 'color', label: 'Surface colour' },
@@ -149,7 +149,7 @@ var CC_PREFLIGHT = (function () {
         tags.push({ layer: parsed.tag, status: 'error' });
         continue;
       }
-      if (!spec.repeated && parsed.index !== null) {
+      if (!spec.repeated && !spec.lines && parsed.index !== null) {
         problems.push(quote(parsed.tag) + ': role "' + parsed.role + '" is not repeatable; drop the ".' + parsed.index + '"');
         tags.push({ layer: parsed.tag, status: 'error' });
         continue;

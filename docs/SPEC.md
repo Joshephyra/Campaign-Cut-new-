@@ -32,6 +32,7 @@ Layers tagged with a `cc.` name prefix are editable. Everything untagged is lock
 ```
 cc.<role>          one editable slot       cc.headline
 cc.<role>.<n>      a repeated slot         cc.stat.1, cc.stat.2
+cc.headline.<n>    one line of a text      cc.headline.1, cc.headline.2 (headline, subhead, body; M57)
 ```
 
 Roles:

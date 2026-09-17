@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ASPECTS, aspectKey, autoFitBox, frameFor, isAspect } from './aspect';
+import { ASPECTS, aspectKey, autoFitBox, frameFor, isAspect, aspectOfFrame } from './aspect';
 
 /** M36: 16:9 is the master; a spot is versioned into 1:1, 4:5 and 9:16. */
 describe('aspects', () => {
@@ -13,6 +13,14 @@ describe('aspects', () => {
     expect(isAspect('16:10')).toBe(false);
     expect(aspectKey('9:16')).toBe('9x16');
     expect(aspectKey('16:9')).toBe('16x9');
+  });
+
+  it('M57: names the aspect a frame size is, exactly', () => {
+    expect(aspectOfFrame(1920, 1080)).toBe('16:9');
+    expect(aspectOfFrame(1080, 1080)).toBe('1:1');
+    expect(aspectOfFrame(1080, 1350)).toBe('4:5');
+    expect(aspectOfFrame(1080, 1920)).toBe('9:16');
+    expect(aspectOfFrame(1280, 720)).toBeNull();
   });
 
   it('auto-fit contains and centres the authored frame in the new one, and is the identity when they match', () => {

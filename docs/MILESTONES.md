@@ -912,6 +912,20 @@ Josh (2026-09-17): animated callouts that circle one word, underline it, highlig
 
 ---
 
+## M57 · A real designer's file: numbered lines, native aspect · DONE
+
+Josh (2026-09-17): a designer will prepare their own organised After Effects project, a 6-second 1080x1080 GIF with two beats, for the app; it must come in editable, 1 to 1. Two rules stood in the way.
+
+**Build**
+- Text roles may be numbered: `cc.headline.1`, `cc.headline.2`, … (also subhead and body) are the lines of one text, each its own layer, so a design that sets each line on its own plate stays editable line by line; the app's fields are single lines. Plain `cc.headline` still works; `cc.stat` still needs its index; a colour or image tag still takes none. Ingest, pre-flight and the docs agree (`RoleSpec.lines`).
+- A template authored at a version's exact size opens as that version: a 1080x1080 template is a 1:1 spot from the first frame, not a square auto-fitted into 16:9 (`aspectOfFrame`; POST /projects).
+- `docs/AE-HANDOVER-GUIDE.md`: the designer's step-by-step, written against that GIF: what each thing on screen becomes, the clean-up pass (what Lottie drops and how to bake it), tagging with the exact names, pre-flight, Bodymovin settings, the reference render, fonts, the folder, and what happens next.
+
+**Tests**
+- Schema: numbered lines in index order with their labels; stat without an index and accent with one still rejected. Pre-flight: the same. Aspect: `aspectOfFrame`; a 1080x1080 template's spot is 1:1 with a 1080x1080 frame, a 16:9 one unchanged.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

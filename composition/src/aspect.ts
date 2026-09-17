@@ -23,6 +23,12 @@ export function frameFor(aspect: Aspect): Frame {
   return { ...FRAMES[aspect] };
 }
 
+/** M57: the aspect a frame size is, exactly, or null: a template authored at 1080x1080 is a 1:1 template. */
+export function aspectOfFrame(width: number, height: number): Aspect | null {
+  for (const a of ASPECTS) if (FRAMES[a].width === width && FRAMES[a].height === height) return a;
+  return null;
+}
+
 /** "9:16" -> "9x16": the folder name a designer variant lives under. */
 export function aspectKey(aspect: Aspect): string {
   return aspect.replace(':', 'x');

@@ -1,7 +1,7 @@
 import fastifyCors from '@fastify/cors';
 import fastifyMultipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
-import { ASPECTS, carriesDisclaimer, disclaimerCheck, frameFor, isAspect, isTreatment, TREATMENTS, TRANSITION_PRESETS, type TemplateParam } from '@campaigncut/composition';
+import { aspectOfFrame, ASPECTS, carriesDisclaimer, disclaimerCheck, frameFor, isAspect, isTreatment, TREATMENTS, TRANSITION_PRESETS, type TemplateParam } from '@campaigncut/composition';
 import Fastify from 'fastify';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -260,6 +260,9 @@ export function buildApp(options: AppOptions = {}) {
       ),
     });
     if (client) applyBrand(id, client);
+    // M57: a template authored at a version's exact size opens as that version (a 1080x1080 GIF template is a 1:1 spot).
+    const native = aspectOfFrame(t.width, t.height);
+    if (native && native !== '16:9') db.setProjectAspect(id, native);
     return reply.code(201).send({ id });
   });
 

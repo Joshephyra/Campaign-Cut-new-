@@ -12,12 +12,19 @@ export type RoleSpec = {
   repeated?: boolean;
   /** Position and size locked; only the value is editable. */
   locked?: boolean;
+  /**
+   * M57: may carry an index as well: cc.headline.1, cc.headline.2 are the
+   * lines of one headline, each its own layer, so a design that sets each
+   * line on its own plate stays editable line by line. Plain cc.headline
+   * still works.
+   */
+  lines?: boolean;
 };
 
 export const ROLES: Readonly<Record<string, RoleSpec>> = {
-  headline: { kind: 'text', label: 'Headline' },
-  subhead: { kind: 'text', label: 'Subhead' },
-  body: { kind: 'text', label: 'Body' },
+  headline: { kind: 'text', label: 'Headline', lines: true },
+  subhead: { kind: 'text', label: 'Subhead', lines: true },
+  body: { kind: 'text', label: 'Body', lines: true },
   stat: { kind: 'text', label: 'Stat', repeated: true },
   accent: { kind: 'color', label: 'Accent colour' },
   surface: { kind: 'color', label: 'Surface colour' },

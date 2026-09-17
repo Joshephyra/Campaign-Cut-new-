@@ -67,7 +67,7 @@ export function generateSchema(lottie: LottieAnimationData): GeneratedSchema {
       fail(tag, `Layer "${tag}": role "${role}" is repeated and needs an index, e.g. cc.${role}.1`);
       continue;
     }
-    if (!spec.repeated && index !== undefined) {
+    if (!spec.repeated && !spec.lines && index !== undefined) {
       fail(tag, `Layer "${tag}": role "${role}" is not repeatable; drop the ".${index}"`);
       continue;
     }

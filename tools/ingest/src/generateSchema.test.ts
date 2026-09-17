@@ -285,3 +285,19 @@ describe('generateSchema: the stand-in template', () => {
     expect(out.fonts).toEqual(["IBM Plex Sans"]);
   });
 });
+
+describe('generateSchema: numbered lines (M57)', () => {
+  it('cc.headline.1 and cc.headline.2 are two params, Headline 1 and Headline 2, in index order; cc.stat still needs its index', () => {
+    const out = generateSchema(lottie([textLayer('cc.headline.2', 'A LOS'), textLayer('cc.headline.1', 'AYUDA'), textLayer('cc.body.1', 'MULTIMILLONARIOS.')]));
+    expect(out.errors).toEqual([]);
+    expect(out.params.filter((p) => p.kind === 'text').map((p) => [p.key, p.role, p.default, p.label])).toEqual([
+      ['headline.1', 'headline', 'AYUDA', 'Headline 1'],
+      ['headline.2', 'headline', 'A LOS', 'Headline 2'],
+      ['body.1', 'body', 'MULTIMILLONARIOS.', 'Body 1'],
+    ]);
+    const stat = generateSchema(lottie([textLayer('cc.stat', '1')]));
+    expect(stat.errors[0]!.message).toMatch(/needs an index/);
+    const logo = generateSchema(lottie([textLayer('cc.accent.1', 'x')]));
+    expect(logo.errors[0]!.message).toMatch(/not repeatable/);
+  });
+});

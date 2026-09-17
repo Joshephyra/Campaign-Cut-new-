@@ -155,6 +155,18 @@ describe('preflight report', () => {
     expect(r.text).toMatch(/PROBLEMS \(5\)/);
   });
 
+  it('M57: numbered lines of a headline are not a problem; a stat without an index still is', () => {
+    const r = api.buildReport(fakeComp('c', [
+      { name: 'cc.headline.1', index: 1, kind: 'text', text: { font: 'A', fontSize: 1, text: 'AYUDA' } },
+      { name: 'cc.headline.2', index: 2, kind: 'text', text: { font: 'A', fontSize: 1, text: 'A LOS' } },
+      { name: 'cc.stat', index: 3, kind: 'text', text: { font: 'A', fontSize: 1, text: '1' } },
+    ]), env);
+    expect(r.problems).toHaveLength(1);
+    expect(r.problems[0]).toMatch(/"cc.stat".*needs an index/);
+    expect(r.text).toMatch(/cc.headline.1/);
+    expect(r.text).toMatch(/cc.headline.2/);
+  });
+
   it('ends with a clear verdict line', () => {
     const clean = api.buildReport(fakeComp('c', [{ name: 'cc.headline', index: 1, kind: 'text', text: { font: 'A', fontSize: 1, text: 'x' } }]), env);
     expect(clean.text).toMatch(/READY TO EXPORT/);

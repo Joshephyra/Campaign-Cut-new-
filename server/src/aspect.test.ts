@@ -47,6 +47,18 @@ describe('aspect versions (M36)', () => {
     fs.rmSync(tmp, { recursive: true, force: true });
   });
 
+  it('M57: a template authored at 1080x1080 opens as a 1:1 spot; a 16:9 one stays 16:9', async () => {
+    fs.mkdirSync(path.join(tmp, 'sq', 'elements', 'sq'), { recursive: true });
+    fs.writeFileSync(path.join(tmp, 'sq', 'elements', 'sq', 'schema.json'), JSON.stringify(schema));
+    fs.writeFileSync(path.join(tmp, 'sq', 'elements', 'sq', 'template.json'), JSON.stringify(lottie(1080, 1080)));
+    db.upsertTemplate({ slug: 'sq', name: 'Square', adType: 'Bio', durationFrames: 120, fps: 20, width: 1080, height: 1080, thumbPath: '' });
+    const sq = ((await app.inject({ method: 'POST', url: '/projects', payload: { templateSlug: 'sq' } })).json() as { id: number }).id;
+    expect(db.getProject(sq)!.aspect).toBe('1:1');
+    const detail = (await app.inject({ method: 'GET', url: `/projects/${sq}` })).json() as { frame: { width: number; height: number }; project: { lengthS: number } };
+    expect(detail.frame).toEqual({ width: 1080, height: 1080 });
+    expect(db.getProject(projectId)!.aspect).toBe('16:9');
+  });
+
   it('element files resolve to the variant for a ratio when it exists, else the master', () => {
     expect(elementDir(tmp, 't', 'open', '9:16')).toBe(path.join(tmp, 't', 'elements', 'open', 'variants', '9x16'));
     expect(elementDir(tmp, 't', 'open', '1:1')).toBe(path.join(tmp, 't', 'elements', 'open'));

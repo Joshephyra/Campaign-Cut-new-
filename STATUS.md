@@ -4,6 +4,25 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M57 A real designer's file: numbered lines, native aspect · DONE
+
+**What exists now**
+
+- Text roles may carry an index: `cc.headline.1`, `cc.headline.2` are the lines of one headline (also subhead, body); the panel shows Headline 1, Headline 2. Plain `cc.headline` unchanged; `cc.stat` still needs its index; colour and image tags still take none. `tools/ingest/src/roles.ts` (`lines`), `generateSchema.ts`, `preflight.jsx`, SPEC 1.1 and AE-AUTHORING agree.
+- A spot opens in its template's own aspect when the template is exactly a version's size (`aspectOfFrame`): a 1080x1080 template is a 1:1 spot at once.
+- `docs/AE-HANDOVER-GUIDE.md`: the designer's guide for the DGA "Ayudando y Perjudicando" 6 s square GIF (references/), mapping every thing on screen to a tag or a locked, baked layer; one comp, two beats, lines numbered 1 to 6.
+
+**Verified**
+
+- Tests: 3 new (schema, pre-flight, aspect ×2). 557 tests green; typecheck clean in every workspace.
+- Not yet verified with a real file: the designer's export has not arrived. When it does: ingest through "Add a template", `npm run fidelity -- --template <slug>` against reference.mp4, then the spot in the browser.
+
+**Next**
+
+The designer's handover folder. Then the acceptance session.
+
+---
+
 ## 2026-09-17 · M56 Animated callouts on one word · DONE
 
 **What exists now**

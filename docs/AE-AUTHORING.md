@@ -61,15 +61,16 @@ Rename the layer in the timeline. That is the whole mechanism.
 ```
 cc.<role>          one editable slot       cc.headline
 cc.<role>.<n>      a repeated slot         cc.stat.1, cc.stat.2, cc.stat.3
+cc.headline.<n>    one line of a headline  cc.headline.1, cc.headline.2 (also subhead, body)
 ```
 
 ### The roles
 
 | Tag | Layer type | What the user gets |
 |---|---|---|
-| `cc.headline` | Text | A text field |
-| `cc.subhead` | Text | A text field |
-| `cc.body` | Text | A text field |
+| `cc.headline` | Text | A text field. Set each line on its own layer as `cc.headline.1`, `cc.headline.2`, … when the lines sit on their own plates: the user gets Headline 1, Headline 2. |
+| `cc.subhead` | Text | A text field (`cc.subhead.1`, … for lines) |
+| `cc.body` | Text | A text field (`cc.body.1`, … for lines) |
 | `cc.stat.1`, `cc.stat.2`, … | Text | One text field each, in order |
 | `cc.accent` | Shape with a fill or stroke | A color picker |
 | `cc.surface` | Shape with a fill | A color picker |
@@ -84,6 +85,7 @@ Every text and image tag except `cc.safe.*` also gets a **Placement** control: t
 - **Tags are case-sensitive.** `cc.Headline` will not match. It will be treated as an unknown tag and the ingest will reject the template and tell you which layer.
 - **A misspelled tag is silently locked, unless it still starts with `cc.`.** A layer named `cc.headlnie` is rejected by name (unknown role). A layer named `c.headline` or `headline` is just an untagged layer and stays locked without a word. That is why ingest prints every tag it found. Read that list. If a layer you meant to be editable is not in it, the tag is wrong.
 - **Color tags need a real fill or stroke.** Tagging a null or a text layer as `cc.accent` fails validation.
+- **One line per tagged text layer.** The app's text fields are single lines; a line break typed in After Effects is kept only until the user edits that field. A two-line headline is two layers, `cc.headline.1` and `cc.headline.2`, and each keeps its own plate, animation and underline.
 - **Size your text boxes for the longest plausible copy.** The app enforces a character limit derived from your box. If the box is tight, the user gets a tight limit. Campaign names are long.
 - **Every font you use must be handed over with the template.** The app fails ingest on a font it does not have, because missing fonts silently reflow text and break the design in ways nobody notices until it is on air.
 

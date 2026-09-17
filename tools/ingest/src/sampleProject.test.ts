@@ -65,7 +65,7 @@ describe('the sample plan obeys the ingest rules', () => {
         const spec = ROLES[tag.role];
         expect(spec, `${comp.slug}: ${layer.name}`).toBeTruthy();
         if (spec!.repeated) expect(tag.index, `${layer.name} needs an index`).toBeTypeOf('number');
-        else expect(tag.index, `${layer.name} must not have an index`).toBeUndefined();
+        else if (!spec!.lines) expect(tag.index, `${layer.name} must not have an index`).toBeUndefined();
         const key = tag.index === undefined ? tag.role : `${tag.role}.${tag.index}`;
         expect(seen.has(key), `${comp.slug}: duplicate ${layer.name}`).toBe(false);
         seen.add(key);

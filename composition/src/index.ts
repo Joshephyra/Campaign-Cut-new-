@@ -27,7 +27,7 @@ export { COLOR_ROLES, ELEMENT_TYPES, ELEMENT_TYPE_LABELS, inferElementType, isEl
 export type { ElementType } from './elementTypes';
 export { carriesDisclaimer, DISCLAIMER_MIN_SECONDS, disclaimerCheck, contentSeconds, disclaimerSeconds, emptySlots, lengthLabel, readiness, SPOT_LENGTHS, type Readiness, type ReadinessItem } from './compliance';
 export type { DisclaimerCheck, DisclaimerScene } from './compliance';
-export { ASPECTS, aspectKey, autoFitBox, frameFor, isAspect, isFullBleed } from './aspect';
+export { ASPECTS, aspectKey, autoFitBox, frameFor, isAspect, isFullBleed, aspectOfFrame } from './aspect';
 export type { Aspect, AutoFitBox, Frame } from './aspect';
 export { metadataFor } from './Root';
 export { accentOf, ACCENT_CLASS, DEFAULT_ACCENT, isTreatment, TREATMENT_LABELS, TREATMENTS, treatmentCss, treatmentFor, treatmentLayerFilter, type Treatment, type TreatmentProps } from './treatments';
