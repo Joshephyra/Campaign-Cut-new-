@@ -55,7 +55,7 @@ describe('Editor: duplicate a scene (M46)', () => {
     const calls = mockApi();
     render(<Editor projectId={7} onBack={() => {}} />);
     await waitFor(() => expect(screen.getByTestId('scene-3')).toBeTruthy());
-    fireEvent.click(screen.getByRole('button', { name: 'Duplicate scene' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Duplicate scene' })); // the open is a scene: the button names it
     await waitFor(() => expect(screen.getByTestId('scene-10000001')).toBeTruthy());
     // open 0-90, the copy right after it 90-180, the end card moved on by the copy's length to 270-360
     await waitFor(() => expect(playerOrder()).toEqual([['3', 0, 90], ['10000001', 90, 180], ['5', 270, 360]]));

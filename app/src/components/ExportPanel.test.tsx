@@ -59,14 +59,22 @@ describe('ready to export (M49)', () => {
     expect(pill.textContent).toBe('2 to check');
     expect(pill.getAttribute('data-blocked')).toBe('false');
     expect((screen.getByRole('button', { name: /Export MP4/ }) as HTMLButtonElement).disabled).toBe(false);
-    expect(screen.queryByRole('dialog', { name: 'Ready to export?' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Ready to export?' })).toBeNull();
     fireEvent.click(pill);
-    const list = screen.getByRole('dialog', { name: 'Ready to export?' });
+    const list = screen.getByRole('region', { name: 'Ready to export?' });
     expect(list.querySelectorAll('li')).toHaveLength(3);
     expect(screen.getByTestId('check-footage').getAttribute('data-ok')).toBe('false');
     expect(screen.getByTestId('check-disclaimer').textContent).toContain('5.0 s');
     fireEvent.click(pill);
-    expect(screen.queryByRole('dialog', { name: 'Ready to export?' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Ready to export?' })).toBeNull();
+    // Escape and a press outside close it too
+    fireEvent.click(pill);
+    expect(screen.getByRole('region', { name: 'Ready to export?' })).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('region', { name: 'Ready to export?' })).toBeNull();
+    fireEvent.click(pill);
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole('region', { name: 'Ready to export?' })).toBeNull();
   });
 
   it('a blocking item reddens the pill and disables Export with its reason; all ok reads "Ready to export"', () => {

@@ -20,6 +20,22 @@ type Props = {
 export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, readiness }: Props) {
   const [job, setJob] = useState<RenderJob | null>(null);
   const [listOpen, setListOpen] = useState(false);
+  const listWrap = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!listOpen) return;
+    const onPointer = (ev: PointerEvent) => {
+      if (listWrap.current && ev.target instanceof Node && !listWrap.current.contains(ev.target)) setListOpen(false);
+    };
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') setListOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [listOpen]);
   const blocking = readiness?.items.find((i) => i.blocking && !i.ok);
   const [error, setError] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -59,7 +75,7 @@ export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, read
   return (
     <div className="flex items-center gap-3 text-xs">
       {readiness && (
-        <div className="relative">
+        <div className="relative" ref={listWrap}>
           <button
             type="button"
             data-testid="readiness"
@@ -75,7 +91,7 @@ export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, read
             {readiness.ok ? 'Ready to export' : `${readiness.todo} to check`}
           </button>
           {listOpen && (
-            <div id="readiness-list" role="dialog" aria-label="Ready to export?" className="absolute right-0 top-9 z-20 w-80 rounded-lg bg-panel border border-line shadow-float p-3 cc-appear">
+            <div id="readiness-list" role="region" aria-label="Ready to export?" className="absolute right-0 top-9 z-20 w-80 rounded-lg bg-panel border border-line shadow-float p-3 cc-appear">
               <h3 className="text-[13px] font-semibold mb-2">Ready to export?</h3>
               <ul className="flex flex-col gap-1.5">
                 {readiness.items.map((i) => (

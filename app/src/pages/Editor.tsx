@@ -853,10 +853,14 @@ export function Editor({ projectId, onBack }: Props) {
                     <TransitionControl element={selected} transition={transitions.find((t) => t.afterElementId === selected.id)} onChange={(t) => void onTransitionChange(selected.id, t)} />
                   </Section>
                 )}
-                <Section title="Scene">
-                  <p className="text-[11px] text-fg-3 mb-2">A second copy of this scene, with its words and colours, right after it.</p>
+                <Section title={isSceneType(selected.type) ? 'Scene' : 'Overlay'}>
+                  <p className="text-[11px] text-fg-3 mb-2">
+                    {isSceneType(selected.type)
+                      ? 'A second copy of this scene, with its words and colours, right after it.'
+                      : 'A second copy of this overlay, with its words and colours, on the same scene. Drag its chip onto another scene.'}
+                  </p>
                   <Button variant="ghost" size="sm" icon={Copy} onClick={() => void duplicateScene(selected.id)}>
-                    Duplicate scene
+                    {isSceneType(selected.type) ? 'Duplicate scene' : 'Duplicate'}
                   </Button>
                 </Section>
                 {selected.added && (
@@ -1679,7 +1683,7 @@ function Monitor({
               }}
               style={{ flexGrow: Math.max(1, seconds(e.endFrame - e.startFrame)) }}
               draggable={e.enabled}
-              title={isSceneType(e.type) ? 'Drag to reorder' : 'Drag onto a scene'}
+              title={!e.enabled ? 'Hidden scene · switch Show on to drag' : isSceneType(e.type) ? 'Drag to reorder' : 'Drag onto a scene'}
               data-drop-edge={dropEdge?.id === e.id ? dropEdge.place : undefined}
               onDragStart={(ev) => {
                 // M43: a scene drags to reorder; M44: an overlay drags onto a scene.
@@ -1696,7 +1700,10 @@ function Monitor({
                 const place: DropPlace = carried === 'overlay' ? 'on' : ev.clientX < box.left + box.width / 2 ? 'before' : 'after';
                 setDropEdge((prev) => (prev?.id === e.id && prev.place === place ? prev : { id: e.id, place }));
               }}
-              onDragLeave={() => setDropEdge((prev) => (prev?.id === e.id ? null : prev))}
+              onDragLeave={(ev) => {
+                if (ev.relatedTarget instanceof Node && ev.currentTarget.contains(ev.relatedTarget)) return;
+                setDropEdge((prev) => (prev?.id === e.id ? null : prev));
+              }}
               onDrop={(ev) => {
                 const sceneId = Number(ev.dataTransfer.getData(SCENE_DRAG_TYPE));
                 const overlayId = Number(ev.dataTransfer.getData(OVERLAY_DRAG_TYPE));
@@ -1710,8 +1717,8 @@ function Monitor({
                 const box = ev.currentTarget.getBoundingClientRect();
                 onReorder(sceneId, e.id, ev.clientX < box.left + box.width / 2 ? 'before' : 'after');
               }}
-              className={`group relative basis-0 min-w-44 overflow-hidden flex items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors cursor-grab active:cursor-grabbing ${
-                onScreen ? 'bg-blue text-white' : 'bg-raised text-fg hover:bg-hover'
+              className={`group relative basis-0 min-w-44 overflow-hidden flex items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors ${e.enabled ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'} ${
+                onScreen ? 'bg-blue text-white' : dropEdge?.id === e.id && dropEdge.place === 'on' ? 'bg-blue-tint text-fg' : 'bg-raised text-fg hover:bg-hover'
               } ${isSelected || dropEdge?.id === e.id && dropEdge.place === 'on' ? 'ring-2 ring-blue ring-offset-2 ring-offset-panel' : ''} ${e.enabled ? '' : 'opacity-60'} ${
                 dropEdge?.id === e.id && dropEdge.place !== 'on' ? (dropEdge.place === 'before' ? 'shadow-[inset_3px_0_0_0_var(--color-blue)]' : 'shadow-[inset_-3px_0_0_0_var(--color-blue)]') : ''
               }`}
@@ -1748,7 +1755,7 @@ function Monitor({
           aria-label="Add a scene"
           title="Add a lower third, caption, end card or any other element from the library"
           onClick={onAdd}
-          className="shrink-0 self-stretch flex items-center gap-1.5 rounded-lg border border-dashed border-line-strong px-3 text-xs font-medium text-fg-2 hover:text-fg hover:border-blue hover:bg-blue-tint/40 transition-colors"
+          className="sticky right-0 z-10 shrink-0 self-stretch flex items-center gap-1.5 rounded-lg border border-dashed border-line-strong bg-panel px-3 text-xs font-medium text-fg-2 shadow-[-12px_0_12px_-6px_var(--color-panel)] hover:text-fg hover:border-blue hover:bg-blue-tint/40 transition-colors"
         >
           <Plus size={14} strokeWidth={1.75} aria-hidden="true" />
           Add
