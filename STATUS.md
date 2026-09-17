@@ -23,7 +23,7 @@ The last of the four phase-2 features Josh opened: stock footage found and pulle
 
 **Next**
 
-Josh: put a Pexels key in `.env` (copy `.env.example`), restart `npm run dev`, search for something, pull a clip in, drop it on the video, export. Then the phase-2 list is built; the five acceptance tests and Germain's verdict are still the gate for the proof of concept.
+Josh parked the Pexels key (2026-09-17): stock stays built and tested against a stand-in, with no live run for now. The phase-2 list is built; the five acceptance tests and Germain's verdict are still the gate for the proof of concept.
 
 ---
 

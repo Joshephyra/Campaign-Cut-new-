@@ -650,7 +650,7 @@ Colours only, by Josh's choice (fonts wait for client profiles, where the client
 
 ---
 
-## M34 · Stock footage · DONE (live run awaits the key)
+## M34 · Stock footage · DONE (live run parked with the key, Josh 2026-09-17)
 
 **Build**
 - Pexels, behind a small provider shape so another site can follow. `PEXELS_API_KEY` from `.env` (gitignored; the server loads it, no dependency) or the shell; without it the routes answer 503 naming the variable and the panel shows that message.
