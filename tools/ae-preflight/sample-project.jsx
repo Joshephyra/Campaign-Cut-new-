@@ -63,7 +63,7 @@ var CC_SAMPLE = (function () {
           { kind: 'solid', name: 'cc.mediaFill', rect: [1056, 0, 864, 1080], color: [0.2, 0.2, 0.2] },
           { kind: 'shape', name: 'cc.surface', rect: [0, 0, 1056, 1080], fill: NAVY },
           { kind: 'shape', name: 'cc.accent', rect: [160, 590, 700, 18], fill: ORANGE, anim: { scaleX: [0.25, 0.95] } },
-          { kind: 'text', name: 'cc.headline', text: 'THEY VOTED AGAINST IT', font: FONT_BOLD, size: 88, box: [820, 260], pos: [160, 300], color: WHITE, anim: { fadeIn: [0.5, 1.2], slideY: [60, 0.5, 1.2] } },
+          { kind: 'text', name: 'cc.headline', text: 'THEY VOTED AGAINST IT', font: FONT_BOLD, size: 88, box: [880, 240], pos: [160, 300], color: WHITE, anim: { fadeIn: [0.5, 1.2], slideY: [60, 0.5, 1.2] } },
           { kind: 'shape', name: 'progress-dot', rect: [940, 930, 24, 24], fill: WHITE }
         ]
       },
@@ -73,7 +73,7 @@ var CC_SAMPLE = (function () {
         folder: '02-lower-third',
         seconds: 5,
         layers: [
-          { kind: 'shape', name: 'lower-third-plate', rect: [120, 860, 900, 120], fill: NAVY, anim: { fadeIn: [0, 0.4] } },
+          { kind: 'shape', name: 'lower-third-plate', rect: [120, 860, 900, 120], fill: TEAL, anim: { fadeIn: [0, 0.4] } },
           { kind: 'shape', name: 'cc.accent', rect: [120, 860, 12, 120], fill: ORANGE },
           { kind: 'text', name: 'cc.subhead', text: 'Jane Example, State Senate', font: FONT_REGULAR, size: 44, box: [820, 60], pos: [160, 880], color: WHITE, anim: { fadeIn: [0.2, 0.7] } },
           { kind: 'text', name: 'cc.body', text: 'Voted to raise your taxes three times', font: FONT_REGULAR, size: 30, box: [820, 44], pos: [160, 930], color: GREY, anim: { fadeIn: [0.4, 0.9] } },
@@ -101,7 +101,7 @@ var CC_SAMPLE = (function () {
         layers: [
           { kind: 'solid', name: 'cc.mediaFill', rect: [1056, 0, 864, 1080], color: [0.2, 0.2, 0.2] },
           { kind: 'shape', name: 'cc.surface', rect: [0, 0, 1056, 1080], fill: NAVY },
-          { kind: 'text', name: 'cc.headline', text: 'VOTE NOVEMBER 3', font: FONT_BOLD, size: 88, box: [820, 260], pos: [160, 380], color: WHITE, anim: { fadeIn: [0.3, 1.0] } },
+          { kind: 'text', name: 'cc.headline', text: 'VOTE NOVEMBER 3', font: FONT_BOLD, size: 88, box: [880, 240], pos: [160, 380], color: WHITE, anim: { fadeIn: [0.3, 1.0] } },
           { kind: 'image', name: 'cc.logo', file: 'logo', pos: [1560, 900], scale: 100 },
           { kind: 'text', name: 'cc.safe.disclaimer', text: 'Paid for by Example Committee', font: FONT_REGULAR, size: 28, box: [860, 40], pos: [160, 980], color: GREY }
         ]
@@ -226,6 +226,8 @@ if (typeof app !== 'undefined' && app && app.project) {
           var doc = layer.property('ADBE Text Properties').property('ADBE Text Document').value;
           doc.font = l.font;
           doc.fontSize = l.size;
+          /* the box keeps its default line spacing when the size changes; make it follow the size */
+          try { doc.autoLeading = true; } catch (eLead) { doc.leading = Math.round(l.size * 1.2); }
           doc.fillColor = l.color;
           doc.applyFill = true;
           doc.justification = ParagraphJustification.LEFT_JUSTIFY;
@@ -248,6 +250,13 @@ if (typeof app !== 'undefined' && app && app.project) {
       return comp;
     }
 
+    /* Always build into a fresh project, so running twice never doubles the comps. */
+    var logoSource = new File(repoRoot().fsName + '/tools/ingest/fixtures/standin/images/logo.png');
+    if (!logoSource.exists) {
+      alert('CampaignCut sample: could not find the logo image at\n' + logoSource.fsName + '\n\nRun this script from its place inside the CampaignCut folder.');
+      return;
+    }
+    app.newProject();
     app.beginUndoGroup('CampaignCut sample project');
 
     /* 1. The handover folder on the Desktop, with its sub-folders. */
@@ -303,12 +312,13 @@ if (typeof app !== 'undefined' && app && app.project) {
 
     app.endUndoGroup();
 
-    alert(
-      'CampaignCut sample project built.\n\n' +
+    /* A summary file instead of a pop-up, so unattended runs (AfterFX.exe -r) leave nothing modal behind. */
+    var summary =
+      'CampaignCut sample project built.\n' +
       'Folder: ' + root.fsName + '\n' +
       'Comps: ' + PLAN.comps.length + ' tagged comps plus "' + PLAN.masterName + '".\n' +
       (missingFonts.length ? 'Fonts not found in C:\\Windows\\Fonts: ' + missingFonts.join(', ') + '\n' : 'Fonts copied: Arial Regular and Bold.\n') +
-      '\nNext: run preflight.jsx on each comp, export each comp with Bodymovin into its numbered sub-folder as data.json, and render "' + PLAN.masterName + '" to reference.mp4 in the same folder.'
-    );
+      'Next: run preflight.jsx on each comp, export each comp with Bodymovin into its numbered sub-folder as data.json, and render "' + PLAN.masterName + '" to reference.mp4 in the same folder.\n';
+    writeText(new File(root.fsName + '/sample-project.log'), summary);
   })();
 }
