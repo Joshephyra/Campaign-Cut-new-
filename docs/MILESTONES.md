@@ -803,6 +803,20 @@ A spot built from nothing needs its scenes moved; until now the only way was to 
 
 ---
 
+## M45 · The same element, twice · DONE
+
+A spot from nothing needs two captions and two lower thirds. Until now a scene's identity was its template element's id, so an element could be in a spot once and the picker greyed it out.
+
+**Build**
+- Scenes: `project_scene (project_id, scene_id, element_id, …)` replaces the per-project element rows. A scene's id is the template element's id the first time an element is used (the spot's own elements included), so values, transitions and every older spot need no translation; a second use gets a fresh id (from 10,000,000 up). Old databases move their rows over on open.
+- `POST /projects/:id/elements` always makes a new scene with its own default values and returns it; every element carries `elementId` beside its scene `id`. Timing, values, transitions, removal and duplication work per scene.
+- The picker no longer greys an element that is in the spot; it says "in the spot" or "in the spot ×2" and adds again.
+
+**Tests**
+- A second add makes a second scene with a fresh id and its own values, timing, transition and removal, and a duplicate carries both; an old database's rows migrate; the editor shows two scenes from one element.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

@@ -4,6 +4,24 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M45 The same element, twice · DONE
+
+**Why**
+
+Building a spot from nothing out of the starter pack, the second caption was impossible: a scene was identified by its template element, so the picker greyed out anything already in the spot.
+
+**What exists now**
+
+- A scene has its own id in the spot (`project_scene`). The first use of an element keeps the element's id as its scene id, so nothing else changed shape and old spots migrate by copying rows; a second use gets a fresh id. `POST /projects/:id/elements` always makes a new scene with its own values. Every element in the detail carries `elementId` beside `id`.
+- The picker adds an element again and says "in the spot ×2".
+- Tests: 2 server (second use end to end; migration), 1 editor. 513 tests green.
+
+**Verified**
+
+- The live database migrated on the server's restart (rows moved to project_scene; the value and transition tables rebuilt without their template_element constraint, which the first live attempt hit as a 500 before the rebuild existed). Real browser on the spot from nothing: Boxed caption added a second time made scene 10000000 with its own default words beside scene 12 with the edited ones; six chips; the picker reads "in the spot ×2".
+
+---
+
 ## 2026-09-17 · M44 Move an overlay onto a scene · DONE
 
 **What exists now**

@@ -28,6 +28,10 @@ Spot **New spot** in the projects list is one built this way, from the starter p
 
 Drag a scene chip under the video onto another scene chip: left half puts it before, right half after (a blue edge shows which). The scenes re-lay with their lengths; lower thirds and other overlays stay where they were. Drag an overlay chip onto a scene chip to put that overlay on that scene.
 
+## 6. The same element twice (M45)
+
+Add **Boxed caption** again: the picker says "in the spot ×2" and the second caption is its own scene, with its own words and timing.
+
 ## For you to do
 
 - Close After Effects (File > Exit); an unattended run left it open on an empty project.

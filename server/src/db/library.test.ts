@@ -54,6 +54,7 @@ describe('element library (M31)', () => {
     const after = db.getProjectElements(projectId);
     expect(after.find((e) => e.id === contrastLower)).toEqual({
       id: contrastLower,
+      elementId: contrastLower,
       slug: 'lower-third',
       name: 'Lower third',
       type: 'lower-third',

@@ -408,13 +408,11 @@ export function buildApp(options: AppOptions = {}) {
     if (!library) return reply.code(404).send({ error: `No element ${String(req.body?.elementId)} in the library` });
     const startFrame = Math.max(0, Math.round(Number(req.body?.startFrame ?? 0)));
     if (!Number.isFinite(startFrame)) return reply.code(400).send({ error: 'startFrame must be a number' });
-    const already = db.getProjectElements(id).some((e) => e.id === elementId);
-    db.addProjectElement(id, elementId, startFrame);
-    if (!already) {
-      const defaults = loadElementSchema(templatesDir, library.templateSlug, library.slug).map((p: TemplateParam) => ({ elementId, key: p.key, value: p.default }));
-      if (defaults.length > 0) db.setProjectValues(id, defaults);
-    }
-    const element = db.getProjectElements(id).find((e) => e.id === elementId)!;
+    // M45: every add is a new scene with its own values; the first use of an element keeps the element's id.
+    const sceneId = db.addProjectElement(id, elementId, startFrame);
+    const defaults = loadElementSchema(templatesDir, library.templateSlug, library.slug).map((p: TemplateParam) => ({ elementId: sceneId, key: p.key, value: p.default }));
+    if (defaults.length > 0) db.setProjectValues(id, defaults);
+    const element = db.getProjectElements(id).find((e) => e.id === sceneId)!;
     const projectAspect = db.getProject(id)!.aspect;
     return reply.code(201).send(withElementFiles(element.templateSlug, element, isAspect(projectAspect) ? projectAspect : '16:9'));
   });

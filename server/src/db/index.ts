@@ -75,9 +75,17 @@ export type ClientRow = ClientInput & { id: number; createdAt: string };
 
 export type ProjectDetail = ProjectRow & { values: ProjectValue[] };
 
-/** An element as it stands in one project: template defaults with the project's own in/out and toggle applied. */
+/**
+ * A scene as it stands in one project: template defaults with the project's
+ * own in/out and toggle applied. M45: `id` is the scene's id in this spot.
+ * The first time an element is used it is the template element's id (so
+ * values, transitions and older spots need no translation); a second use of
+ * the same element gets a fresh id of its own. `elementId` is always the
+ * template element.
+ */
 export type ProjectElement = {
   id: number;
+  elementId: number;
   slug: string;
   name: string;
   /** M31 */
@@ -167,10 +175,10 @@ export type Db = Database.Database & {
   listTemplateElements(templateId: number): TemplateElementRow[];
   /** M31: every element of every template. */
   listLibraryElements(): LibraryElement[];
-  /** M31: add a library element to a project at a frame, with its authored length. Adding twice is one element. */
-  addProjectElement(projectId: number, elementId: number, startFrame: number): void;
-  /** M31: remove an added element and its values. False when the element is the spot's own (or absent). */
-  removeProjectElement(projectId: number, elementId: number): boolean;
+  /** M31: add a library element to a project at a frame, with its authored length. M45: adding twice makes a second scene; returns the scene id. */
+  addProjectElement(projectId: number, elementId: number, startFrame: number): number;
+  /** M31: remove an added scene and its values. False when the scene is the spot's own (or absent). */
+  removeProjectElement(projectId: number, sceneId: number): boolean;
   /** Drop a template's elements whose slug is not in `keep` (a re-ingest that lost an element). */
   deleteTemplateElementsExcept(templateId: number, keep: string[]): void;
   createProject(p: ProjectInput): { id: number };
@@ -190,8 +198,8 @@ export type Db = Database.Database & {
   setProjectValues(projectId: number, values: ProjectValue[]): void;
   /** The project's timeline: template elements with this project's overrides, in z order. */
   getProjectElements(projectId: number): ProjectElement[];
-  /** Move or toggle one element in one project. The template is untouched. */
-  setProjectElement(projectId: number, elementId: number, patch: ProjectElementPatch): void;
+  /** Move or toggle one scene in one project. The template is untouched. */
+  setProjectElement(projectId: number, sceneId: number, patch: ProjectElementPatch): void;
   getProjectTransitions(projectId: number): ProjectTransition[];
   /** 'cut' removes the row; anything else upserts it. */
   setProjectTransition(projectId: number, afterElementId: number, t: { preset: string; durationInFrames: number }): void;
@@ -240,24 +248,25 @@ CREATE TABLE IF NOT EXISTS project (
 
 CREATE TABLE IF NOT EXISTS project_value (
   project_id  INTEGER NOT NULL REFERENCES project(id) ON DELETE CASCADE,
-  element_id  INTEGER NOT NULL REFERENCES template_element(id),
+  element_id  INTEGER NOT NULL,
   param_key   TEXT    NOT NULL,
   value_json  TEXT    NOT NULL,
   PRIMARY KEY (project_id, element_id, param_key)
 );
 
-CREATE TABLE IF NOT EXISTS project_element (
+CREATE TABLE IF NOT EXISTS project_scene (
   project_id   INTEGER NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+  scene_id     INTEGER NOT NULL,
   element_id   INTEGER NOT NULL REFERENCES template_element(id),
   start_frame  INTEGER,
   end_frame    INTEGER,
   enabled      INTEGER NOT NULL DEFAULT 1,
-  PRIMARY KEY (project_id, element_id)
+  PRIMARY KEY (project_id, scene_id)
 );
 
 CREATE TABLE IF NOT EXISTS project_transition (
   project_id        INTEGER NOT NULL REFERENCES project(id) ON DELETE CASCADE,
-  after_element_id  INTEGER NOT NULL REFERENCES template_element(id),
+  after_element_id  INTEGER NOT NULL,
   preset            TEXT    NOT NULL,
   duration_frames   INTEGER NOT NULL,
   PRIMARY KEY (project_id, after_element_id)
@@ -340,6 +349,31 @@ export function openDb(file: string): Db {
   if (!projectColumns.includes('aspect')) db.exec(`ALTER TABLE project ADD COLUMN aspect TEXT NOT NULL DEFAULT '16:9'`);
   // M39: a project has a style treatment; everything before was clean.
   if (!projectColumns.includes('treatment')) db.exec(`ALTER TABLE project ADD COLUMN treatment TEXT NOT NULL DEFAULT 'clean'`);
+  // M45: scenes replaced per-project element rows. A scene's id is its element's id the first time (so nothing
+  // else needs translating); the old rows move over with scene_id = element_id.
+  const hadElementRows = (db.prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'project_element'`).get() as { name: string } | undefined) !== undefined;
+  if (hadElementRows) {
+    db.exec(`INSERT INTO project_scene (project_id, scene_id, element_id, start_frame, end_frame, enabled)
+             SELECT project_id, element_id, element_id, start_frame, end_frame, enabled FROM project_element;
+             DROP TABLE project_element;`);
+  }
+  // M45: values and transitions are keyed by scene id, which for a second use of an element is not a template
+  // element id. Databases whose tables still reference template_element are rebuilt without that constraint.
+  for (const [table, columns] of [
+    ['project_value', 'project_id, element_id, param_key, value_json'],
+    ['project_transition', 'project_id, after_element_id, preset, duration_frames'],
+  ] as const) {
+    const refs = db.prepare(`PRAGMA foreign_key_list(${table})`).all() as { table: string }[];
+    if (!refs.some((r) => r.table === 'template_element')) continue;
+    const create = (db.prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?`).get(table) as { sql: string }).sql;
+    const rebuilt = create.replace(/\s+REFERENCES template_element\(id\)/g, '').replace(new RegExp(`TABLE (IF NOT EXISTS )?${table}`), `TABLE ${table}_new`);
+    db.pragma('foreign_keys = OFF');
+    db.exec(`${rebuilt};
+             INSERT INTO ${table}_new (${columns}) SELECT ${columns} FROM ${table};
+             DROP TABLE ${table};
+             ALTER TABLE ${table}_new RENAME TO ${table};`);
+    db.pragma('foreign_keys = ON');
+  }
   // M20: media assets gained a kind (video or audio).
   const mediaColumns = (db.prepare(`PRAGMA table_info(media_asset)`).all() as { name: string }[]).map((c) => c.name);
   if (!mediaColumns.includes('kind')) db.exec(`ALTER TABLE media_asset ADD COLUMN kind TEXT NOT NULL DEFAULT 'video'`);
@@ -465,29 +499,30 @@ function setProjectAudio(db: Database.Database, projectId: number, audio: Projec
 // ---- project timeline --------------------------------------------------
 
 function getProjectElements(db: Database.Database, projectId: number): ProjectElement[] {
-  // The spot's own elements (its template's, with any per-project overrides)
-  // and, since M31, elements added from other templates (present only as
-  // project_element rows). Own elements first, then added ones.
+  // The spot's own elements (its template's, each once, with any per-project
+  // overrides on the scene whose id is the element's id), then every other
+  // scene: elements added from the library (M31) and second uses of any
+  // element (M45). Own elements first, then the rest.
   const rows = db
     .prepare(
-      `SELECT e.id AS id, e.slug AS slug, COALESCE(NULLIF(e.name, ''), e.slug) AS name, e.type AS type, t.slug AS templateSlug, e.z_index AS zIndex,
-              COALESCE(pe.start_frame, e.start_frame) AS startFrame,
-              COALESCE(pe.end_frame, e.end_frame) AS endFrame,
-              COALESCE(pe.enabled, 1) AS enabledInt,
+      `SELECT e.id AS id, e.id AS elementId, e.slug AS slug, COALESCE(NULLIF(e.name, ''), e.slug) AS name, e.type AS type, t.slug AS templateSlug, e.z_index AS zIndex,
+              COALESCE(ps.start_frame, e.start_frame) AS startFrame,
+              COALESCE(ps.end_frame, e.end_frame) AS endFrame,
+              COALESCE(ps.enabled, 1) AS enabledInt,
               0 AS addedInt
        FROM project p
        JOIN template_element e ON e.template_id = p.template_id
        JOIN template t ON t.id = e.template_id
-       LEFT JOIN project_element pe ON pe.project_id = p.id AND pe.element_id = e.id
+       LEFT JOIN project_scene ps ON ps.project_id = p.id AND ps.scene_id = e.id AND ps.element_id = e.id
        WHERE p.id = @projectId
        UNION ALL
-       SELECT e.id AS id, e.slug AS slug, COALESCE(NULLIF(e.name, ''), e.slug) AS name, e.type AS type, t.slug AS templateSlug, e.z_index AS zIndex,
-              pe.start_frame AS startFrame, pe.end_frame AS endFrame, pe.enabled AS enabledInt, 1 AS addedInt
+       SELECT ps.scene_id AS id, e.id AS elementId, e.slug AS slug, COALESCE(NULLIF(e.name, ''), e.slug) AS name, e.type AS type, t.slug AS templateSlug, e.z_index AS zIndex,
+              ps.start_frame AS startFrame, ps.end_frame AS endFrame, ps.enabled AS enabledInt, 1 AS addedInt
        FROM project p
-       JOIN project_element pe ON pe.project_id = p.id
-       JOIN template_element e ON e.id = pe.element_id AND e.template_id <> p.template_id
+       JOIN project_scene ps ON ps.project_id = p.id
+       JOIN template_element e ON e.id = ps.element_id
        JOIN template t ON t.id = e.template_id
-       WHERE p.id = @projectId
+       WHERE p.id = @projectId AND (e.template_id <> p.template_id OR ps.scene_id <> ps.element_id)
        ORDER BY addedInt, zIndex, id`,
     )
     .all({ projectId }) as (Omit<ProjectElement, 'enabled' | 'added'> & { enabledInt: number; addedInt: number })[];
@@ -520,44 +555,64 @@ function listLibraryElements(db: Database.Database): LibraryElement[] {
     .all() as LibraryElement[];
 }
 
-function addProjectElement(db: Database.Database, projectId: number, elementId: number, startFrame: number): void {
-  const element = db.prepare(`SELECT start_frame AS startFrame, end_frame AS endFrame FROM template_element WHERE id = ?`).get(elementId) as
-    | { startFrame: number; endFrame: number }
+/** M45: scene ids for second uses start here, above any template element id. */
+const FRESH_SCENE_FROM = 10_000_000;
+
+function addProjectElement(db: Database.Database, projectId: number, elementId: number, startFrame: number): number {
+  const element = db.prepare(`SELECT start_frame AS startFrame, end_frame AS endFrame, template_id AS templateId FROM template_element WHERE id = ?`).get(elementId) as
+    | { startFrame: number; endFrame: number; templateId: number }
     | undefined;
   if (!element) throw new Error(`No template element ${elementId}`);
   const start = Math.max(0, Math.round(startFrame));
-  db.prepare(
-    `INSERT INTO project_element (project_id, element_id, start_frame, end_frame, enabled) VALUES (?, ?, ?, ?, 1)
-     ON CONFLICT(project_id, element_id) DO NOTHING`,
-  ).run(projectId, elementId, start, start + (element.endFrame - element.startFrame));
-  db.prepare(`UPDATE project SET updated_at = datetime('now') WHERE id = ?`).run(projectId);
+  const run = db.transaction((): number => {
+    // The first use of an element keeps the element's id as its scene id; the spot's own elements count as used.
+    const own = (db.prepare(`SELECT template_id AS templateId FROM project WHERE id = ?`).get(projectId) as { templateId: number } | undefined)?.templateId === element.templateId;
+    const used = own || db.prepare(`SELECT 1 FROM project_scene WHERE project_id = ? AND scene_id = ?`).get(projectId, elementId) !== undefined;
+    let sceneId = elementId;
+    if (used) {
+      const max = (db.prepare(`SELECT MAX(scene_id) AS max FROM project_scene`).get() as { max: number | null }).max ?? 0;
+      sceneId = Math.max(FRESH_SCENE_FROM, max + 1);
+    }
+    db.prepare(`INSERT INTO project_scene (project_id, scene_id, element_id, start_frame, end_frame, enabled) VALUES (?, ?, ?, ?, ?, 1)`).run(
+      projectId,
+      sceneId,
+      elementId,
+      start,
+      start + (element.endFrame - element.startFrame),
+    );
+    db.prepare(`UPDATE project SET updated_at = datetime('now') WHERE id = ?`).run(projectId);
+    return sceneId;
+  });
+  return run();
 }
 
-function removeProjectElement(db: Database.Database, projectId: number, elementId: number): boolean {
-  const own = db.prepare(`SELECT 1 FROM project p JOIN template_element e ON e.template_id = p.template_id WHERE p.id = ? AND e.id = ?`).get(projectId, elementId);
+function removeProjectElement(db: Database.Database, projectId: number, sceneId: number): boolean {
+  // The spot's own elements (scene id = element id, from the spot's template) stay; hide them instead.
+  const own = db.prepare(`SELECT 1 FROM project p JOIN template_element e ON e.template_id = p.template_id WHERE p.id = ? AND e.id = ?`).get(projectId, sceneId);
   if (own) return false;
   const run = db.transaction((): boolean => {
-    const gone = db.prepare(`DELETE FROM project_element WHERE project_id = ? AND element_id = ?`).run(projectId, elementId).changes;
+    const gone = db.prepare(`DELETE FROM project_scene WHERE project_id = ? AND scene_id = ?`).run(projectId, sceneId).changes;
     if (gone === 0) return false;
-    db.prepare(`DELETE FROM project_value WHERE project_id = ? AND element_id = ?`).run(projectId, elementId);
-    db.prepare(`DELETE FROM project_transition WHERE project_id = ? AND after_element_id = ?`).run(projectId, elementId);
+    db.prepare(`DELETE FROM project_value WHERE project_id = ? AND element_id = ?`).run(projectId, sceneId);
+    db.prepare(`DELETE FROM project_transition WHERE project_id = ? AND after_element_id = ?`).run(projectId, sceneId);
     db.prepare(`UPDATE project SET updated_at = datetime('now') WHERE id = ?`).run(projectId);
     return true;
   });
   return run();
 }
 
-function setProjectElement(db: Database.Database, projectId: number, elementId: number, patch: ProjectElementPatch): void {
+function setProjectElement(db: Database.Database, projectId: number, sceneId: number, patch: ProjectElementPatch): void {
+  // A scene row exists for every added scene; an own element gets one on its first change, keyed by its own id.
   db.prepare(
-    `INSERT INTO project_element (project_id, element_id, start_frame, end_frame, enabled)
-     VALUES (@projectId, @elementId, @startFrame, @endFrame, COALESCE(@enabled, 1))
-     ON CONFLICT(project_id, element_id) DO UPDATE SET
-       start_frame = COALESCE(excluded.start_frame, project_element.start_frame),
-       end_frame = COALESCE(excluded.end_frame, project_element.end_frame),
-       enabled = COALESCE(@enabled, project_element.enabled)`,
+    `INSERT INTO project_scene (project_id, scene_id, element_id, start_frame, end_frame, enabled)
+     VALUES (@projectId, @sceneId, @sceneId, @startFrame, @endFrame, COALESCE(@enabled, 1))
+     ON CONFLICT(project_id, scene_id) DO UPDATE SET
+       start_frame = COALESCE(excluded.start_frame, project_scene.start_frame),
+       end_frame = COALESCE(excluded.end_frame, project_scene.end_frame),
+       enabled = COALESCE(@enabled, project_scene.enabled)`,
   ).run({
     projectId,
-    elementId,
+    sceneId,
     startFrame: patch.startFrame ?? null,
     endFrame: patch.endFrame ?? null,
     enabled: patch.enabled === undefined ? null : patch.enabled ? 1 : 0,
@@ -744,7 +799,7 @@ function deleteTemplateElementsExcept(db: Database.Database, templateId: number,
   const run = db.transaction(() => {
     for (const { id } of gone) {
       db.prepare(`DELETE FROM project_value WHERE element_id = ?`).run(id);
-      db.prepare(`DELETE FROM project_element WHERE element_id = ?`).run(id);
+      db.prepare(`DELETE FROM project_scene WHERE element_id = ?`).run(id);
       db.prepare(`DELETE FROM project_transition WHERE after_element_id = ?`).run(id);
       db.prepare(`DELETE FROM template_element WHERE id = ?`).run(id);
     }
@@ -807,7 +862,7 @@ function duplicateProject(db: Database.Database, id: number, name: string): { id
     if (!source) throw new Error(`No project ${id}`);
     const copy = Number(db.prepare(`INSERT INTO project (template_id, name, client_id, aspect, treatment) VALUES (?, ?, ?, ?, ?)`).run(source.templateId, name, source.clientId, source.aspect, source.treatment).lastInsertRowid);
     db.prepare(`INSERT INTO project_value (project_id, element_id, param_key, value_json) SELECT ?, element_id, param_key, value_json FROM project_value WHERE project_id = ?`).run(copy, id);
-    db.prepare(`INSERT INTO project_element (project_id, element_id, start_frame, end_frame, enabled) SELECT ?, element_id, start_frame, end_frame, enabled FROM project_element WHERE project_id = ?`).run(copy, id);
+    db.prepare(`INSERT INTO project_scene (project_id, scene_id, element_id, start_frame, end_frame, enabled) SELECT ?, scene_id, element_id, start_frame, end_frame, enabled FROM project_scene WHERE project_id = ?`).run(copy, id);
     db.prepare(`INSERT INTO project_transition (project_id, after_element_id, preset, duration_frames) SELECT ?, after_element_id, preset, duration_frames FROM project_transition WHERE project_id = ?`).run(copy, id);
     db.prepare(`INSERT INTO project_audio (project_id, asset_id, volume, in_s) SELECT ?, asset_id, volume, in_s FROM project_audio WHERE project_id = ?`).run(copy, id);
     return { id: copy };
@@ -819,7 +874,7 @@ function deleteProject(db: Database.Database, id: number): void {
   const run = db.transaction(() => {
     db.prepare(`DELETE FROM render WHERE project_id = ?`).run(id);
     db.prepare(`DELETE FROM project_value WHERE project_id = ?`).run(id);
-    db.prepare(`DELETE FROM project_element WHERE project_id = ?`).run(id);
+    db.prepare(`DELETE FROM project_scene WHERE project_id = ?`).run(id);
     db.prepare(`DELETE FROM project_transition WHERE project_id = ?`).run(id);
     db.prepare(`DELETE FROM project_audio WHERE project_id = ?`).run(id);
     db.prepare(`DELETE FROM project WHERE id = ?`).run(id);

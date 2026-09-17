@@ -137,3 +137,40 @@ describe('Editor element library (M31)', () => {
     expect(screen.getByLabelText('Headline')).toBeTruthy();
   });
 });
+
+/** M45: the same element added twice is two scenes, each its own; the picker says how many times it is in the spot. */
+describe('Editor: the same element twice (M45)', () => {
+  it('adds a lower third twice: two chips, the second with a fresh id, and the picker says "in the spot ×2"', async () => {
+    let adds = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === '/api/projects/7' && !init?.method) return new Response(JSON.stringify(detail), { status: 200 });
+      if (url === '/api/elements') return new Response(JSON.stringify(library), { status: 200 });
+      if (url.endsWith('/template.json')) return new Response(JSON.stringify(textLottie('X')), { status: 200 });
+      if (url === '/api/media' || url === '/api/themes') return new Response('[]', { status: 200 });
+      if (url === '/api/projects/7/elements' && init?.method === 'POST') {
+        adds += 1;
+        const id = adds === 1 ? 9 : 10_000_000 + adds;
+        return new Response(JSON.stringify({ ...added, id, elementId: 9 }), { status: 201 });
+      }
+      if (init?.method === 'PUT') return new Response(init.body as string, { status: 200 });
+      return new Response('not found', { status: 404 });
+    });
+    render(<Editor projectId={7} onBack={() => {}} />);
+    await waitFor(() => expect(screen.getByLabelText('Headline')).toBeTruthy());
+    for (const n of [1, 2]) {
+      fireEvent.click(screen.getByLabelText('Add a scene'));
+      await screen.findByRole('dialog', { name: 'Add to the spot' });
+      const button = screen.getByLabelText('Add Lower third from Contrast :30');
+      expect((button as HTMLButtonElement).disabled).toBe(false);
+      if (n === 2) expect(button.textContent).toContain('in the spot');
+      fireEvent.click(button);
+      await waitFor(() => expect(screen.getAllByTestId(/^scene-[0-9]+$/)).toHaveLength(1 + n));
+    }
+    expect(screen.getByTestId('scene-9')).toBeTruthy();
+    expect(screen.getByTestId('scene-10000002')).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('Add a scene'));
+    await screen.findByRole('dialog', { name: 'Add to the spot' });
+    expect(screen.getByLabelText('Add Lower third from Contrast :30').textContent).toContain('in the spot ×2');
+  });
+});

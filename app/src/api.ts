@@ -47,7 +47,10 @@ export type ClientInput = Omit<Client, 'id' | 'createdAt'>;
 
 /** One element of a project: its own Lottie (at lottieUrl), its own schema, and this project's in/out and toggle. */
 export type ProjectElement = {
+  /** The scene's id in this spot (M45): the template element's id the first time an element is used, a fresh id after that. */
   id: number;
+  /** M45: the template element this scene is an instance of. */
+  elementId: number;
   slug: string;
   name: string;
   /** M31: what the element is (ELEMENT_TYPES). */

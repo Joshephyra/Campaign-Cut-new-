@@ -691,7 +691,7 @@ export function Editor({ projectId, onBack }: Props) {
         <div className="flex flex-1 min-h-0">
           <aside className="w-[280px] shrink-0 border-r border-line bg-panel overflow-y-auto">
             {picking ? (
-              <LibraryPicker library={library} error={libraryError} inSpot={new Set(elements.map((e) => e.id))} onAdd={(item, copy) => void addFromLibrary(item, copy)} onClose={() => setPicking(false)} />
+              <LibraryPicker library={library} error={libraryError} inSpot={usesByElement(elements)} onAdd={(item, copy) => void addFromLibrary(item, copy)} onClose={() => setPicking(false)} />
             ) : (
               <>
                 <MediaPanel onSelect={selectFootage} selectedId={selectedAssetId} onChange={setAssets} audio={audio} onAudioChange={onAudioChange} />
@@ -934,6 +934,16 @@ function ProjectName({ name, templateName, onRename }: { name: string | null; te
  * M31: the element library, grouped by type, in the left column while
  * choosing. Never over the video.
  */
+/** M45: how many scenes of the spot use each library element, by template element id. */
+function usesByElement(elements: { elementId?: number; id: number }[]): Map<number, number> {
+  const uses = new Map<number, number>();
+  for (const e of elements) {
+    const key = e.elementId ?? e.id;
+    uses.set(key, (uses.get(key) ?? 0) + 1);
+  }
+  return uses;
+}
+
 /** M42: the library's Lotties, fetched once per page for every opening of the picker (a template's files do not change under a session). */
 const pickerLotties = new Map<string, LottieAnimationData>();
 
@@ -946,7 +956,8 @@ function LibraryPicker({
 }: {
   library: LibraryElement[] | null;
   error: string | null;
-  inSpot: Set<number>;
+  /** M45: how many times each library element is already in the spot, by template element id. */
+  inSpot: Map<number, number>;
   onAdd: (item: LibraryElement, copy: string) => void;
   onClose: () => void;
 }) {
@@ -1036,13 +1047,12 @@ function LibraryPicker({
           <h3 className="text-xs font-semibold text-fg-2 mb-2">{g.label}</h3>
           <ul className="flex flex-col gap-1.5">
             {g.items.map((item) => {
-              const already = inSpot.has(item.id);
+              const uses = inSpot.get(item.id) ?? 0;
               return (
                 <li key={item.id}>
                   <button
                     type="button"
                     aria-label={`Add ${item.name} from ${item.templateName}`}
-                    disabled={already}
                     onClick={() => onAdd(item, copy)}
                     className="w-full flex items-center gap-3 rounded-lg bg-raised border border-line p-2 text-left transition-colors hover:bg-hover hover:border-line-strong disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue"
                   >
@@ -1064,7 +1074,7 @@ function LibraryPicker({
                     <div className="min-w-0 flex-1">
                       <div className="text-xs font-medium truncate">{item.name}</div>
                       <div className="text-[11px] text-fg-3 truncate tabular-nums">
-                        {item.templateName} · {seconds(item.durationInFrames).toFixed(1)} s{already ? ' · in the spot' : ''}
+                        {item.templateName} · {seconds(item.durationInFrames).toFixed(1)} s{uses > 0 ? (uses === 1 ? ' · in the spot' : ` · in the spot ×${uses}`) : ''}
                       </div>
                     </div>
                     <Plus size={14} strokeWidth={1.75} aria-hidden="true" className="text-blue shrink-0" />
