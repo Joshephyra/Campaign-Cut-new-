@@ -37,6 +37,8 @@
     ".": "./src/app.ts",
     "./db": "./src/db/index.ts",
     "./render": "./src/render.ts",
-    "./paths": "./src/paths.ts"
+    "./paths": "./src/paths.ts",
+    "./fontNames": "./src/fontNames.ts",
+    "./googleFonts": "./src/googleFonts.ts"
   }
 }

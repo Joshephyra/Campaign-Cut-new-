@@ -13,6 +13,7 @@ import { renderComposition } from './render';
 import { RenderQueue, type RenderFn } from './renderQueue';
 import { pexelsClient, type StockOptions } from './stock';
 import { elementLottieUrl, hasVariant, loadElementSchema, projectFontFiles } from './templateFiles';
+import { FONT_EXTENSIONS, listFontLibrary } from './fontNames';
 import { defaultUploadsDir, makeStagingDir, problemsFrom, runIngestCommand, stagedRelativePath, type RunIngest } from './ingestUpload';
 
 export type { RunIngest } from './ingestUpload';
@@ -31,6 +32,8 @@ export type AppOptions = {
   uploadsDir?: string;
   /** M34: the stock provider's key and (in tests) fetch. Defaults to PEXELS_API_KEY from the environment. */
   stock?: StockOptions;
+  /** M59: where uploaded font files live. Defaults to <mediaDir>/fonts. */
+  fontLibraryDir?: string;
 };
 
 declare module 'fastify' {
@@ -731,6 +734,33 @@ export function buildApp(options: AppOptions = {}) {
   app.get<{ Querystring: { projectId?: string } }>('/renders', async (req) => {
     const projectId = req.query.projectId ? Number(req.query.projectId) : undefined;
     return db.listRenders(projectId).map(renderJson);
+  });
+
+  // ---- M59: the font library ---------------------------------------------
+
+  const fontLibraryDir = options.fontLibraryDir ?? path.join(mediaDir, 'fonts');
+  fs.mkdirSync(fontLibraryDir, { recursive: true });
+
+  /** The uploaded faces, each named by what the file says it is. */
+  app.get('/fonts', async () => listFontLibrary(fontLibraryDir));
+
+  /** Font files in multipart fields named "file"; answers the faces they turned out to be. */
+  app.post('/fonts', async (req, reply) => {
+    const saved: string[] = [];
+    const refused: string[] = [];
+    for await (const part of req.files()) {
+      const ext = path.extname(part.filename).toLowerCase();
+      const name = path.basename(part.filename).replace(/[^A-Za-z0-9._-]+/g, '-');
+      if (!FONT_EXTENSIONS.has(ext) || !name) {
+        refused.push(part.filename);
+        part.file.resume();
+        continue;
+      }
+      await pipeline(part.file, fs.createWriteStream(path.join(fontLibraryDir, name)));
+      saved.push(name);
+    }
+    if (saved.length === 0) return reply.code(400).send({ error: refused.length > 0 ? `${refused.join(', ')}: not a font file (.ttf, .otf, .ttc, .woff, .woff2)` : 'Send font files in multipart fields named "file"' });
+    return reply.code(201).send(listFontLibrary(fontLibraryDir).filter((f) => saved.includes(f.file)));
   });
 
   // ---- images (logo replacement) --------------------------------------

@@ -1,4 +1,6 @@
 import { openDb } from '@campaigncut/server/db';
+import { systemFontDirs } from '@campaigncut/server/fontNames';
+import { fetchGoogleFont } from '@campaigncut/server/googleFonts';
 import { paths } from '@campaigncut/server/paths';
 import { renderThumbnail } from '@campaigncut/server/render';
 import path from 'node:path';
@@ -44,6 +46,10 @@ try {
     slug,
     templatesDir: paths.templates,
     fontsDir: paths.fonts,
+    // M59: where a face is looked for when the handover has no file for it
+    fontLibraryDirs: [paths.fontLibrary],
+    installedFontDirs: systemFontDirs(),
+    fetchGoogleFont,
     db,
     renderThumbnail: ({ elements, outputPath, frame, fonts }) =>
       renderThumbnail({ outputPath, inputProps: { background: '#000000', elements, fonts }, frame }).then(() => undefined),

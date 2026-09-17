@@ -196,6 +196,10 @@ Without it the app uses black. The sample project script writes this form.
 
 The same wrapper may say `"libraryOnly": true`. The template then feeds the element library only (every element still offered in "Add to the spot") and is left out of the "start a new spot" grid. That is how the starter pack ships: sixteen elements nobody would play end to end.
 
+### Fonts: where the app looks (M59)
+
+A face is looked for in this order: the handover's `fonts/` folder, the fonts already in the app, the font library ("Fonts on hand" under Add a template, where a face is uploaded once for every ingest after), the fonts installed on the computer running the app, and Google Fonts. Files are matched by the names inside them, so an installed `ARIALNB.TTF` is found for Arial Narrow Bold. Every find is copied into the app under the face's own name. Only a face found nowhere fails the ingest, and the message names every place it looked. Hand over a file when the face is a commercial one nobody but the designer has; Adobe Fonts cannot be handed over at all, so a design set in one needs a face that can be.
+
 ### Fonts: one file per style
 
 A family used in two weights is two faces. Hand over one file per face: `Arial-Regular.ttf` and `Arial-Bold.ttf`, or the Windows names `arial.ttf` and `arialbd.ttf`. The ingest looks for a file whose name says the style; a regular file is never accepted for a bold face, because the browser would fake the weight and the text would drift away from what After Effects rendered. The pre-flight report lists every font as After Effects names it (`Arial-BoldMT`); the family and style are what the file name must carry.

@@ -1,4 +1,5 @@
 import { FolderUp } from 'lucide-react';
+import { FontLibrary } from './FontLibrary';
 import { useRef, useState, type FormEvent } from 'react';
 import { api, type IngestAnswer } from '../api';
 import { Button, FieldLabel } from './ui';
@@ -148,6 +149,7 @@ export function AddTemplate({ onIngested, open: openProp, onOpenChange }: Props)
               <pre className="whitespace-pre-wrap mt-2 rounded-md bg-stage p-3 text-fg-2">{answer.output}</pre>
             </details>
           )}
+          <FontLibrary />
         </form>
       )}
     </section>

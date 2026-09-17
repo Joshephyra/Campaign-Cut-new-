@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from './app';
 import { openDb, type Db } from './db/index';
@@ -50,5 +51,43 @@ describe('template fonts reach both runners', () => {
   it('the export runner gets absolute font URLs', () => {
     const props = buildProjectProps({ db, templatesDir: tmp, projectId, serverBase: 'http://127.0.0.1:3001' });
     expect(props.fonts).toEqual([{ family: 'IBM Plex Sans', url: 'http://127.0.0.1:3001/templates/t/fonts/IBMPlexSans-Regular.ttf' }]);
+  });
+});
+
+/** M59: the font library: upload faces once, list them by what each file says it is. */
+describe('the font library (M59)', () => {
+  let tmp: string;
+  let db: Db;
+  let app: ReturnType<typeof buildApp>;
+
+  beforeEach(() => {
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-font-library-'));
+    db = openDb(':memory:');
+    app = buildApp({ db, templatesDir: path.join(tmp, 't'), mediaDir: path.join(tmp, 'media') });
+  });
+
+  afterEach(async () => {
+    await app.close();
+    db.close();
+    fs.rmSync(tmp, { recursive: true, force: true });
+  });
+
+  it('POST /fonts stores font files under media/fonts and answers their faces; GET /fonts lists them; a non-font is refused', async () => {
+    const plexBold = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'app', 'public', 'fonts', 'IBMPlexSans-Bold.ttf');
+    const boundary = 'cc-boundary';
+    const part = (name: string, bytes: Buffer, type: string) =>
+      Buffer.concat([Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${name}"\r\nContent-Type: ${type}\r\n\r\n`), bytes, Buffer.from('\r\n')]);
+    const body = Buffer.concat([part('plex bold.ttf', fs.readFileSync(plexBold), 'font/ttf'), part('notes.txt', Buffer.from('hello'), 'text/plain'), Buffer.from(`--${boundary}--\r\n`)]);
+    const res = await app.inject({ method: 'POST', url: '/fonts', headers: { 'content-type': `multipart/form-data; boundary=${boundary}` }, payload: body });
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toEqual([{ file: 'plex-bold.ttf', family: 'IBM Plex Sans', style: 'Bold' }]);
+    expect(fs.existsSync(path.join(tmp, 'media', 'fonts', 'plex-bold.ttf'))).toBe(true);
+    expect(fs.existsSync(path.join(tmp, 'media', 'fonts', 'notes.txt'))).toBe(false);
+    expect((await app.inject({ method: 'GET', url: '/fonts' })).json()).toEqual([{ file: 'plex-bold.ttf', family: 'IBM Plex Sans', style: 'Bold' }]);
+
+    const onlyText = Buffer.concat([part('notes.txt', Buffer.from('hello'), 'text/plain'), Buffer.from(`--${boundary}--\r\n`)]);
+    const refused = await app.inject({ method: 'POST', url: '/fonts', headers: { 'content-type': `multipart/form-data; boundary=${boundary}` }, payload: onlyText });
+    expect(refused.statusCode).toBe(400);
+    expect((refused.json() as { error: string }).error).toMatch(/notes.txt: not a font file/);
   });
 });

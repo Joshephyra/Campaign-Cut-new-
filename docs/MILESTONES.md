@@ -931,10 +931,24 @@ Josh (2026-09-17): a designer will prepare their own organised After Effects pro
 Josh (2026-09-17): one replaceable image per comp was a limit the designer should not have to live with.
 
 **Build**
-- , , … tag any replaceable photo or picture, one slot each (Photo 1, Photo 2 in the panel, each with its placement).  stays the logo: the one a client's brand kit fills and the one readiness asks about. Ingest, pre-flight, SPEC, AE-AUTHORING and the handover guide agree.
+- `cc.image.1`, `cc.image.2`, … tag any replaceable photo or picture, one slot each (Photo 1, Photo 2 in the panel, each with its placement). `cc.logo` stays the logo: the one a client's brand kit fills and the one readiness asks about. Ingest, pre-flight, SPEC, AE-AUTHORING and the handover guide agree.
 
 **Tests**
-- Schema: two photo slots and a logo, in order, with placements;  without an index rejected. Pre-flight: a photo slot on an image layer passes; on a text layer it is named.
+- Schema: two photo slots and a logo, in order, with placements; `cc.image` without an index rejected. Pre-flight: a photo slot on an image layer passes; on a text layer it is named.
+
+---
+
+## M59 · Fonts without a handover · DONE
+
+Josh (2026-09-17): every font arriving as a file the designer is licensed to hand over was a limit to lift.
+
+**Build**
+- An ingest looks for each face in order: the handover's `fonts/`, the fonts already in the app, the font library, the fonts installed on the computer running the app, and Google Fonts. Files are matched by the names inside them (`server/src/fontNames.ts` reads the sfnt name table: typographic and legacy pairs, styles by meaning), so Windows' `ARIALNB.TTF` is found for Arial Narrow Bold. Google Fonts is asked for exactly the weight and slant, with an old browser's user agent so the answer is TTF (`server/src/googleFonts.ts`). Every find is copied into the app under the face's own name. Only a face found nowhere fails the ingest, and the message names every place it looked.
+- The font library: `media/fonts`, `GET /fonts` and `POST /fonts` (multipart, .ttf/.otf/.ttc/.woff/.woff2), and "Fonts on hand" under Add a template, which lists uploaded faces by what each file says it is and takes uploads. The CLI wires the environment; `ingestTemplate` itself looks nowhere new unless told (tests stay offline).
+- The licence question stays: the docs and the guide say a commercial face nobody else owns is still handed over, and Adobe Fonts cannot be.
+
+**Tests**
+- Name tables (a real TTF, a WOFF, a non-font; style synonyms; a folder searched by inner names; the library listing). Google (weight and slant, CSS parsing, the user agent, unknown family, missing weight, empty file, offline). Ingest (library, installed, Google, and the message naming every place). The routes. The panel.
 
 ---
 

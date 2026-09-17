@@ -103,6 +103,54 @@ describe('ingestTemplate', () => {
     expect(db.listTemplates()).toHaveLength(0);
   });
 
+  /** M59: a face nobody handed over is found by the names inside a file in the library or on this computer, or fetched from Google Fonts. */
+  const plexRegular = path.resolve(here, '..', '..', '..', 'app', 'public', 'fonts', 'IBMPlexSans-Regular.ttf');
+
+  it('M59: finds a face in the font library by its inner names, whatever the file is called, and ships it under the face\'s name', async () => {
+    fs.rmSync(path.join(fontsDir, 'IBMPlexSans-Regular.ttf'));
+    const library = path.join(tmp, 'library');
+    fs.mkdirSync(library);
+    fs.copyFileSync(plexRegular, path.join(library, 'mystery.ttf'));
+    const lines: string[] = [];
+    await run(makeHandover(tmp), { fontLibraryDirs: [library], log: (l) => lines.push(l) });
+    expect(fs.existsSync(path.join(fontsDir, 'IBMPlexSans-Regular.ttf'))).toBe(true);
+    expect(fs.existsSync(path.join(templatesDir, 'standin', 'fonts', 'IBMPlexSans-Regular.ttf'))).toBe(true);
+    expect(lines.join('\n')).toMatch(/IBM Plex Sans Regular: from the font library/);
+  });
+
+  it('M59: finds a face among the fonts installed on this computer', async () => {
+    fs.rmSync(path.join(fontsDir, 'IBMPlexSans-Regular.ttf'));
+    const installed = path.join(tmp, 'windows-fonts');
+    fs.mkdirSync(installed);
+    fs.copyFileSync(plexRegular, path.join(installed, 'PLEXR.TTF'));
+    const lines: string[] = [];
+    await run(makeHandover(tmp), { installedFontDirs: [installed], log: (l) => lines.push(l) });
+    expect(fs.existsSync(path.join(fontsDir, 'IBMPlexSans-Regular.ttf'))).toBe(true);
+    expect(lines.join('\n')).toMatch(/installed on this computer/);
+  });
+
+  it('M59: fetches a face from Google Fonts when nobody has it, and names every place it looked when Google has none either', async () => {
+    fs.rmSync(path.join(fontsDir, 'IBMPlexSans-Regular.ttf'));
+    const asked: string[] = [];
+    await run(makeHandover(tmp), {
+      installedFontDirs: [path.join(tmp, 'nowhere')],
+      fetchGoogleFont: async (family, style) => {
+        asked.push(`${family} ${style}`);
+        return { fileName: 'IBMPlexSans-Regular.ttf', bytes: fs.readFileSync(plexRegular), url: 'https://fonts.gstatic.com/x.ttf' };
+      },
+    });
+    expect(asked).toEqual(['IBM Plex Sans Regular']);
+    expect(fs.existsSync(path.join(fontsDir, 'IBMPlexSans-Regular.ttf'))).toBe(true);
+    expect(fs.existsSync(path.join(templatesDir, 'standin', 'fonts', 'IBMPlexSans-Regular.ttf'))).toBe(true);
+
+    fs.rmSync(path.join(fontsDir, 'IBMPlexSans-Regular.ttf'));
+    fs.rmSync(path.join(templatesDir, 'standin'), { recursive: true, force: true });
+    const input = makeHandover(tmp);
+    const none = run(input, { fontLibraryDirs: [path.join(tmp, 'lib')], installedFontDirs: [path.join(tmp, 'nowhere')], fetchGoogleFont: async () => null });
+    await expect(none).rejects.toThrow(/not in .*, in a fonts\/ folder of the handover, in the font library, among the fonts installed on this computer, on Google Fonts/);
+    expect(fs.existsSync(path.join(fontsDir, 'IBMPlexSans-Regular.ttf'))).toBe(false);
+  });
+
   it('copies font files handed over in the export folder into the fonts dir', async () => {
     fs.rmSync(path.join(fontsDir, 'IBMPlexSans-Regular.ttf'));
     const input = makeHandover(tmp);

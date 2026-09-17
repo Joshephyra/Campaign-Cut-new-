@@ -42,6 +42,9 @@ export type ProjectRow = {
 export type StockResult = { provider: 'pexels'; id: string; title: string; thumbUrl: string; durationS: number; width: number; height: number; credit: string; pageUrl: string };
 
 /** M33: a client profile: the brand guide a spot is made for. */
+/** M59: a face in the server's font library. */
+export type LibraryFont = { file: string; family: string; style: string };
+
 export type Client = { id: number; name: string; logoUrl: string; colors: Record<string, string>; disclaimer: string; createdAt: string };
 export type ClientInput = Omit<Client, 'id' | 'createdAt'>;
 
@@ -291,6 +294,14 @@ export const api = {
     const body = new FormData();
     body.append('file', file, file.name);
     return fetch(`${API}/media`, { method: 'POST', body }).then((r) => json<MediaAsset>(r));
+  },
+
+  /** M59: the font library. */
+  fonts: () => fetch(`${API}/fonts`).then((r) => json<LibraryFont[]>(r)),
+  uploadFonts: (files: File[]) => {
+    const body = new FormData();
+    for (const f of files) body.append('file', f, f.name);
+    return fetch(`${API}/fonts`, { method: 'POST', body }).then((r) => json<LibraryFont[]>(r));
   },
 
   uploadImage: (file: File) => {

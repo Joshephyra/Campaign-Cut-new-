@@ -1,4 +1,6 @@
 import type { ElementProps, LottieAnimationData, TemplateParam } from '@campaigncut/composition';
+import { fileNameFor, findFontByName } from '@campaigncut/server/fontNames';
+import type { GoogleFontFetcher } from '@campaigncut/server/googleFonts';
 import type { Db } from '@campaigncut/server/db';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -43,6 +45,12 @@ export type IngestOptions = {
   templatesDir: string;
   /** Where font files must exist (app/public/fonts). Fonts handed over in the folder are copied here. */
   fontsDir: string;
+  /** M59: font files uploaded from the app (media/fonts). Looked in after the handover. */
+  fontLibraryDirs?: string[];
+  /** M59: this computer's font folders. Looked in after the library; a face is matched by the names inside the file. */
+  installedFontDirs?: string[];
+  /** M59: fetches a face from Google Fonts when nobody has it. Absent: not tried. */
+  fetchGoogleFont?: GoogleFontFetcher;
   db: Db;
   renderThumbnail: ThumbnailRenderer;
   log?: (line: string) => void;
@@ -276,22 +284,53 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
       ...el.preparedVariants.map((v) => ({ slug: `${el.slug} (${v.aspect})`, lottie: v.lottie, fonts: v.fonts })),
     ]),
   );
+  // M59: after the handover, the font library, this computer's own fonts (matched by the
+  // names inside each file, whatever it is called) and Google Fonts. Every find is copied
+  // into fontsDir under the face's own name, so the next ingest finds it at once.
+  const libraryDirs = options.fontLibraryDirs ?? [];
+  const installedDirs = options.installedFontDirs ?? [];
+  const fontBytes: Array<{ to: string; bytes: Uint8Array }> = [];
   for (const face of faces) {
-    const inApp = findFontFileForStyle(face.family, face.style, [fontsDir]);
+    const shippedAs = (from: string) => path.join(fontsDir, fileNameFor(face.family, face.style, path.extname(from)));
+    const inApp = findFontFileForStyle(face.family, face.style, [fontsDir]) ?? findFontByName(face.family, face.style, [fontsDir]);
     if (inApp) {
       fontSources.push({ family: face.family, style: face.style, from: inApp });
       continue;
     }
-    const inHandover = findFontFileForStyle(face.family, face.style, fontDirs);
+    const inHandover = findFontFileForStyle(face.family, face.style, fontDirs) ?? findFontByName(face.family, face.style, fontDirs);
     if (inHandover) {
       fontCopies.push({ from: inHandover, to: path.join(fontsDir, path.basename(inHandover)) });
       fontSources.push({ family: face.family, style: face.style, from: inHandover });
+      log(`Font ${face.family} ${face.style}: handed over (${path.basename(inHandover)})`);
+      continue;
+    }
+    const inLibrary = findFontFileForStyle(face.family, face.style, libraryDirs) ?? findFontByName(face.family, face.style, libraryDirs);
+    if (inLibrary) {
+      fontCopies.push({ from: inLibrary, to: shippedAs(inLibrary) });
+      fontSources.push({ family: face.family, style: face.style, from: shippedAs(inLibrary) }); // shipped from the renamed copy, once written
+      log(`Font ${face.family} ${face.style}: from the font library (${inLibrary})`);
+      continue;
+    }
+    const installed = findFontByName(face.family, face.style, installedDirs);
+    if (installed) {
+      fontCopies.push({ from: installed, to: shippedAs(installed) });
+      fontSources.push({ family: face.family, style: face.style, from: shippedAs(installed) });
+      log(`Font ${face.family} ${face.style}: installed on this computer (${installed})`);
+      continue;
+    }
+    const fetched = options.fetchGoogleFont ? await options.fetchGoogleFont(face.family, face.style) : null;
+    if (fetched) {
+      const to = path.join(fontsDir, fetched.fileName);
+      fontBytes.push({ to, bytes: fetched.bytes });
+      fontSources.push({ family: face.family, style: face.style, from: to });
+      log(`Font ${face.family} ${face.style}: from Google Fonts (${fetched.url})`);
       continue;
     }
     const users = face.elements.map((s) => `"${s}"`).join(', ');
+    const looked = [`in ${fontsDir}`, 'in a fonts/ folder of the handover', libraryDirs.length > 0 ? 'in the font library' : '', installedDirs.length > 0 ? 'among the fonts installed on this computer' : '', options.fetchGoogleFont ? 'on Google Fonts' : ''].filter(Boolean).join(', ');
     problems.push(
-      `Font "${face.family}" style "${face.style}" (used by element ${users}) has no file in ${fontsDir} and none was handed over in a fonts/ folder. ` +
-        `A missing face would be faked by the browser and no longer match After Effects, so the template is rejected. Hand over that font file (for example ${face.family.replace(/\s+/g, '')}-${face.style.replace(/\s+/g, '')}.ttf).`,
+      `Font "${face.family}" style "${face.style}" (used by element ${users}) was not found: not ${looked}. ` +
+        `A missing face would be faked by the browser and no longer match After Effects, so the template is rejected. Hand over that font file (for example ${fileNameFor(face.family, face.style, '.ttf')}), or upload it under "Fonts on hand".`,
     );
   }
 
@@ -305,7 +344,11 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
   fs.mkdirSync(fontsDir, { recursive: true });
   for (const { from, to } of fontCopies) {
     fs.copyFileSync(from, to);
-    log(`Copied font ${path.basename(from)} -> ${fontsDir}`);
+    log(`Copied font ${path.basename(from)} -> ${to}`);
+  }
+  for (const { to, bytes } of fontBytes) {
+    fs.writeFileSync(to, bytes);
+    log(`Wrote font ${path.basename(to)} -> ${fontsDir}`);
   }
   // A re-ingest that lost an element removes its files; pre-M17 root files go too.
   for (const stale of fs.readdirSync(elementsRoot)) {

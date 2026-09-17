@@ -53,7 +53,7 @@ Two beats, one disclaimer. Use one `cc.safe.disclaimer` layer that runs the full
 
 ## 2. Before you touch the project
 
-1. **Find the font files.** Every font in the comp must be handed over as a file: `.otf`, `.ttf`, `.woff` or `.woff2`. One file per style: a family used in Bold and Regular is two files. Your condensed headline face and the disclaimer face both count. If you cannot find or are not licensed to hand over a font file, swap to one you can before you go further. The app refuses a template whose fonts are missing, on purpose, because a substituted font reflows every line.
+1. **Know your fonts.** Write down every font family and style in the comp (your condensed headline face in Bold, the disclaimer face, anything else). The app finds most faces on its own: it looks in the fonts already on its computer, in its own font library, and on Google Fonts, and it matches by the names inside each file. You hand over a file only when the app says a face was not found, which happens with commercial faces nobody but you owns. One file per style, `.otf`, `.ttf`, `.woff` or `.woff2`. Two faces can never be handed over: anything from Adobe Fonts (Typekit), which is licensed to your machine only, and any face whose licence forbids embedding. A design set in one of those needs a face that can travel, so swap it now rather than after the export.
 
 2. **Make the handover folder.** On the Desktop, make a folder named `ayudando-6s`. Everything you hand over ends up inside it.
 
@@ -244,12 +244,13 @@ Also copy the original GIF into the folder. It is the thing everyone has already
 
 ## 8. Fonts
 
-1. Inside `ayudando-6s`, make a folder named `fonts`.
-2. Copy every font file from step 2.1 into it, one file per style.
-3. Name each file `Family-Style.ext`, with no spaces: `KnockoutHTF-Bold.otf`, `PublicSans-Regular.ttf`. The pre-flight report lists each font as After Effects names it, for example `Knockout-HTF49-Liteweight`; the family and style in the file name must match that.
-4. Widths belong in the family name: After Effects reports Arial Narrow Bold as family "Arial", style "Narrow Bold"; the file must be named `ArialNarrow-Bold.ttf`.
+Usually nothing to do. When the folder is ingested, the app looks for each face in its own fonts, in its font library, among the fonts installed on its computer and on Google Fonts, and it reads the names inside each file, so a face is found whatever its file is called. If a face is found nowhere, the ingest stops and names it, and Josh asks you for the file. Then:
 
-A regular file is never accepted in place of a bold one. The browser would fake the weight and the text would drift from what you rendered.
+1. Inside `ayudando-6s`, make a folder named `fonts`.
+2. Copy the file for that face into it, one file per style.
+3. Any file name works; `Family-Style.ext` with no spaces is clearest: `KnockoutHTF-Bold.otf`.
+
+To save the round trip, put the files for your commercial faces in `fonts/` from the start. A regular file is never accepted in place of a bold one: the browser would fake the weight and the text would drift from what you rendered.
 
 ---
 
@@ -294,7 +295,7 @@ Before you zip, tick every line:
 - [ ] Every locked layer has a readable name
 - [ ] The pre-flight report ends READY TO EXPORT
 - [ ] Bodymovin settings: Glyphs off, original asset names on, originals copied
-- [ ] `fonts/` has one correctly named file per style
+- [ ] `fonts/` holds a file for each commercial face, one per style (the app finds the rest)
 - [ ] `reference.mp4` and the original GIF are in the folder
 - [ ] The dump files and the .aep are in the folder
 

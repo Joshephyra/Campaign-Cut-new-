@@ -4,9 +4,17 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M59 Fonts without a handover · DONE
+
+- The ingest finds a face in the handover, the app's fonts, the font library (`media/fonts`, uploaded under "Fonts on hand" in Add a template), the fonts installed on this computer (matched by the names inside each file) or Google Fonts (exact weight and slant, TTF), in that order; every find is copied in under the face's own name; a face found nowhere fails the ingest naming every place looked.
+- Tests: 12 new across name tables, Google Fonts, the ingest chain, the routes and the panel. Suite green but the M60 render test written ahead of its plumbing; typecheck clean.
+- Not yet verified with a real file: the designer's export. Verified by hand: Windows' Arial Narrow Bold name table reads "Arial Narrow"/"Bold" and "Arial"/"Narrow Bold"; Google's CSS endpoint answers TTF for the old user agent and 400 for an unknown family.
+
+---
+
 ## 2026-09-17 · M58 Photo slots · DONE
 
-- : any replaceable photo, one slot each, labelled Photo N;  reserved for the logo the brand kit fills. Roles, pre-flight, SPEC 1.1, AE-AUTHORING and the handover guide (Lombardo is , the Musk photo ).
+- `cc.image.N`: any replaceable photo, one slot each, labelled Photo N; `cc.logo` reserved for the logo the brand kit fills. Roles, pre-flight, SPEC 1.1, AE-AUTHORING and the handover guide (Lombardo is `cc.image.1`, the Musk photo `cc.image.2`).
 - Tests: 2 new (schema, pre-flight); ingest and pre-flight suites green.
 - Not yet verified with a real file: waits for the designer's export, as M57.
 
