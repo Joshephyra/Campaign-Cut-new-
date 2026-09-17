@@ -6,6 +6,8 @@ import { Button, ICON } from './ui';
 type Props = {
   /** The clip is in the footage now; the caller reloads its list. */
   onImported: (asset: MediaAsset) => void;
+  /** M53: inside a folding section, which carries the heading and the rule. */
+  bare?: boolean;
 };
 
 /**
@@ -13,7 +15,7 @@ type Props = {
  * here; a result pulled in becomes an ordinary clip in the footage, ready
  * to press or drag onto the video. The credit rides in the clip's name.
  */
-export function StockPanel({ onImported }: Props) {
+export function StockPanel({ onImported, bare = false }: Props) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<StockResult[] | null>(null);
   const [searching, setSearching] = useState(false);
@@ -50,8 +52,8 @@ export function StockPanel({ onImported }: Props) {
   };
 
   return (
-    <div className="mt-4 pt-4 border-t border-line">
-      <h3 className="text-xs font-semibold text-fg-2 mb-2">Find stock footage</h3>
+    <div className={bare ? '' : 'mt-4 pt-4 border-t border-line'}>
+      {!bare && <h3 className="text-xs font-semibold text-fg-2 mb-2">Find stock footage</h3>}
       <div className="flex items-center gap-2">
         <input
           aria-label="Search stock footage"

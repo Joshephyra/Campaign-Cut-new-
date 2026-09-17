@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { api, type MediaAsset, type ProjectAudio } from '../api';
 import { AudioPanel } from './AudioPanel';
 import { StockPanel } from './StockPanel';
-import { ICON } from './ui';
+import { ICON , Section } from './ui';
 
 /** The drag payload a library clip carries onto the monitor (M30). */
 export const ASSET_DRAG_TYPE = 'application/x-campaigncut-asset';
@@ -69,12 +69,12 @@ export function MediaPanel({ onSelect, selectedId, onChange, audio, onAudioChang
 
   return (
     <div className="flex flex-col">
-      <section className="px-4 py-4 border-b border-line">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[13px] font-semibold flex items-center gap-2">
-            <Film size={ICON.size} strokeWidth={ICON.strokeWidth} aria-hidden="true" className="text-fg-2" />
-            Footage
-          </h2>
+      <Section
+        id="footage"
+        icon={Film}
+        title="Footage"
+        className="!px-4"
+        action={
           <label className="cursor-pointer">
             <span className="inline-flex items-center gap-1.5 h-7 px-2.5 text-xs font-medium rounded-md bg-raised border border-line text-fg hover:bg-hover hover:border-line-strong transition-colors">
               <Upload size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" />
@@ -89,7 +89,8 @@ export function MediaPanel({ onSelect, selectedId, onChange, audio, onAudioChang
               onChange={(e) => void onFile(e.target.files?.[0])}
             />
           </label>
-        </div>
+        }
+      >
 
         {status && <p className="text-xs text-blue mb-2">{status}</p>}
         {error && <p className="text-xs text-red mb-2">{error}</p>}
@@ -138,14 +139,12 @@ export function MediaPanel({ onSelect, selectedId, onChange, audio, onAudioChang
             })}
           </ul>
         )}
-        <StockPanel onImported={() => void refresh()} />
-      </section>
+        <Section id="stock" level={3} title="Find stock footage" className="mt-4 pt-4 border-t border-line">
+          <StockPanel onImported={() => void refresh()} bare />
+        </Section>
+      </Section>
 
-      <section className="px-4 py-4 border-b border-line">
-        <h2 className="text-[13px] font-semibold flex items-center gap-2 mb-3">
-          <Music size={ICON.size} strokeWidth={ICON.strokeWidth} aria-hidden="true" className="text-fg-2" />
-          Music
-        </h2>
+      <Section id="music" icon={Music} title="Music" className="!px-4">
         {onAudioChange ? (
           <AudioPanel assets={assets ?? []} audio={audio ?? null} onChange={onAudioChange} />
         ) : tracks.length === 0 ? (
@@ -160,7 +159,7 @@ export function MediaPanel({ onSelect, selectedId, onChange, audio, onAudioChang
             ))}
           </ul>
         )}
-      </section>
+      </Section>
       <p className="px-4 py-3 text-[11px] text-fg-3">Upload also accepts mp3 and wav for music.</p>
     </div>
   );

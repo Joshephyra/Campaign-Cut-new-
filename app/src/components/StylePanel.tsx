@@ -2,7 +2,7 @@ import { hexToRgba, TREATMENT_LABELS, TREATMENTS, type ParamValues, type Templat
 import { Palette, RotateCcw, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { Theme } from '../api';
-import { Button, ICON, Segmented } from './ui';
+import { Button, ICON, Section, Segmented } from './ui';
 
 /** One colour role as it stands across the spot. */
 export type StyleRole = {
@@ -80,12 +80,7 @@ export function StylePanel({ elements, values, themes, onApply, onSaveTheme, onD
   };
 
   return (
-    <section className="px-4 py-4 border-b border-line">
-      <h2 className="text-[13px] font-semibold flex items-center gap-2 mb-1">
-        <Palette size={ICON.size} strokeWidth={ICON.strokeWidth} aria-hidden="true" className="text-fg-2" />
-        Colours across the spot
-      </h2>
-      <p className="text-[11px] text-fg-3 mb-3">A change here recolours every scene that uses the role.</p>
+    <Section id="colours" icon={Palette} title="Colours across the spot" note="A change here recolours every scene that uses the role." className="!px-4">
       {clientName && onApplyBrand && (
         <Button size="sm" className="mb-3 w-full" onClick={onApplyBrand}>
           Apply {clientName}&apos;s brand
@@ -102,9 +97,7 @@ export function StylePanel({ elements, values, themes, onApply, onSaveTheme, onD
       )}
 
       {onTreatment && (
-        <div className="mt-4">
-          <h3 className="text-xs font-semibold text-fg-2 mb-1">Treatment</h3>
-          <p className="text-[11px] text-fg-3 mb-2">A look over the whole spot. The designs stay as authored underneath.</p>
+        <Section id="treatment" level={3} title="Treatment" note="A look over the whole spot. The designs stay as authored underneath." className="mt-4">
           <Segmented
             label="Treatment across the spot"
             size="sm"
@@ -113,17 +106,22 @@ export function StylePanel({ elements, values, themes, onApply, onSaveTheme, onD
             onChange={onTreatment}
             className="w-full [&>button]:flex-1 [&>button]:justify-center"
           />
-        </div>
+        </Section>
       )}
 
-      <div className="mt-4 flex items-center justify-between">
-        <h3 className="text-xs font-semibold text-fg-2">Saved themes</h3>
-        {!naming && roles.length > 0 && (
-          <Button size="sm" variant="ghost" onClick={() => setNaming(true)}>
-            Save as theme
-          </Button>
-        )}
-      </div>
+      <Section
+        id="themes"
+        level={3}
+        title="Saved themes"
+        className="mt-4"
+        action={
+          !naming && roles.length > 0 ? (
+            <Button size="sm" variant="ghost" onClick={() => setNaming(true)}>
+              Save as theme
+            </Button>
+          ) : undefined
+        }
+      >
       {naming && (
         <div className="mt-2 flex items-center gap-2">
           <input
@@ -166,7 +164,8 @@ export function StylePanel({ elements, values, themes, onApply, onSaveTheme, onD
           ))}
         </ul>
       )}
-    </section>
+      </Section>
+    </Section>
   );
 }
 

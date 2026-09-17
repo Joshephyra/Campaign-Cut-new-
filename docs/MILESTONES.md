@@ -864,6 +864,12 @@ Josh (2026-09-17): a political spot is an opening, three or four proof points in
 
 ---
 
+## M53 · Collapsible sections · DONE
+
+- Every panel section folds from its title (a chevron, aria-expanded) and the fold is remembered per browser: Add to the spot, Footage, Find stock footage, Music, Colours across the spot, Treatment, Saved themes, Timing, How it ends, Scene, From the library, Exports. Actions beside a title (Upload, Save as theme) stay live while folded.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

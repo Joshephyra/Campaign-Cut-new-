@@ -309,6 +309,7 @@ Controls are CapCut's vocabulary played straight: tactile, filled, quiet until t
 - **Ghost:** no fill, fg-2 text; hover to fg text on hover fill. Cancel, Keep, Back to library.
 - **Danger:** red text, no fill; hover on red tint. Only for confirming a delete.
 - **Export split button:** the filled blue Export MP4 with its right corners squared, and a 32 px caret IconButton in the same blue against a 20% white hairline; the caret opens a 256 px panel-toned menu (role menu) with "This version (16:9)" and "All four versions".
+- **Section title:** 13 px/600 in `fg` (12 px/600 in `fg-2` for a block inside a section), a 14 px chevron in `fg-3` before it that turns -90° when folded; the whole title is the button (aria-expanded), the fold is remembered per browser, and the action beside the title stays live while folded.
 - **Readiness pill:** a 28 px raised pill beside Export, shield icon, "Ready to export" in `fg-3` with a green shield, "N to check" in `fg-2`, red only while the disclaimer blocks; it opens a 320 px panel-toned list under it (a region, not a modal: Escape or a press anywhere else closes it), one row per check with a green check, a grey circle or a red shield.
 - **Icon button:** 32 px square (28 px inside grouped pairs like Undo/Redo, 36 px for Play), ghost treatment. Play is the one icon button filled blue.
 - **States:** 150 ms colour transition; disabled at 40% opacity (35% for icon buttons) with pointer events off; focus uses the global 2 px blue outline.

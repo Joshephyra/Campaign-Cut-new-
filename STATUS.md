@@ -4,6 +4,19 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M53 Collapsible sections · DONE
+
+**What exists now**
+
+- `Section` in `app/src/components/ui.tsx` folds when given an id (`useCollapsed`, remembered in localStorage under `cc.folded.<id>`, wrapped in try/catch); level 3 for blocks inside a section; `note` folds with the body; `action` stays live. Footage, Find stock footage, Music, Colours across the spot, Treatment, Saved themes, Add to the spot, Timing, How it ends, Scene, From the library and Exports all fold.
+- Tests: 2 ui. 534 tests green.
+
+**Verified**
+
+- Real browser on spot 9: eleven folding titles (Add to the spot, Footage, Music, Colours across the spot, Treatment, Saved themes, Timing, How it ends, Scene, From the library, Exports; Find stock footage folds inside Footage). Footage folded, the Upload button stayed, and after a reload it was still folded (localStorage cc.folded.footage = 1). Capture in .impeccable/review/m53-folds.png.
+
+---
+
 ## 2026-09-17 · M51 The strip in the ad's own words · DONE
 
 **Why**

@@ -749,8 +749,7 @@ export function Editor({ projectId, onBack }: Props) {
             ) : (
               <>
                 {/* M51: the library's shelves, one press from the spot. Transitions live between the chips and in the panel. */}
-                <section className="px-4 py-3 border-b border-line" aria-label="Add to the spot">
-                  <h2 className="text-[13px] font-semibold mb-2">Add to the spot</h2>
+                <Section id="shelves" title="Add to the spot" className="!px-4 !py-3">
                   <div className="flex flex-wrap gap-1.5">
                     {PICKER_ORDER.map((type) => (
                       <button
@@ -772,7 +771,7 @@ export function Editor({ projectId, onBack }: Props) {
                       Transitions
                     </button>
                   </div>
-                </section>
+                </Section>
                 <MediaPanel onSelect={selectFootage} selectedId={selectedAssetId} onChange={setAssets} audio={audio} onAudioChange={onAudioChange} />
                 {styleError && <p className="px-4 pt-3 text-xs text-red">{styleError}</p>}
                 <StylePanel
@@ -872,7 +871,7 @@ export function Editor({ projectId, onBack }: Props) {
                     activeKey={active && active.elementId === selected.id ? active.key : null}
                   />
                 </div>
-                <Section title="Timing">
+                <Section title="Timing" id="timing">
                   <Slider
                     label={`${selected.name} length`}
                     name="Length"
@@ -890,7 +889,7 @@ export function Editor({ projectId, onBack }: Props) {
                     <TransitionControl element={selected} transition={transitions.find((t) => t.afterElementId === selected.id)} onChange={(t) => void onTransitionChange(selected.id, t)} />
                   </Section>
                 )}
-                <Section title={isSceneType(selected.type) ? 'Scene' : 'Overlay'}>
+                <Section title={isSceneType(selected.type) ? 'Scene' : 'Overlay'} id="scene">
                   <p className="text-[11px] text-fg-3 mb-2">
                     {isSceneType(selected.type)
                       ? 'A second copy of this scene, with its words and colours, right after it.'
@@ -914,7 +913,7 @@ export function Editor({ projectId, onBack }: Props) {
                   </div>
                 </Section>
                 {selected.added && (
-                  <Section title="From the library">
+                  <Section title="From the library" id="from-library">
                     <p className="text-[11px] text-fg-3 mb-2">Added from another template. Removing it puts the spot back as it was.</p>
                     <Button variant="danger" size="sm" icon={Trash2} onClick={() => void removeFromSpot(selected.id)}>
                       Remove from spot
@@ -923,7 +922,7 @@ export function Editor({ projectId, onBack }: Props) {
                 )}
               </>
             )}
-            <Section title="Exports">
+            <Section title="Exports" id="exports">
               <ExportHistory projectId={projectId} refreshKey={exportsTick} projectName={loaded.detail.project.name} />
             </Section>
           </aside>

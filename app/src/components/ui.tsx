@@ -1,5 +1,5 @@
-import type { LucideIcon } from 'lucide-react';
-import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react';
+import { ChevronDown, type LucideIcon } from 'lucide-react';
+import { useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react';
 
 /**
  * M30: the shared control vocabulary. One shape for buttons, one for
@@ -142,14 +142,90 @@ export function Switch({ label, checked, onChange }: { label: string; checked: b
 }
 
 /** A panel section: title on the left, an optional action on the right, then the content. */
-export function Section({ title, action, children, className = '', id }: { title: ReactNode; action?: ReactNode; children: ReactNode; className?: string; id?: string }) {
+/** M53: whether a section is folded, remembered per browser under its id (a per-viewer convenience; never state that must persist). */
+export function useCollapsed(id: string | undefined, initial = false): [boolean, (next: boolean) => void] {
+  const key = id ? `cc.folded.${id}` : null;
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (!key) return initial;
+    try {
+      const saved = window.localStorage.getItem(key);
+      return saved === null ? initial : saved === '1';
+    } catch {
+      return initial;
+    }
+  });
+  const set = (next: boolean) => {
+    setCollapsed(next);
+    if (!key) return;
+    try {
+      window.localStorage.setItem(key, next ? '1' : '0');
+    } catch {
+      /* a private window, or blocked storage: the fold still works for the session */
+    }
+  };
+  return [collapsed, set];
+}
+
+/**
+ * A titled block of a panel. With an `id` it folds: the title is a button
+ * with a chevron, the fold is remembered per browser, and anything in
+ * `action` stays live beside the title while folded. `note` is a one-line
+ * explanation that folds with the body.
+ */
+export function Section({
+  title,
+  action,
+  children,
+  className = '',
+  id,
+  icon: Icon,
+  note,
+  defaultCollapsed = false,
+  level = 2,
+}: {
+  title: ReactNode;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  id?: string;
+  icon?: LucideIcon;
+  note?: ReactNode;
+  defaultCollapsed?: boolean;
+  /** 2 for a panel's sections, 3 for a block inside one. */
+  level?: 2 | 3;
+}) {
+  const [collapsed, setCollapsed] = useCollapsed(id, defaultCollapsed);
+  const foldable = id !== undefined;
+  const Heading = level === 3 ? 'h3' : 'h2';
+  const titleClass = level === 3 ? 'text-xs font-semibold text-fg-2' : 'text-[13px] font-semibold text-fg';
+  const label = (
+    <>
+      {Icon && <Icon size={ICON.size} strokeWidth={ICON.strokeWidth} aria-hidden="true" className="text-fg-2" />}
+      {title}
+    </>
+  );
   return (
-    <section id={id} className={`px-5 py-4 border-b border-line last:border-b-0 ${className}`}>
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-[13px] font-semibold text-fg">{title}</h2>
+    <section id={id} data-collapsed={foldable ? String(collapsed) : undefined} className={`${level === 3 ? '' : 'px-5 py-4 border-b border-line last:border-b-0'} ${className}`}>
+      <div className={`flex items-center justify-between gap-2 ${collapsed ? '' : 'mb-3'}`}>
+        <Heading className={`${titleClass} min-w-0`}>
+          {foldable ? (
+            <button
+              type="button"
+              aria-expanded={!collapsed}
+              onClick={() => setCollapsed(!collapsed)}
+              className="inline-flex items-center gap-2 max-w-full text-left rounded-sm -ml-1 pl-1 pr-1 hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-blue"
+            >
+              <ChevronDown size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" className={`shrink-0 text-fg-3 transition-transform duration-150 ${collapsed ? '-rotate-90' : ''}`} />
+              {label}
+            </button>
+          ) : (
+            <span className="inline-flex items-center gap-2">{label}</span>
+          )}
+        </Heading>
         {action}
       </div>
-      {children}
+      {!collapsed && note && <p className="text-[11px] text-fg-3 -mt-2 mb-3">{note}</p>}
+      {!collapsed && children}
     </section>
   );
 }
