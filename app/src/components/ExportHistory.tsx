@@ -49,7 +49,7 @@ export function ExportHistory({ projectId, refreshKey = 0, projectName = null }:
                   Download
                 </a>
               ) : (
-                <span className="text-red truncate" title={r.error ?? ''}>
+                <span className="text-red-ink truncate" title={r.error ?? ''}>
                   failed{r.error ? `: ${r.error}` : ''}
                 </span>
               )}

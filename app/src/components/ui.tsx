@@ -12,10 +12,10 @@ export const ICON = { size: 16, strokeWidth: 1.75 } as const;
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
 const VARIANT: Record<Variant, string> = {
-  primary: 'bg-blue text-white hover:bg-blue-hover active:bg-blue-deep shadow-card',
+  primary: 'cc-sheen bg-blue text-on-blue hover:bg-blue-hover active:bg-blue-deep shadow-card',
   secondary: 'bg-raised text-fg border border-line hover:bg-hover hover:border-line-strong',
   ghost: 'text-fg-2 hover:text-fg hover:bg-hover',
-  danger: 'text-red hover:bg-red-tint',
+  danger: 'text-red-ink hover:bg-red-tint',
 };
 
 export function Button({
@@ -30,7 +30,7 @@ export function Button({
   return (
     <button
       type="button"
-      className={`inline-flex items-center justify-center font-medium rounded-md whitespace-nowrap select-none transition-colors duration-150 disabled:opacity-40 disabled:pointer-events-none ${pad} ${VARIANT[variant]} ${className}`}
+      className={`cc-press inline-flex items-center justify-center font-medium rounded-full whitespace-nowrap select-none disabled:opacity-40 disabled:pointer-events-none ${pad} ${VARIANT[variant]} ${className}`}
       {...rest}
     >
       {Icon && <Icon size={size === 'sm' ? 14 : ICON.size} strokeWidth={ICON.strokeWidth} aria-hidden="true" />}
@@ -45,14 +45,14 @@ export function Button({
  * out, a stock outlet, the fix beside a readiness line. Pressed is the
  * selection blue; at rest it is raised with the hairline.
  */
-export const CHIP_CLASS = 'inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-xs font-medium whitespace-nowrap select-none transition-colors duration-150';
+export const CHIP_CLASS = 'cc-press inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-xs font-medium whitespace-nowrap select-none';
 
 export function Chip({ pressed, className = '', children, ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & { pressed?: boolean }) {
   return (
     <button
       type="button"
       aria-pressed={pressed}
-      className={`${CHIP_CLASS} ${pressed ? 'bg-blue text-white' : 'bg-raised border border-line text-fg-2 hover:text-fg hover:bg-hover hover:border-line-strong'} focus:outline-none focus-visible:ring-2 focus-visible:ring-blue disabled:opacity-40 disabled:pointer-events-none ${className}`}
+      className={`${CHIP_CLASS} ${pressed ? 'bg-blue text-on-blue' : 'bg-raised border border-line text-fg-2 hover:text-fg hover:bg-hover hover:border-line-strong'} focus:outline-none focus-visible:ring-2 focus-visible:ring-blue disabled:opacity-40 disabled:pointer-events-none ${className}`}
       {...rest}
     >
       {children}
@@ -66,7 +66,7 @@ export function IconButton({ label, icon: Icon, className = '', ...rest }: Butto
       type="button"
       aria-label={label}
       title={rest.title ?? label}
-      className={`inline-flex items-center justify-center w-8 h-8 rounded-md text-fg-2 hover:text-fg hover:bg-hover transition-colors duration-150 disabled:opacity-35 disabled:pointer-events-none ${className}`}
+      className={`cc-press inline-flex items-center justify-center w-8 h-8 rounded-full text-fg-2 hover:text-fg hover:bg-hover disabled:opacity-35 disabled:pointer-events-none ${className}`}
       {...rest}
     >
       <Icon size={ICON.size} strokeWidth={ICON.strokeWidth} aria-hidden="true" />
@@ -92,7 +92,7 @@ export function Segmented<T extends string>({
 }) {
   const pad = size === 'sm' ? 'h-7 px-2.5 text-xs' : 'h-8 px-3 text-[13px]';
   return (
-    <div role="group" aria-label={label} className={`inline-flex p-0.5 bg-raised border border-line rounded-md ${className}`}>
+    <div role="group" aria-label={label} className={`inline-flex p-0.5 bg-raised border border-line rounded-full ${className}`}>
       {options.map((o) => {
         const active = o.value === value;
         return (
@@ -101,8 +101,8 @@ export function Segmented<T extends string>({
             type="button"
             aria-pressed={active}
             onClick={() => onChange(o.value)}
-            className={`inline-flex items-center gap-1.5 rounded-[6px] font-medium whitespace-nowrap transition-colors duration-150 ${pad} ${
-              active ? 'bg-blue text-white shadow-card' : 'text-fg-2 hover:text-fg hover:bg-hover'
+            className={`inline-flex items-center gap-1.5 rounded-full font-medium whitespace-nowrap cc-press duration-150 ${pad} ${
+              active ? 'bg-blue text-on-blue shadow-card' : 'text-fg-2 hover:text-fg hover:bg-hover'
             }`}
           >
             {o.icon && <o.icon size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" />}
@@ -275,7 +275,7 @@ export function Wordmark({ className = '' }: { className?: string }) {
     <span className={`inline-flex items-center gap-2 select-none ${className}`}>
       <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
         <rect width="22" height="22" rx="6" fill="var(--color-blue)" />
-        <path d="M8.5 6.5v9l7-4.5z" fill="#fff" />
+        <path d="M8.5 6.5v9l7-4.5z" fill="var(--color-on-blue)" />
       </svg>
       <span className="text-[15px] font-bold tracking-tight text-fg">CampaignCut</span>
     </span>

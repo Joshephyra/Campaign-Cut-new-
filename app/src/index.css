@@ -20,48 +20,79 @@
 }
 
 /*
- * The world (M30): a dark studio ground so footage colour reads true, two
- * panel tones and one hairline, one accent (campaign blue) that is filled on
- * the primary action and the selection and tinted on hover and drop targets.
- * Red is for danger only. 8 px radius on controls, 12 px on panels.
- * DESIGN.md records the system; these tokens are its source.
+ * The world (M63, Josh 2026-09-17: "less dark, more blue and fun", then "more
+ * like the blue from our prototype", campaigncut_3.html): a navy studio, the
+ * prototype's own steps, deep navy ground and navy panels that read blue
+ * rather than black, with the prototype's sky-blue accent and its navy ink on
+ * every sky-blue fill. A deeper navy on the two bars (the top bar and the
+ * scene strip) and the deepest around the monitor, so footage colour reads
+ * true. Gold marks "something to check", the prototype's brick red is for
+ * danger, one green for a readout; all sparingly, poster-style. Controls are
+ * pills with a little spring under a press. DESIGN.md records the system;
+ * these tokens are its source.
  */
 @theme {
   --font-sans: "Public Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 
-  --color-bg: #0b0d12;
-  --color-stage: #07080b;
-  --color-panel: #12151c;
-  --color-raised: #1a1e27;
-  --color-hover: #20252f;
-  --color-line: #262b36;
-  --color-line-strong: #343b48;
-  --color-fg: #f4f6fa;
-  --color-fg-2: #a9b1c1;
-  --color-fg-3: #7f8899;
-  --color-blue: #2f6bff;
-  --color-blue-hover: #4a7eff;
-  --color-blue-deep: #1b48c2;
-  --color-blue-tint: rgba(47, 107, 255, 0.16);
-  --color-red: #e5484d;
-  --color-red-tint: rgba(229, 72, 77, 0.14);
-  --color-green: #3dd68c;
+  --color-bg: #091422;
+  --color-stage: #06192c;
+  --color-panel: #0e1d31;
+  --color-raised: #15273f;
+  --color-hover: #1d3350;
+  --color-line: #26405f;
+  --color-line-strong: #3f6fa6;
+  --color-fg: #eaf2fb;
+  --color-fg-2: #9db4d0;
+  --color-fg-3: #7f96b4;
+  /* The accent: the prototype's sky blue, and its lighter step for hover and highlights. */
+  --color-blue: #4d9fe6;
+  --color-blue-hover: #6fb4f0;
+  --color-blue-deep: #3b8bd2;
+  --color-blue-tint: rgba(77, 159, 230, 0.16);
+  /* Text on a sky-blue fill is navy ink, as in the prototype; white would not read. */
+  --color-on-blue: #06192c;
+  /* The bars: the top bar and the scene strip, a step deeper than the panels. */
+  --color-bar: #071324;
+  --color-red: #e0563f;
+  /* Red as text, a step lighter than the fill so it reads on navy. */
+  --color-red-ink: #ec7360;
+  --color-red-tint: rgba(224, 86, 63, 0.16);
+  --color-green: #5fc08a;
+  --color-green-tint: rgba(95, 192, 138, 0.16);
+  --color-yellow: #ffd76a;
+  --color-yellow-tint: rgba(255, 215, 106, 0.18);
+  --color-yellow-ink: #ffd76a;
 
   /* Names older components still use; all resolve into the same palette. */
-  --color-ink: #0b0d12;
-  --color-hairline: #262b36;
-  --color-muted: #a9b1c1;
-  --color-cobalt: #2f6bff;
-  --color-danger: #e5484d;
+  --color-ink: #06192c;
+  --color-hairline: #26405f;
+  --color-muted: #9db4d0;
+  --color-cobalt: #4d9fe6;
+  --color-danger: #e0563f;
 
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
 
   --shadow-float: 0 12px 32px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.35);
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
+
+  /* A gentle spring: a hint of overshoot (Josh: "bouncier"), never elastic. */
+  --ease-spring: cubic-bezier(0.22, 1.15, 0.36, 1);
+}
+
+/* The two bars sit a step deeper than the panels; everything inside keeps its tokens. */
+.on-bar {
+  --color-bg: var(--color-bar);
+  --color-panel: var(--color-bar);
+}
+
+/* Around the monitor the wall is the deepest navy, so the video's own black reads as black. */
+.on-stage {
+  --color-bg: var(--color-stage);
+  --color-panel: var(--color-bar);
 }
 
 html,
@@ -80,14 +111,14 @@ body {
 }
 
 ::selection {
-  background: rgba(47, 107, 255, 0.35);
+  background: rgba(77, 159, 230, 0.35);
   color: var(--color-fg);
 }
 
+/* The outline follows each control's own radius: pills stay pills under Tab. */
 :focus-visible {
   outline: 2px solid var(--color-blue);
   outline-offset: 2px;
-  border-radius: var(--radius-sm);
 }
 
 /* Scrollbars belong to the palette, not the platform. */
@@ -116,10 +147,10 @@ body {
   border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
   color: var(--color-fg);
-  padding: 8px 10px;
+  padding: 8px 12px;
   font-size: 13px;
   line-height: 1.4;
-  transition: border-color 150ms ease, background-color 150ms ease;
+  transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
 }
 .field::placeholder {
   color: var(--color-fg-3);
@@ -131,6 +162,7 @@ body {
   outline: none;
   border-color: var(--color-blue);
   background: var(--color-panel);
+  box-shadow: 0 0 0 3px var(--color-blue-tint);
 }
 .field[aria-invalid="true"] {
   border-color: var(--color-red);
@@ -165,18 +197,18 @@ input[type="range"].slider::-moz-range-progress {
 input[type="range"].slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
-  margin-top: -5px;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
   border-radius: 999px;
   background: #ffffff;
   border: 2px solid var(--color-blue);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-  transition: transform 120ms ease;
+  transition: transform 160ms var(--ease-spring);
 }
 input[type="range"].slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 999px;
   background: #ffffff;
   border: 2px solid var(--color-blue);
@@ -184,7 +216,7 @@ input[type="range"].slider::-moz-range-thumb {
 }
 input[type="range"].slider:hover::-webkit-slider-thumb,
 input[type="range"].slider:focus-visible::-webkit-slider-thumb {
-  transform: scale(1.15);
+  transform: scale(1.2);
 }
 input[type="range"].slider:disabled {
   opacity: 0.4;
@@ -195,8 +227,8 @@ input[type="range"].slider:disabled {
 input[type="checkbox"].switch {
   appearance: none;
   -webkit-appearance: none;
-  width: 34px;
-  height: 20px;
+  width: 36px;
+  height: 22px;
   border-radius: 999px;
   background: var(--color-line-strong);
   position: relative;
@@ -209,12 +241,12 @@ input[type="checkbox"].switch::after {
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 999px;
   background: #ffffff;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-  transition: transform 150ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 220ms var(--ease-spring);
 }
 input[type="checkbox"].switch:checked {
   background: var(--color-blue);
@@ -231,7 +263,7 @@ input[type="color"].swatch {
   height: 36px;
   padding: 0;
   border: 1px solid var(--color-line);
-  border-radius: var(--radius-md);
+  border-radius: 999px;
   background: transparent;
   cursor: pointer;
   overflow: hidden;
@@ -241,18 +273,23 @@ input[type="color"].swatch::-webkit-color-swatch-wrapper {
 }
 input[type="color"].swatch::-webkit-color-swatch {
   border: none;
-  border-radius: 5px;
+  border-radius: 999px;
 }
 input[type="color"].swatch::-moz-color-swatch {
   border: none;
-  border-radius: 5px;
+  border-radius: 999px;
 }
 
-/* The one authored motion: things that appear on the video ease in from where they are. */
+/* The prototype's sheen on a sky-blue fill: a touch lighter at the top, never a gradient for its own sake. */
+.cc-sheen {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 60%);
+}
+
+/* The one authored motion: things that appear pop in with a little spring, from where they are. */
 @keyframes cc-appear {
   from {
     opacity: 0;
-    transform: scale(0.985);
+    transform: scale(0.94);
   }
   to {
     opacity: 1;
@@ -260,10 +297,20 @@ input[type="color"].swatch::-moz-color-swatch {
   }
 }
 .cc-appear {
-  animation: cc-appear 160ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: cc-appear 220ms var(--ease-spring) both;
+}
+/* A press: the control gives a little under the pointer. */
+.cc-press {
+  transition: transform 160ms var(--ease-spring), background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+.cc-press:active {
+  transform: scale(0.96);
 }
 @media (prefers-reduced-motion: reduce) {
   .cc-appear {
     animation: none;
+  }
+  .cc-press:active {
+    transform: none;
   }
 }

@@ -128,11 +128,11 @@ export function AddTemplate({ onIngested, open: openProp, onOpenChange }: Props)
             <Button type="submit" variant="primary" disabled={busy || files.length === 0 || !name.trim() || !adType.trim()}>
               {busy ? 'Ingesting… (the thumbnail render takes a moment)' : 'Ingest'}
             </Button>
-            {error && <span className="text-xs text-red">{error}</span>}
+            {error && <span className="text-xs text-red-ink">{error}</span>}
           </div>
           {answer && !answer.ok && (
             <div data-testid="ingest-problems" className="rounded-lg bg-red-tint border border-red/40 p-3">
-              <p className="text-xs text-red font-medium mb-2">
+              <p className="text-xs text-red-ink font-medium mb-2">
                 Ingest rejected. {answer.problems.length} problem{answer.problems.length === 1 ? '' : 's'}. Nothing written.
               </p>
               <ul className="text-xs text-fg list-disc pl-4 flex flex-col gap-1">
@@ -146,7 +146,7 @@ export function AddTemplate({ onIngested, open: openProp, onOpenChange }: Props)
           {answer && (
             <details className="text-[11px] text-fg-3">
               <summary className="cursor-pointer">Full output</summary>
-              <pre className="whitespace-pre-wrap mt-2 rounded-md bg-stage p-3 text-fg-2">{answer.output}</pre>
+              <pre className="whitespace-pre-wrap mt-2 rounded-md bg-raised border border-line p-3 text-fg-2">{answer.output}</pre>
             </details>
           )}
           <FontLibrary />

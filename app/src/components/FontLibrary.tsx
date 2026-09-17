@@ -68,7 +68,7 @@ export function FontLibrary() {
           {busy ? 'Uploading…' : 'Upload font files'}
           <input type="file" multiple accept=".ttf,.otf,.ttc,.woff,.woff2" className="sr-only" aria-label="Font files" disabled={busy} onChange={(e) => void onFiles(e.target.files)} />
         </label>
-        {error && <p className="text-[11px] text-red">{error}</p>}
+        {error && <p className="text-[11px] text-red-ink">{error}</p>}
       </div>
     </Section>
   );

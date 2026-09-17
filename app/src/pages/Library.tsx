@@ -82,7 +82,7 @@ export function Library({ onOpenProject }: Props) {
 
   return (
     <main className="min-h-screen bg-bg text-fg">
-      <header className="h-[52px] px-5 flex items-center justify-between border-b border-line bg-panel">
+      <header className="on-bar h-[52px] px-5 flex items-center justify-between border-b border-line bg-panel">
         <h1 className="m-0">
           <Wordmark />
         </h1>
@@ -92,7 +92,7 @@ export function Library({ onOpenProject }: Props) {
       </header>
 
       <div className="px-8 py-8 max-w-6xl mx-auto">
-        {error && <p className="text-xs text-red mb-6 rounded-md bg-red-tint px-3 py-2">Could not load the library: {error}</p>}
+        {error && <p className="text-xs text-red-ink mb-6 rounded-md bg-red-tint px-3 py-2">Could not load the library: {error}</p>}
         {groups === null && !error && <p className="text-xs text-fg-3">Loading…</p>}
         {groups?.length === 0 && <p className="text-xs text-fg-2">No templates yet. Add one from an After Effects export below.</p>}
 
@@ -128,7 +128,7 @@ export function Library({ onOpenProject }: Props) {
                   type="button"
                   disabled={busySlug !== null}
                   onClick={() => open(t)}
-                  className="group text-left rounded-xl bg-panel border border-line overflow-hidden transition-colors hover:border-line-strong hover:bg-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-blue disabled:opacity-60"
+                  className="group text-left rounded-lg bg-panel border border-line overflow-hidden transition-colors hover:border-line-strong hover:bg-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-blue disabled:opacity-60"
                 >
                   <div className="aspect-video bg-stage overflow-hidden">
                     <img src={api.fileUrl(t.thumbUrl)} alt="" className="w-full h-full object-cover block transition-transform duration-300 group-hover:scale-[1.02]" />
@@ -161,7 +161,7 @@ export function Library({ onOpenProject }: Props) {
               aria-label="Start a spot from nothing"
               disabled={busySlug !== null}
               onClick={() => void startBlank()}
-              className="group text-left rounded-xl bg-panel border border-dashed border-line-strong overflow-hidden transition-colors hover:border-blue hover:bg-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-blue disabled:opacity-60 w-[calc((100%-2rem)/3)]"
+              className="group text-left rounded-lg bg-panel border border-dashed border-line-strong overflow-hidden transition-colors hover:border-blue hover:bg-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-blue disabled:opacity-60 w-[calc((100%-2rem)/3)]"
             >
               <div className="aspect-video bg-stage flex items-center justify-center">
                 <span className="text-sm font-medium text-fg-2 group-hover:text-fg">Empty spot</span>
@@ -193,7 +193,7 @@ function ClientChip({ label, active, onClick }: { label: string; active: boolean
       aria-label={`New spots for ${label}`}
       aria-pressed={active}
       onClick={onClick}
-      className={`h-8 px-3 rounded-md text-xs font-medium transition-colors ${active ? 'bg-blue text-white' : 'bg-raised border border-line text-fg-2 hover:text-fg hover:bg-hover'}`}
+      className={`cc-press h-8 px-3.5 rounded-full text-xs font-medium ${active ? 'bg-blue text-on-blue' : 'bg-raised border border-line text-fg-2 hover:text-fg hover:bg-hover'}`}
     >
       {label}
     </button>
@@ -267,7 +267,7 @@ function ProjectList({
     }
   };
 
-  const iconButton = 'inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-xs text-fg-2 hover:text-fg hover:bg-hover transition-colors disabled:opacity-40';
+  const iconButton = 'cc-press inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-xs text-fg-2 hover:text-fg hover:bg-hover disabled:opacity-40';
 
   return (
     <section className="mb-10">
@@ -275,7 +275,7 @@ function ProjectList({
         <h2 className="text-base font-semibold tracking-tight">Projects</h2>
         <span className="text-xs text-fg-3">Your spots, newest first</span>
       </div>
-      <ul className="rounded-xl bg-panel border border-line divide-y divide-line overflow-hidden">
+      <ul className="rounded-lg bg-panel border border-line divide-y divide-line overflow-hidden">
         {projects.map((p) => (
           <li key={p.id} data-testid={`project-row-${p.id}`} className="flex items-center gap-4 px-4 h-12 hover:bg-raised transition-colors">
             <div className="flex-1 min-w-0">
@@ -290,7 +290,7 @@ function ProjectList({
                   className="field !py-1.5"
                 />
               ) : (
-                <button type="button" aria-label={`Open ${p.name}`} onClick={() => onOpen(p.id)} className="block w-full text-sm font-medium text-left truncate hover:text-blue transition-colors focus:outline-none">
+                <button type="button" aria-label={`Open ${p.name}`} onClick={() => onOpen(p.id)} className="block w-full text-sm font-medium text-left truncate hover:text-blue transition-colors rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue">
                   {p.name}
                 </button>
               )}
@@ -317,7 +317,7 @@ function ProjectList({
                   </Button>
                 </>
               ) : (
-                <button type="button" aria-label={`Delete ${p.name}`} onClick={() => setConfirmingId(p.id)} disabled={busyId === p.id} className={`${iconButton} hover:!text-red`}>
+                <button type="button" aria-label={`Delete ${p.name}`} onClick={() => setConfirmingId(p.id)} disabled={busyId === p.id} className={`${iconButton} hover:!text-red-ink`}>
                   <Trash2 size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" />
                   Delete
                 </button>

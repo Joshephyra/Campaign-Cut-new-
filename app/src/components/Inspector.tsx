@@ -324,7 +324,7 @@ function ImageControl({
         </div>
         <input ref={fileInput} type="file" accept="image/*" className="sr-only" data-testid={`image-file-${param.key}`} onChange={(e) => void onFile(e.target.files?.[0])} />
       </label>
-      {error && <p className="text-[11px] text-red mt-1">{error}</p>}
+      {error && <p className="text-[11px] text-red-ink mt-1">{error}</p>}
     </div>
   );
 }
@@ -471,7 +471,7 @@ function TrimBar({ value, clipLengthS, onChange }: { value: MediaValue; clipLeng
       aria-valuenow={at}
       aria-valuetext={`${at.toFixed(1)} s`}
       onKeyDown={onKey(key)}
-      className="absolute top-0 bottom-0 w-2.5 bg-white rounded-xs cursor-ew-resize shadow-card focus:outline-none focus-visible:ring-2 focus-visible:ring-blue"
+      className="absolute top-0 bottom-0 w-3 bg-white border-2 border-blue rounded-full cursor-ew-resize shadow-card focus:outline-none focus-visible:ring-2 focus-visible:ring-blue"
       style={{ left: `${(at / len) * 100}%`, transform: side === 'left' ? undefined : 'translateX(-100%)' }}
     />
   );
@@ -486,13 +486,13 @@ function TrimBar({ value, clipLengthS, onChange }: { value: MediaValue; clipLeng
       </div>
       <div
         data-testid="trim-bar"
-        className="relative h-7 rounded-md bg-stage border border-line select-none touch-none overflow-hidden"
+        className="relative h-7 rounded-full bg-blue-tint border border-line select-none touch-none overflow-hidden"
         onPointerDown={onBarDown}
         onPointerMove={onBarMove}
         onPointerUp={onBarUp}
         onPointerCancel={onBarUp}
       >
-        <div className="absolute top-0 bottom-0 bg-blue/35 pointer-events-none" style={{ left, width }} />
+        <div className="absolute top-0 bottom-0 bg-blue pointer-events-none" style={{ left, width }} />
         {grip('inS', 'Footage start', inS, 'left')}
         {grip('outS', 'Footage end', outS, 'right')}
       </div>
@@ -517,7 +517,7 @@ function ChromaControls({ value, onChange }: { value: MediaValue; onChange: (v: 
         <div className="flex flex-col gap-2 rounded-lg bg-raised border border-line p-3">
           <div className="flex items-center justify-between gap-2 text-xs text-fg-2">
             <span>Screen colour</span>
-            <div role="group" aria-label="Screen colour" className="inline-flex p-0.5 bg-stage border border-line rounded-md">
+            <div role="group" aria-label="Screen colour" className="inline-flex p-0.5 bg-raised border border-line rounded-full">
               {(
                 [
                   ['green', 'Green', '#1DB954'],
@@ -529,7 +529,7 @@ function ChromaControls({ value, onChange }: { value: MediaValue; onChange: (v: 
                   type="button"
                   aria-pressed={key.color === c}
                   onClick={() => onChange(withKey({ ...key, color: c as ChromaKey['color'] }))}
-                  className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[6px] text-xs font-medium transition-colors ${key.color === c ? 'bg-hover text-fg' : 'text-fg-2 hover:text-fg'}`}
+                  className={`cc-press inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-xs font-medium ${key.color === c ? 'bg-blue text-on-blue' : 'text-fg-2 hover:text-fg'}`}
                 >
                   <span aria-hidden="true" className="w-2.5 h-2.5 rounded-xs block" style={{ backgroundColor: swatch }} />
                   {label}

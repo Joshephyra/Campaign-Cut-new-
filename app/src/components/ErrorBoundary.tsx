@@ -32,7 +32,7 @@ export class ErrorBoundary extends Component<Props, State> {
       <main role="alert" className="min-h-screen bg-bg text-fg flex items-center justify-center p-8">
         <div className="w-full max-w-xl rounded-xl bg-panel border border-line p-6 flex flex-col gap-4">
           <h1 className="text-lg font-semibold tracking-tight">Something went wrong in the editor</h1>
-          <p className="text-xs text-red whitespace-pre-wrap rounded-md bg-red-tint p-3">{this.state.error.message}</p>
+          <p className="text-xs text-red-ink whitespace-pre-wrap rounded-md bg-red-tint p-3">{this.state.error.message}</p>
           <p className="text-xs text-fg-2">Your last saved changes are safe on the server. Reload the page to try again, or go back.</p>
           <div className="flex gap-2">
             <Button variant="primary" onClick={() => window.location.reload()}>

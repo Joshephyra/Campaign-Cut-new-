@@ -157,7 +157,7 @@ export function StylePanel({ elements, values, themes, onApply, onSaveTheme, onD
                 </span>
                 <span className="truncate">{t.name}</span>
               </button>
-              <button type="button" aria-label={`Delete ${t.name}`} onClick={() => onDeleteTheme(t.id)} className="inline-flex items-center justify-center w-7 h-7 rounded-md text-fg-3 hover:text-red hover:bg-red-tint transition-colors">
+              <button type="button" aria-label={`Delete ${t.name}`} onClick={() => onDeleteTheme(t.id)} className="inline-flex items-center justify-center w-7 h-7 rounded-md text-fg-3 hover:text-red-ink hover:bg-red-tint transition-colors">
                 <Trash2 size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" />
               </button>
             </li>

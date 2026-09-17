@@ -993,6 +993,22 @@ Not worth a fix, per the review: "Proof point n" numbering (the ad's own structu
 
 ---
 
+## M63 · The prototype's blue: a navy studio with a sky-blue accent · DONE
+
+Josh (2026-09-17): "making this look a little less dark, maybe the design is more blue and fun". Interviewed: light and airy, blue on the bars, rounder and bouncier plus a campaign palette, the wall around the video dark. Built and reviewed as a light world with campaign-blue bars; on seeing it: "I don't like this darker blue, maybe something more polished and professional, maybe more like the blue from our prototype". The prototype (campaigncut_3.html, Downloads) is a navy studio: deep navy ground and navy panels that read blue rather than black, a sky-blue accent with navy ink on its fills, gold markers, a brick red. That is the world now. Redesign of the visual world, Impeccable new-work flow, code-led.
+
+**Build**
+- `app/src/index.css`: the prototype's tokens (bg #091422, panel #0e1d31, raised #15273f, hover #1d3350, line #26405f; text #eaf2fb / #9db4d0 / #7f96b4; accent #4d9fe6 with `--color-on-blue` #06192c as the ink on every sky-blue fill; bar #0b1a2e a step deeper for the top bar and the scene strip; stage #06192c around the monitor; gold #ffd76a for "something to check", brick #e0563f for danger, green #5fc08a for one readout; radii 6/8/10/16/22; a gentle spring easing). Two small scopes, `.on-bar` and `.on-stage`, only deepen the ground. `.cc-sheen` is a faint top highlight on the primary pill, the prototype's polish.
+- `ui.tsx`: Button, Chip, IconButton and Segmented are pills; `.cc-press` gives every press a little spring; `.cc-appear` pops in with the same easing. Every `bg-blue text-white` became `bg-blue text-on-blue`. The wordmark is a sky-blue mark with a navy play triangle, as on the prototype.
+- On the way (from the light-world round, kept): the readiness pill solid gold with ink while there is something to check, brick with ink when blocked, quiet when ready; the trim bar one family with the sliders; timecode badges white on their thumbnails; the library's last non-pills made pills, cards at 16 px, keyboard focus on Open; `fg-3`, red and green raised to pass 4.5:1.
+- The surface brief's OWN-WORLD, FIRST VIEWPORT and FORM rewritten; DESIGN.md regenerated from the shipped tokens by the documenter.
+- Second finish review (the navy world), six fixes in one batch: the bars close with the world's hairline and sit a real step deeper (#071324); the focus outline follows each pill's own radius (the global border-radius on :focus-visible was squaring every pill); the Export pill and its options chevron are one material; navy ink on the play button in every state; red as text is \`red-ink\` #ec7360 everywhere, red stays the fill; the gold and brick readiness pills answer the pointer.
+
+**Verified**
+- Captures at 1440 of the light world (`.impeccable/review/m63*.png`) and of the navy world (`m64-editor-9.png`, `m64-editor-13.png`, `m64-library.png`) beside the prototype (`prototype-1440.png`). 589 tests green; typecheck clean in every workspace. Detector: the bounce-easing warning is the brief's own choice, kept gentle (overshoot 1.15).
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

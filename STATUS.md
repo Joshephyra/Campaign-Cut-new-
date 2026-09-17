@@ -4,6 +4,18 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M63 The prototype's blue: a navy studio with a sky-blue accent · DONE
+
+- The whole app moved through the tokens, twice: first to a light world with campaign-blue bars (Josh's first answers), then, on his reaction, to the prototype's own palette: navy ground and panels, the two bars a step deeper, the deepest navy around the monitor, the sky-blue accent with navy ink on every fill and a faint sheen on the primary, gold for "to check", brick for danger. Pills and a gentle spring kept. Direction contract in the surface brief; DESIGN.md regenerated.
+- Two finish-review rounds (one per world), each applied in one batch. Captures: `.impeccable/review/m64-editor-9.png`, `m64-library.png`, beside `prototype-1440.png`.
+- 589 tests green; typecheck clean.
+
+**Next**
+
+Josh's eyes on the navy world, then the designer's handover folder and the acceptance session.
+
+---
+
 ## 2026-09-17 · M62 Finish review of the day's additions · DONE
 
 - The Impeccable finish reviewer's eight fixes, applied in one round (see MILESTONES M62): one Chip primitive, one blue in the top bar, the shelves folded, sentence-case strip labels and a centred marker, the callout control folded, "· soon" on unconnected outlets, the gauge's delta on the surface. Plus the one-comp handover as an opening scene.

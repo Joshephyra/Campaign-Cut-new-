@@ -55,7 +55,7 @@ export function ClientsPanel({ clients, onCreate, onUpdate, onDelete, onChange }
           </Button>
         )}
       </div>
-      {error && <p className="text-xs text-red mb-3">{error}</p>}
+      {error && <p className="text-xs text-red-ink mb-3">{error}</p>}
       {clients.length === 0 && editing === null && (
         <p className="text-xs text-fg-2 mb-3">No clients yet. A client is a brand guide: logo, colours and disclaimer. Spots made for a client open already branded.</p>
       )}
@@ -63,7 +63,7 @@ export function ClientsPanel({ clients, onCreate, onUpdate, onDelete, onChange }
         <ul className="rounded-xl bg-panel border border-line divide-y divide-line overflow-hidden mb-3">
           {clients.map((c) => (
             <li key={c.id} data-testid={`client-row-${c.id}`} className="flex items-center gap-4 px-4 py-3 hover:bg-raised transition-colors">
-              <div className="w-14 h-10 rounded-md bg-stage flex items-center justify-center overflow-hidden shrink-0">
+              <div className="w-14 h-10 rounded-md bg-raised border border-line flex items-center justify-center overflow-hidden shrink-0">
                 {c.logoUrl ? <img src={api.fileUrl(c.logoUrl)} alt="" className="max-w-full max-h-full object-contain" /> : <Building2 size={ICON.size} strokeWidth={ICON.strokeWidth} aria-hidden="true" className="text-fg-3" />}
               </div>
               <div className="flex-1 min-w-0">
@@ -90,7 +90,7 @@ export function ClientsPanel({ clients, onCreate, onUpdate, onDelete, onChange }
                     </Button>
                   </>
                 ) : (
-                  <button type="button" aria-label={`Delete ${c.name}`} onClick={() => setConfirmingId(c.id)} className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-xs text-fg-2 hover:text-red hover:bg-hover transition-colors">
+                  <button type="button" aria-label={`Delete ${c.name}`} onClick={() => setConfirmingId(c.id)} className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-xs text-fg-2 hover:text-red-ink hover:bg-hover transition-colors">
                     <Trash2 size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" />
                     Delete
                   </button>
@@ -155,7 +155,7 @@ function ClientForm({ initial, onSubmit, onCancel }: { initial: Client | null; o
         <div>
           <FieldLabel>Logo</FieldLabel>
           <label className="flex items-center gap-3 rounded-lg bg-raised border border-line hover:border-line-strong p-2 cursor-pointer transition-colors">
-            <div className="w-16 h-10 rounded-md bg-stage flex items-center justify-center overflow-hidden shrink-0">
+            <div className="w-16 h-10 rounded-md bg-raised border border-line flex items-center justify-center overflow-hidden shrink-0">
               {logoUrl ? <img src={api.fileUrl(logoUrl)} alt="" data-testid="client-logo-preview" className="max-w-full max-h-full object-contain" /> : <span className="text-[11px] text-fg-3">none</span>}
             </div>
             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-fg">
@@ -164,7 +164,7 @@ function ClientForm({ initial, onSubmit, onCancel }: { initial: Client | null; o
             </span>
             <input ref={fileInput} type="file" accept="image/*" className="sr-only" data-testid="client-logo-input" onChange={(e) => void onLogo(e.target.files?.[0])} />
           </label>
-          {uploadError && <p className="text-[11px] text-red mt-1">{uploadError}</p>}
+          {uploadError && <p className="text-[11px] text-red-ink mt-1">{uploadError}</p>}
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">

@@ -124,7 +124,7 @@ export function StockPanel({ onImported, bare = false }: Props) {
           Search
         </Button>
       </div>
-      {error && <p className="text-xs text-red mt-2">{error}</p>}
+      {error && <p className="text-xs text-red-ink mt-2">{error}</p>}
       {results !== null && results.length === 0 && !error && <p className="text-xs text-fg-2 mt-2">Nothing matched. Try other words.</p>}
       {results !== null && results.length > 0 && (
         <ul className="grid grid-cols-2 gap-2 mt-3">
@@ -135,7 +135,7 @@ export function StockPanel({ onImported, bare = false }: Props) {
               <li key={r.id} data-testid={`stock-result-${r.id}`} className="rounded-lg overflow-hidden bg-raised border border-line">
                 <div className="relative aspect-video bg-stage">
                   {r.thumbUrl && <img src={r.thumbUrl} alt="" className="w-full h-full object-cover block" />}
-                  <span className="absolute bottom-1 right-1 px-1 py-px rounded-xs bg-black/70 text-[11px] text-fg tabular-nums">{r.durationS.toFixed(1)} s</span>
+                  <span className="absolute bottom-1 right-1 px-1 py-px rounded-xs bg-black/70 text-[11px] text-white tabular-nums">{r.durationS.toFixed(1)} s</span>
                 </div>
                 <div className="px-2 py-1.5">
                   <div className="text-xs truncate" title={r.title}>

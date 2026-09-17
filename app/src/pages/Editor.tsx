@@ -705,9 +705,9 @@ export function Editor({ projectId, onBack }: Props) {
 
   return (
     <main className="h-screen bg-bg text-fg flex flex-col overflow-hidden">
-      <header className="h-[52px] px-4 flex items-center justify-between shrink-0 gap-4 border-b border-line bg-panel">
+      <header className="on-bar h-[52px] px-4 flex items-center justify-between shrink-0 gap-4 border-b border-line bg-panel">
         <div className="flex items-center gap-3 min-w-0 w-[280px] shrink-0">
-          <button type="button" onClick={onBack} className="inline-flex items-center gap-0.5 h-8 pl-1 pr-2 rounded-md text-xs font-medium text-fg-2 hover:text-fg hover:bg-hover transition-colors">
+          <button type="button" onClick={onBack} className="cc-press inline-flex items-center gap-0.5 h-8 pl-1.5 pr-3 rounded-full text-xs font-medium text-fg-2 hover:text-fg hover:bg-hover">
             <ChevronLeft size={16} strokeWidth={1.75} aria-hidden="true" />
             Library
           </button>
@@ -724,7 +724,7 @@ export function Editor({ projectId, onBack }: Props) {
         <div className="flex items-center gap-3 shrink-0 justify-end">
           {loaded && (
             /* M62 (finish review): the length and the version in one raised frame, the chosen ones in the hover tone, so Export is the top bar's only blue. */
-            <div className="inline-flex items-center rounded-md bg-raised border border-line p-0.5">
+            <div className="inline-flex items-center rounded-full bg-raised border border-line p-0.5">
               <div role="group" aria-label="Spot length" title="A spot is exactly its length. Change it and the list beside Export says what to add or cut." className="inline-flex items-center">
                 {[...new Set<number>([...SPOT_LENGTHS, lengthS])].sort((a, b) => a - b).map((s) => (
                   <button
@@ -733,7 +733,7 @@ export function Editor({ projectId, onBack }: Props) {
                     aria-label={`Length ${lengthLabel(s)}`}
                     aria-pressed={s === lengthS}
                     onClick={() => void changeLength(s)}
-                    className={`h-7 px-2.5 rounded-[6px] text-xs font-medium tabular-nums transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue ${s === lengthS ? 'bg-hover text-fg' : 'text-fg-2 hover:text-fg hover:bg-hover'}`}
+                    className={`cc-press h-7 px-2.5 rounded-full text-xs font-medium tabular-nums focus:outline-none focus-visible:ring-2 focus-visible:ring-blue ${s === lengthS ? 'bg-hover text-fg' : 'text-fg-2 hover:text-fg hover:bg-hover'}`}
                   >
                     {lengthLabel(s)}
                   </button>
@@ -749,7 +749,7 @@ export function Editor({ projectId, onBack }: Props) {
                     aria-pressed={a === aspect}
                     disabled={switchingAspect}
                     onClick={() => void changeAspect(a)}
-                    className={`h-7 px-2.5 rounded-[6px] text-xs font-medium tabular-nums transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue ${a === aspect ? 'bg-hover text-fg' : 'text-fg-2 hover:text-fg hover:bg-hover'} disabled:opacity-60`}
+                    className={`cc-press h-7 px-2.5 rounded-full text-xs font-medium tabular-nums focus:outline-none focus-visible:ring-2 focus-visible:ring-blue ${a === aspect ? 'bg-hover text-fg' : 'text-fg-2 hover:text-fg hover:bg-hover'} disabled:opacity-60`}
                   >
                     {a}
                   </button>
@@ -758,7 +758,7 @@ export function Editor({ projectId, onBack }: Props) {
             </div>
           )}
           {loaded && (
-            <span className="inline-flex items-center rounded-md bg-raised border border-line p-0.5">
+            <span className="inline-flex items-center rounded-full bg-raised border border-line p-0.5">
               <IconButton label="Undo" title="Undo (Ctrl+Z)" icon={Undo2} onClick={undo} disabled={!undoAvailable} className="!w-7 !h-7" />
               <IconButton label="Redo" title="Redo (Ctrl+Shift+Z)" icon={Redo2} onClick={redo} disabled={!redoAvailable} className="!w-7 !h-7" />
             </span>
@@ -768,7 +768,7 @@ export function Editor({ projectId, onBack }: Props) {
         </div>
       </header>
 
-      {error && <p className="text-xs text-red p-8">Could not open the project: {error}</p>}
+      {error && <p className="text-xs text-red-ink p-8">Could not open the project: {error}</p>}
       {!loaded && !error && <p className="text-xs text-fg-3 p-8">Loading…</p>}
       {loaded && (
         <div className="flex flex-1 min-h-0">
@@ -789,7 +789,7 @@ export function Editor({ projectId, onBack }: Props) {
                   </div>
                 </Section>
                 <MediaPanel onSelect={selectFootage} selectedId={selectedAssetId} onChange={setAssets} audio={audio} onAudioChange={onAudioChange} />
-                {styleError && <p className="px-4 pt-3 text-xs text-red">{styleError}</p>}
+                {styleError && <p className="px-4 pt-3 text-xs text-red-ink">{styleError}</p>}
                 <StylePanel
                   elements={elements}
                   values={values}
@@ -1031,7 +1031,7 @@ function ProjectName({ name, templateName, onRename }: { name: string | null; te
           }}
         />
       )}
-      {error && <span className="text-[11px] font-normal text-red">{error}</span>}
+      {error && <span className="text-[11px] font-normal text-red-ink">{error}</span>}
     </h1>
   );
 }
@@ -1148,7 +1148,7 @@ function LibraryPicker({
         />
         <p className="mt-2 text-[11px] text-fg-3">Every element of every template, drawn with your words. A scene lands at the playhead and moves it on; an overlay lands on the scene under the playhead.</p>
       </div>
-      {error && <p className="px-4 pt-2 text-xs text-red">{error}</p>}
+      {error && <p className="px-4 pt-2 text-xs text-red-ink">{error}</p>}
       {library === null && !error && <p className="px-4 py-3 text-xs text-fg-3">Loading…</p>}
       {library !== null && library.length === 0 && <p className="px-4 py-3 text-xs text-fg-2">Nothing in the library yet. Add a template first.</p>}
       {groups.map((g) => (
@@ -1200,7 +1200,7 @@ function LibraryPicker({
 
 function SaveIndicator({ state }: { state: SaveState }) {
   const text = { idle: 'Saved', dirty: 'Unsaved', saving: 'Saving…', saved: 'Saved', error: 'Save failed' }[state];
-  const colour = state === 'error' ? 'text-red' : state === 'saved' || state === 'idle' ? 'text-fg-3' : 'text-blue';
+  const colour = state === 'error' ? 'text-red-ink' : state === 'saved' || state === 'idle' ? 'text-fg-3' : 'text-blue';
   return <span className={colour}>{text}</span>;
 }
 
@@ -1639,8 +1639,8 @@ function Monitor({
                 const box = ev.currentTarget.getBoundingClientRect();
                 onReorder(sceneId, e.id, ev.clientX < box.left + box.width / 2 ? 'before' : 'after');
               }}
-              className={`group relative overflow-hidden flex items-center text-left transition-colors ${kind === 'scene' ? 'min-w-44 gap-3 rounded-lg px-2 py-2' : 'gap-1.5 rounded-md h-7 px-2.5 text-xs'} ${e.enabled ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'} ${
-                onScreen ? 'bg-blue text-white' : dropEdge?.id === e.id && dropEdge.place === 'on' ? 'bg-blue-tint text-fg' : 'bg-raised text-fg hover:bg-hover'
+              className={`group relative overflow-hidden flex items-center text-left transition-colors ${kind === 'scene' ? 'min-w-44 gap-3 rounded-lg px-2 py-2' : 'gap-1.5 rounded-full h-7 px-3 text-xs'} ${e.enabled ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'} ${
+                onScreen ? 'bg-blue text-on-blue' : dropEdge?.id === e.id && dropEdge.place === 'on' ? 'bg-blue-tint text-fg' : 'bg-raised text-fg hover:bg-hover'
               } ${isSelected || dropEdge?.id === e.id && dropEdge.place === 'on' ? 'ring-2 ring-blue ring-offset-2 ring-offset-panel' : ''} ${e.enabled ? '' : 'opacity-60'} ${
                 dropEdge?.id === e.id && dropEdge.place !== 'on' ? (dropEdge.place === 'before' ? 'shadow-[inset_3px_0_0_0_var(--color-blue)]' : 'shadow-[inset_-3px_0_0_0_var(--color-blue)]') : ''
               }`}
@@ -1665,10 +1665,10 @@ function Monitor({
               <span className="flex flex-col items-start gap-0.5 min-w-0">
               <span className={`flex items-center gap-1.5 font-medium whitespace-nowrap ${kind === 'scene' ? 'text-[13px]' : 'text-xs'}`}>
                 <span className="truncate">{e.name}</span>
-                {!e.enabled && <EyeOff size={12} strokeWidth={1.75} aria-hidden="true" className={onScreen ? 'text-white/70' : 'text-fg-3'} />}
+                {!e.enabled && <EyeOff size={12} strokeWidth={1.75} aria-hidden="true" className={onScreen ? 'text-on-blue/70' : 'text-fg-3'} />}
               </span>
               {kind === 'scene' && (
-              <span className={`text-[11px] tabular-nums truncate max-w-full ${onScreen ? 'text-white/75' : 'text-fg-3'}`}>
+              <span className={`text-[11px] tabular-nums truncate max-w-full ${onScreen ? 'text-on-blue/75' : 'text-fg-3'}`}>
                 {seconds(e.startFrame).toFixed(1)} s · {seconds(e.endFrame - e.startFrame).toFixed(1)} s long
               </span>
               )}
@@ -1679,7 +1679,7 @@ function Monitor({
   const structure = structureOf(elements);
 
   return (
-    <section className="flex-1 min-w-0 flex flex-col bg-stage">
+    <section className="on-stage flex-1 min-w-0 flex flex-col bg-stage">
       <div className="flex-1 min-h-0 flex items-center justify-center p-6">
         {/* M36: the monitor takes the version's ratio; a tall version is limited by height, a wide one by width. */}
         <div className="w-full max-w-[1400px]" style={{ maxWidth: `min(1400px, calc((100vh - 300px) * ${frameSize.width / frameSize.height}))` }}>
@@ -1731,7 +1731,7 @@ function Monitor({
                 className="absolute rounded-md border-2 border-dashed border-blue bg-blue-tint flex items-end justify-start p-2 cc-appear"
                 style={{ pointerEvents: 'none', left: dropBox.box.left, top: dropBox.box.top, width: dropBox.box.width, height: dropBox.box.height }}
               >
-                <span className="px-2 py-1 rounded-sm bg-blue text-white text-xs font-medium">Drop to use here · {dropBox.label}</span>
+                <span className="px-2 py-1 rounded-sm bg-blue text-on-blue text-xs font-medium">Drop to use here · {dropBox.label}</span>
               </div>
             )}
             {elements.length === 0 && (
@@ -1783,7 +1783,7 @@ function Monitor({
           </div>
           {/* The transport, in the world's vocabulary, under the video rather than on it. */}
           <div className="mt-3 flex items-center gap-3">
-            <IconButton label={playing ? 'Pause' : 'Play'} title={playing ? 'Pause (Space)' : 'Play (Space)'} icon={playing ? Pause : Play} onClick={togglePlay} className="!w-9 !h-9 bg-blue text-white hover:bg-blue-hover hover:text-white shrink-0" />
+            <IconButton label={playing ? 'Pause' : 'Play'} title={playing ? 'Pause (Space)' : 'Play (Space)'} icon={playing ? Pause : Play} onClick={togglePlay} className="!w-9 !h-9 bg-blue text-on-blue hover:bg-blue-hover shrink-0" />
             <span className="text-xs text-fg tabular-nums shrink-0 w-24">
               {clock(frame)} <span className="text-fg-3">/ {clock(durationInFrames)}</span>
             </span>
@@ -1808,14 +1808,14 @@ function Monitor({
                 {frameSize.width}×{frameSize.height}
               </span>
               <span>{compositionConfig.fps} fps</span>
-              <span data-testid="length-gauge" className={contentS === lengthS ? '' : 'text-fg-2'}>
+              <span data-testid="length-gauge" className={contentS === lengthS ? '' : 'text-yellow-ink'}>
                 {contentS.toFixed(1)} s of {lengthS.toFixed(1)} s
                 {contentS !== lengthS && ` · ${Math.abs(lengthS - contentS).toFixed(1)} s ${contentS < lengthS ? 'to fill' : 'over'}`}
               </span>
               {hasFootage && <span>preview at proxy quality</span>}
             </span>
             {perf && (
-              <span data-testid="perf-result" className={perf.meetsTarget ? 'text-green w-full' : 'text-red w-full'}>
+              <span data-testid="perf-result" className={perf.meetsTarget ? 'text-green w-full' : 'text-red-ink w-full'}>
                 measured {perf.fps.toFixed(1)} fps over {perf.seconds.toFixed(1)} s, {perf.droppedFrames} dropped, worst gap {Math.round(perf.worstGapMs)} ms
               </span>
             )}
@@ -1824,7 +1824,7 @@ function Monitor({
       </div>
 
       {/* M30: the scene strip. M51: a spot's shape, opening, proof points, end card, each scene with what sits on it. */}
-      <div className="shrink-0 border-t border-line bg-panel px-6 py-3 flex items-stretch gap-2 overflow-x-auto">
+      <div className="on-bar shrink-0 border-t border-line bg-panel px-6 py-3 flex items-stretch gap-2 overflow-x-auto">
         {structure.stray.length > 0 && (
           <div className="flex flex-col gap-1 justify-center" data-testid="stray-overlays">
             {structure.stray.map((e) => chip(e, 'overlay'))}
@@ -1856,7 +1856,7 @@ function Monitor({
                     </button>
                   </div>
                   {transitionMenu === g.scene.id && (
-                    <div role="group" aria-label={`Choose the transition after ${g.scene.name}`} className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-20 flex items-center gap-0.5 rounded-md bg-panel border border-line shadow-float p-0.5 cc-appear">
+                    <div role="group" aria-label={`Choose the transition after ${g.scene.name}`} className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-20 flex items-center gap-0.5 rounded-full bg-panel border border-line shadow-float p-0.5 cc-appear">
                       {TRANSITION_PRESETS.map((p) => (
                         <button
                           key={p}
@@ -1866,7 +1866,7 @@ function Monitor({
                             onTransitionChange(g.scene.id, { preset: p, durationInFrames: transitions.find((t) => t.afterElementId === g.scene.id)?.durationInFrames ?? DEFAULT_TRANSITION_FRAMES });
                             setTransitionMenu(null);
                           }}
-                          className={`h-7 px-2.5 rounded-[6px] text-xs font-medium whitespace-nowrap transition-colors ${p === current ? 'bg-blue text-white' : 'text-fg-2 hover:text-fg hover:bg-hover'}`}
+                          className={`cc-press h-7 px-2.5 rounded-full text-xs font-medium whitespace-nowrap ${p === current ? 'bg-blue text-on-blue' : 'text-fg-2 hover:text-fg hover:bg-hover'}`}
                         >
                           {PRESET_LABEL[p]}
                         </button>

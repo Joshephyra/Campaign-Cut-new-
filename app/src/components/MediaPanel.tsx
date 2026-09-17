@@ -76,7 +76,7 @@ export function MediaPanel({ onSelect, selectedId, onChange, audio, onAudioChang
         className="!px-4"
         action={
           <label className="cursor-pointer">
-            <span className="inline-flex items-center gap-1.5 h-7 px-2.5 text-xs font-medium rounded-md bg-raised border border-line text-fg hover:bg-hover hover:border-line-strong transition-colors">
+            <span className="inline-flex items-center gap-1.5 cc-press h-7 px-3 text-xs font-medium rounded-full bg-raised border border-line text-fg hover:bg-hover hover:border-line-strong">
               <Upload size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" />
               Upload
             </span>
@@ -93,7 +93,7 @@ export function MediaPanel({ onSelect, selectedId, onChange, audio, onAudioChang
       >
 
         {status && <p className="text-xs text-blue mb-2">{status}</p>}
-        {error && <p className="text-xs text-red mb-2">{error}</p>}
+        {error && <p className="text-xs text-red-ink mb-2">{error}</p>}
         {assets !== null && clips.length === 0 && !status && (
           <div className="rounded-lg border border-dashed border-line-strong p-4 text-center">
             <p className="text-xs text-fg-2">No footage yet. Upload a clip.</p>
@@ -121,8 +121,8 @@ export function MediaPanel({ onSelect, selectedId, onChange, audio, onAudioChang
                   >
                     <div className="relative aspect-video bg-stage">
                       {a.thumbUrl && <img src={api.fileUrl(a.thumbUrl)} alt="" className="w-full h-full object-cover block" draggable={false} />}
-                      <span className="absolute bottom-1 right-1 px-1 py-px rounded-xs bg-black/70 text-[10px] text-fg tabular-nums">{formatTimecode(Math.round(a.durationS * a.fps), fps)}</span>
-                      {selected && <span className="absolute top-1 left-1 px-1.5 py-px rounded-xs bg-blue text-[10px] font-semibold text-white">In use</span>}
+                      <span className="absolute bottom-1 right-1 px-1 py-px rounded-xs bg-black/70 text-[11px] text-white tabular-nums">{formatTimecode(Math.round(a.durationS * a.fps), fps)}</span>
+                      {selected && <span className="absolute top-1 left-1 px-1.5 py-px rounded-xs bg-blue text-[11px] font-semibold text-on-blue">In use</span>}
                     </div>
                     <div className="px-2 py-1.5">
                       <div className="text-xs truncate">{a.originalName}</div>

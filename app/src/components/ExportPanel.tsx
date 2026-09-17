@@ -105,7 +105,7 @@ export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, read
             aria-controls="readiness-list"
             onClick={() => setListOpen((o) => !o)}
             title={readiness.ok ? 'Everything is in' : readiness.items.filter((i) => !i.ok).map((i) => i.message).join(' · ')}
-            className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-line bg-raised hover:bg-hover whitespace-nowrap ${readiness.blocked ? 'text-red' : readiness.ok ? 'text-fg-3' : 'text-fg-2'}`}
+            className={`cc-press inline-flex items-center gap-1.5 h-7 px-3 rounded-full border whitespace-nowrap ${readiness.blocked ? 'text-on-blue bg-red border-transparent hover:brightness-110' : readiness.ok ? 'text-fg border-line bg-raised hover:bg-hover' : 'text-on-blue bg-yellow border-transparent hover:brightness-110'}`}
           >
             {readiness.blocked ? <ShieldAlert size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" /> : <ShieldCheck size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" className={readiness.ok ? 'text-green' : ''} />}
             {readiness.ok ? 'Ready to export' : `${readiness.todo} to check`}
@@ -115,7 +115,7 @@ export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, read
               <h3 className="text-[13px] font-semibold mb-2">Ready to export?</h3>
               <ul className="flex flex-col gap-1.5">
                 {readiness.items.map((i) => (
-                  <li key={i.key} data-testid={`check-${i.key}`} data-ok={i.ok ? 'true' : 'false'} className={`flex items-start gap-2 text-xs leading-snug ${i.ok ? 'text-fg-2' : i.blocking ? 'text-red' : 'text-fg'}`}>
+                  <li key={i.key} data-testid={`check-${i.key}`} data-ok={i.ok ? 'true' : 'false'} className={`flex items-start gap-2 text-xs leading-snug ${i.ok ? 'text-fg-2' : i.blocking ? 'text-red-ink' : 'text-fg'}`}>
                     {i.ok ? <CircleCheck size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" className="text-green shrink-0 mt-0.5" /> : i.blocking ? <ShieldAlert size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" className="shrink-0 mt-0.5" /> : <Circle size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" className="text-fg-3 shrink-0 mt-0.5" />}
                     <span>
                       {i.message}
@@ -152,13 +152,13 @@ export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, read
         </span>
       )}
       {job?.status === 'done' && job.outputUrl && (
-        <a href={api.fileUrl(job.outputUrl)} download={exportFileName(projectName, job.aspect ?? aspect)} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md text-[13px] font-medium text-fg bg-raised border border-line hover:bg-hover">
+        <a href={api.fileUrl(job.outputUrl)} download={exportFileName(projectName, job.aspect ?? aspect)} className="cc-press inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full text-[13px] font-medium text-fg bg-raised border border-line hover:bg-hover">
           <Download size={ICON.size} strokeWidth={ICON.strokeWidth} aria-hidden="true" />
           Download MP4
         </a>
       )}
-      {job?.status === 'failed' && <span className="text-red max-w-64 truncate" title={job.error ?? ''}>Export failed: {job.error ?? 'unknown error'}</span>}
-      {error && <span className="text-red">{error}</span>}
+      {job?.status === 'failed' && <span className="text-red-ink max-w-64 truncate" title={job.error ?? ''}>Export failed: {job.error ?? 'unknown error'}</span>}
+      {error && <span className="text-red-ink">{error}</span>}
       <div className="relative inline-flex items-stretch">
         <Button variant="primary" icon={Share} onClick={() => void start()} disabled={busy || blocking !== undefined} title={blocking?.message} className={`${busy ? 'cursor-wait' : ''} rounded-r-none`}>
           Export MP4
@@ -169,7 +169,7 @@ export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, read
           disabled={busy || blocking !== undefined}
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((o) => !o)}
-          className="!h-9 !w-8 !rounded-l-none border-l border-white/20 bg-blue text-white hover:bg-blue-hover"
+          className="cc-sheen !h-9 !w-8 !rounded-l-none border-l border-on-blue/25 bg-blue text-on-blue hover:bg-blue-hover"
         />
         {menuOpen && (
           <ul role="menu" aria-label="Export options" className="absolute right-0 top-10 z-20 w-64 rounded-lg bg-panel border border-line shadow-float p-1 cc-appear text-[13px]">
