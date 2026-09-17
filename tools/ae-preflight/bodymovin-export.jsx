@@ -127,6 +127,10 @@ var CC_BM = (function () {
         }
         $.__ccFontData = { list: list };
         app.scheduleTask('$.__bodymovin.bm_renderManager.setFontData($.__ccFontData);', 20, false);
+      } else if (type === 'bm:image:process') {
+        /* The panel would compress or inline the image here; we keep the original file, so just say "unchanged". */
+        log('  image kept: ' + (data && data.path ? data.path : ''));
+        app.scheduleTask('$.__bodymovin.bm_sourceHelper.imageProcessed(false);', 20, false);
       } else if (type === 'bm:alert') {
         log('  Bodymovin says: ' + (data && data.message ? data.message : data));
       } else if (type === 'console:log') {
