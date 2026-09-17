@@ -4,6 +4,12 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · Finish review of the M37–M42 surfaces · DONE
+
+The Impeccable finish reviewer went over the composer and picker, the scene-chip stills, the Treatment control, the "From nothing" card and the empty states against the editor's direction contract. Disposition: fix, one round, then ship. Applied: scene-chip text truncates instead of running under the Add chip; a footage scene's chip draws its clip under the design; one filled accent on an empty spot (the stage's button; the panel's is ghost); "From nothing" follows the template groups (the audience starts from a designer's template); the picker's "Other" group has its own key; the composer takes focus when the picker opens; the Treatment segmented fills the panel like "How it ends"; the surface brief and DESIGN.md record the stills. Not worth a fix, per the review: the thumbnail-then-still swap on open, the four-line picker note. Captures: .impeccable/review/review-editor.png, review-library.png.
+
+---
+
 ## 2026-09-17 · M42 The composer's copy lands; overlays fit the last scene · DONE
 
 **Why**

@@ -743,7 +743,7 @@ export function Editor({ projectId, onBack }: Props) {
               <div className="px-5 py-6" data-testid="empty-panel">
                 <h2 className="text-lg font-semibold tracking-tight">Nothing on the video yet</h2>
                 <p className="mt-2 text-[13px] text-fg-2">Add a scene from the library: a headline, a background, an end card. Overlays sit on top of the scene under the playhead.</p>
-                <Button variant="primary" className="mt-4" onClick={openLibrary}>
+                <Button variant="ghost" className="mt-4" onClick={openLibrary}>
                   Add the first scene
                 </Button>
               </div>
@@ -936,9 +936,9 @@ function LibraryPicker({
   onAdd: (item: LibraryElement, copy: string) => void;
   onClose: () => void;
 }) {
-  const groups = ELEMENT_TYPES.map((type) => ({ type, label: ELEMENT_TYPE_LABELS[type], items: (library ?? []).filter((e) => e.type === type) })).filter((g) => g.items.length > 0);
+  const groups: { type: string; label: string; items: LibraryElement[] }[] = ELEMENT_TYPES.map((type) => ({ type, label: ELEMENT_TYPE_LABELS[type], items: (library ?? []).filter((e) => e.type === type) })).filter((g) => g.items.length > 0);
   const untyped = (library ?? []).filter((e) => !(ELEMENT_TYPES as readonly string[]).includes(e.type));
-  if (untyped.length > 0) groups.push({ type: 'overlay', label: 'Other', items: untyped });
+  if (untyped.length > 0) groups.push({ type: 'other', label: 'Other', items: untyped });
 
   // M37: the composer. Type your copy once; every text element previews
   // with it. Each element's Lottie is fetched once and drawn as a still.
@@ -1006,6 +1006,7 @@ function LibraryPicker({
       <div className="px-4 pt-3">
         <input
           aria-label="Preview every text element with your copy"
+          autoFocus
           value={copy}
           placeholder="Type your copy to see it in every element"
           onChange={(e) => setCopy(e.target.value)}
@@ -1307,6 +1308,13 @@ function Monitor({
     [renderedValues, assets, lotties],
   );
 
+  /** The clip a scene carries in its footage slot, for its chip (M42 review): the asset behind its cc.mediaFill value, or none. */
+  const chipClip = (e: ProjectElement) => {
+    const mediaParam = e.schema.find((p) => p.kind === 'media');
+    const v = mediaParam ? values[e.id]?.[mediaParam.key] : undefined;
+    const assetId = v && typeof v === 'object' && 'assetId' in v ? (v as { assetId: number }).assetId : null;
+    return assetId === null ? undefined : assets.find((a) => a.id === assetId);
+  };
   const elementProps = useMemo<ElementProps[]>(
     () =>
       elements.map((e) => {
@@ -1588,12 +1596,13 @@ function Monitor({
                 seek(holdFrame(e));
               }}
               style={{ flexGrow: Math.max(1, seconds(e.endFrame - e.startFrame)) }}
-              className={`group basis-0 min-w-36 flex items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors ${
+              className={`group basis-0 min-w-36 min-w-0 overflow-hidden flex items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors ${
                 onScreen ? 'bg-blue text-white' : 'bg-raised text-fg hover:bg-hover'
               } ${isSelected ? 'ring-2 ring-blue ring-offset-2 ring-offset-panel' : ''} ${e.enabled ? '' : 'opacity-60'}`}
             >
               {/* M37: the scene as it stands, drawn at its hold frame with its own values. */}
-              <div className="w-16 shrink-0 rounded-md bg-stage overflow-hidden" style={{ aspectRatio: `${frameSize.width} / ${frameSize.height}` }}>
+              <div className="relative w-16 shrink-0 rounded-md bg-stage overflow-hidden" style={{ aspectRatio: `${frameSize.width} / ${frameSize.height}` }}>
+                {chipClip(e)?.thumbUrl && <img src={api.fileUrl(chipClip(e)!.thumbUrl!)} alt="" className="absolute inset-0 w-full h-full object-cover" />}
                 {lotties[e.id] && (
                   <ElementPreview
                     testId={`scene-thumb-${e.id}`}
@@ -1611,7 +1620,7 @@ function Monitor({
                 <span className="truncate">{e.name}</span>
                 {!e.enabled && <EyeOff size={12} strokeWidth={1.75} aria-hidden="true" className={onScreen ? 'text-white/70' : 'text-fg-3'} />}
               </span>
-              <span className={`text-[11px] tabular-nums whitespace-nowrap ${onScreen ? 'text-white/75' : 'text-fg-3'}`}>
+              <span className={`text-[11px] tabular-nums truncate max-w-full ${onScreen ? 'text-white/75' : 'text-fg-3'}`}>
                 {seconds(e.startFrame).toFixed(1)} s · {seconds(e.endFrame - e.startFrame).toFixed(1)} s long
               </span>
               </span>

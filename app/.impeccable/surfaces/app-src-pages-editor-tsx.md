@@ -33,4 +33,4 @@ Double-click the headline on the video and type while the spot keeps its animati
 
 ## Unresolved
 
-Element thumbnails on the scene strip (no cheap frame grab yet; chips carry name and length, sized by length). Logos as a library tab needs a list endpoint the server does not have.
+Logos as a library tab needs a list endpoint the server does not have. (Scene-strip thumbnails: resolved in M37, each chip draws its scene as a lottie-web still at its hold frame with the scene's own values, over the clip in its slot.)

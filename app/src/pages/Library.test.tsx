@@ -42,7 +42,7 @@ describe('Library', () => {
 
     await waitFor(() => expect(screen.getByText('Split Record')).toBeTruthy());
     const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
-    expect(headings).toEqual(['From nothing', 'Contrast', 'GOTV', 'Clients']); // M41 adds the blank spot first, M33 the clients section
+    expect(headings).toEqual(['Contrast', 'GOTV', 'From nothing', 'Clients']); // M41 adds the blank spot after the templates, M33 the clients section
     // duration in timecode, dimensions in mono facts
     expect(screen.getByText('00:30:00')).toBeTruthy();
     expect(screen.getByText('00:05:00')).toBeTruthy();

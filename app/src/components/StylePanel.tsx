@@ -111,6 +111,7 @@ export function StylePanel({ elements, values, themes, onApply, onSaveTheme, onD
             value={treatment}
             options={TREATMENTS.map((t) => ({ value: t, label: TREATMENT_LABELS[t] }))}
             onChange={onTreatment}
+            className="w-full [&>button]:flex-1 [&>button]:justify-center"
           />
         </div>
       )}
