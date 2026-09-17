@@ -18,6 +18,8 @@ import {
   ELEMENT_TYPES,
   EMPTY_LOTTIE,
   fontsFor,
+  isTreatment,
+  treatmentFor,
   isChromaKey,
   isMediaValue,
   isTransformValue,
@@ -37,6 +39,7 @@ import {
   type TemplateFontFile,
   type TemplateParam,
   type TransitionPreset,
+  type Treatment,
   type TransitionProps,
 } from '@campaigncut/composition';
 import { Player, type PlayerRef } from '@remotion/player';
@@ -194,6 +197,25 @@ export function Editor({ projectId, onBack }: Props) {
   // spot at that ratio's files (designer variants where they exist).
   const aspect = (isAspect(loaded?.detail.project.aspect) ? loaded!.detail.project.aspect : '16:9') as Aspect;
   const frame = useMemo(() => loaded?.detail.frame ?? frameFor(aspect), [loaded, aspect]);
+  // M39: the style treatment across the spot. Applied at once in the
+  // Player; saved through the project route. Both runners read it from props.
+  const [treatment, setTreatment] = useState<Treatment>('clean');
+  useEffect(() => {
+    const saved = loaded?.detail.project.treatment;
+    setTreatment(isTreatment(saved) ? saved : 'clean');
+  }, [loaded]);
+  const changeTreatment = async (next: Treatment) => {
+    if (next === treatment) return;
+    setTreatment(next);
+    setSaveState('saving');
+    try {
+      await api.setTreatment(projectId, next);
+      setSaveState('saved');
+    } catch (e) {
+      setError((e as Error).message);
+      setSaveState('error');
+    }
+  };
   const [switchingAspect, setSwitchingAspect] = useState(false);
   const changeAspect = async (next: Aspect) => {
     if (next === aspect || switchingAspect) return;
@@ -666,6 +688,8 @@ export function Editor({ projectId, onBack }: Props) {
                   onDeleteTheme={(id) => void deleteTheme(id)}
                   clientName={loaded.detail.project.clientName ?? null}
                   onApplyBrand={loaded.detail.project.clientName ? () => void applyBrand() : undefined}
+                  treatment={treatment}
+                  onTreatment={(t) => void changeTreatment(t)}
                 />
               </>
             )}
@@ -681,6 +705,7 @@ export function Editor({ projectId, onBack }: Props) {
             selectedId={selected?.id}
             onSelect={setSelectedId}
             frameSize={frame}
+            treatment={treatment}
             schemaFor={schemaFor}
             onPress={onPress}
             onDrag={onDrag}
@@ -1049,6 +1074,7 @@ function Monitor({
   selectedId,
   onSelect,
   frameSize,
+  treatment,
   schemaFor,
   onPress,
   onDrag,
@@ -1070,6 +1096,8 @@ function Monitor({
   onSelect: (id: number) => void;
   /** M36: the frame this version renders at. */
   frameSize: Frame;
+  /** M39: the style treatment across the spot. */
+  treatment: Treatment;
   /** M28: an element's schema, to know which layers on screen are placements. */
   schemaFor: (elementId: number) => TemplateParam[] | undefined;
   /** M28: a press on an editable layer: select its element and make that placement the active one. */
@@ -1283,8 +1311,17 @@ function Monitor({
   );
   const fonts = useMemo(() => fontsFor(detail.meta?.fontFiles, slug, API), [detail.meta, slug]);
   const inputProps = useMemo<MainProps>(
-    () => ({ background: detail.meta?.background ?? BACKGROUND, audio: audioProps, elements: elementProps, transitions: transitionProps, fonts, frame: frameSize }),
-    [detail.meta, audioProps, elementProps, transitionProps, fonts, frameSize],
+    () => ({
+      background: detail.meta?.background ?? BACKGROUND,
+      audio: audioProps,
+      elements: elementProps,
+      transitions: transitionProps,
+      fonts,
+      frame: frameSize,
+      // M39: the treatment, with the spot's accent for glow, the way the export runner builds it
+      treatment: treatmentFor(treatment, elements.map((e) => ({ schema: e.schema, values: values[e.id] ?? {} }))) ?? null,
+    }),
+    [detail.meta, audioProps, elementProps, transitionProps, fonts, frameSize, treatment, elements, values],
   );
   const durationInFrames = compositionDurationWithTransitions(elementProps, transitionProps);
 

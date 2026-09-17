@@ -2,7 +2,7 @@ import type { LottieAnimationData } from './config';
 import { hexToRgba } from './hexToRgba';
 import { resolvePointer } from './jsonPointer';
 import type { ParamValues, TemplateParam } from './schema';
-import { applyTransform, isTransformValue, LAYER_CLASS, layerClassFor } from './transform';
+import { applyTransform, isTransformValue, LAYER_CLASS, TEXT_CLASS, layerClassFor } from './transform';
 
 type AnyRecord = Record<string, unknown>;
 
@@ -46,6 +46,15 @@ export function applyLottieValues(
     if (param.kind !== 'transform') continue;
     const layer = resolvePointer(result, param.path);
     if (layer && typeof layer === 'object') (layer as AnyRecord).cl = `${LAYER_CLASS} ${layerClassFor(param.key)}`;
+  }
+  // M39: tag every text layer too, so a treatment can address the text
+  // (the opaque plate is an SVG filter on these). Changes no pixel.
+  for (const param of schema) {
+    if (param.kind !== 'text') continue;
+    const layer = resolvePointer(result, param.path);
+    if (!layer || typeof layer !== 'object') continue;
+    const existing = typeof (layer as AnyRecord).cl === 'string' ? ((layer as AnyRecord).cl as string) : '';
+    if (!existing.split(' ').includes(TEXT_CLASS)) (layer as AnyRecord).cl = `${existing ? existing + ' ' : ''}${TEXT_CLASS} ${layerClassFor(param.key)}`;
   }
 
   memo.set(values, { source, schema, result });

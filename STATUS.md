@@ -4,6 +4,31 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M39 Style treatments · DONE
+
+**Why**
+
+Josh's "overall style updates": the prototype's Clean, Grit, Glow, Bubbly, Opaque. Three of the four are looks laid over the spot; Bubbly is a font swap, which would put text in a font the designer never chose, so it becomes a designed variant from After Effects (M40, parked).
+
+**What exists now**
+
+- `composition/src/treatments.ts` and the composition draw the treatment, so the preview and the export are the same code path: grit is film grain over the whole frame (a fractal-noise SVG tile at 22% overlay blend, footage included) with a touch more contrast on each design; glow is a two-stop drop shadow in the spot's accent colour on each design, never on the footage; opaque runs every editable text layer but the disclaimer through one SVG filter that dilates the glyphs into a white plate and sets the words in dark ink, the prototype's highlighter look.
+- `project.treatment`, clean by default, kept by duplicate; `PATCH /projects/:id { treatment }` (unknown refused, naming the four). Render props carry `treatment`, glow with the accent the spot has set.
+- Style panel: "Treatment" under the colours, a segmented Clean · Grit · Glow · Opaque. Pressing one changes the monitor at once and saves.
+- `applyLottieValues` tags text layers `cc-text` beside the placement class.
+- Tests: 4 treatments, 4 Main, 1 tagging, 2 server, 1 editor. 487 tests green, render tests included.
+
+**Verified**
+
+- Real browser on the Contrast :30 spot: each button sets `data-treatment` on the composition root; grit draws the grain layer last at 0.22 overlay and the design's filter reads contrast(1.12); glow reads drop-shadow in #F05929 (the spot's accent) on the design and none on the footage; opaque puts the plate filter on the headline's text layer. Captures in `.impeccable/review/m39-*.png`.
+- Export parity with glow on a duplicate of the spot (npm run parity, frames 30, 120, 240): all within threshold, worst mean 4.05 at frame 30 where the glow sits over the first headline; the export carries the glow.
+
+**Next**
+
+Josh's call. The prototype's inventory is built except Bubbly (M40, waits for a designed pack) and the timeline (parked). The five acceptance tests and Germain's verdict remain the gate.
+
+---
+
 ## 2026-09-17 · M38 The starter element pack · DONE
 
 **Why**

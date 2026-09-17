@@ -186,3 +186,42 @@ describe('Main holds the elements until the template fonts are ready (M38)', () 
     expect(screen.getAllByTestId('lottie-stub')).toHaveLength(1);
   });
 });
+
+
+/**
+ * M39: style treatments over the whole spot. The composition draws them,
+ * so preview and export agree: a filter on each design (never on the
+ * footage), grain over the frame for grit, a plate filter on text for opaque.
+ */
+describe('Main style treatments (M39)', () => {
+  it('draws the design as authored when there is no treatment', () => {
+    render(<Main background="#000" elements={[element('e', null)]} />);
+    expect(screen.getByTestId('lottie-wrapper').style.filter).toBe('');
+    expect(screen.queryByTestId('grit')).toBeNull();
+    expect(screen.queryByTestId('opaque-plate')).toBeNull();
+  });
+
+  it('grit: grain over the whole frame, above the elements, and more contrast on each design', () => {
+    render(<Main background="#000" treatment={{ name: 'grit' }} elements={[element('e', null)]} />);
+    expect(screen.getByTestId('lottie-wrapper').style.filter).toBe('contrast(1.12)');
+    const grain = screen.getByTestId('grit');
+    expect(grain.style.mixBlendMode).toBe('overlay');
+    expect(grain.style.pointerEvents).toBe('none');
+    // last child: over every element
+    expect(grain.parentElement!.lastElementChild).toBe(grain);
+  });
+
+  it('glow: the design glows in the accent, the footage does not', () => {
+    render(<Main background="#000" treatment={{ name: 'glow', accent: '#00FF00' }} elements={[element('e', { src: '/media/proxies/1.mp4', rect, fit: 'cover' })]} />);
+    expect(screen.getByTestId('lottie-wrapper').style.filter).toContain('#00FF00');
+    expect(screen.getByTestId('video').style.filter).toBe('');
+  });
+
+  it('opaque: one plate filter, addressed to every editable text layer but the disclaimer', () => {
+    const { container } = render(<Main background="#000" treatment={{ name: 'opaque' }} elements={[element('e', null)]} />);
+    expect(screen.getByTestId('opaque-plate').querySelector('filter#cc-opaque-plate feMorphology')).toBeTruthy();
+    const css = [...container.querySelectorAll('style')].map((s) => s.textContent).join('');
+    expect(css).toContain('[data-treatment="opaque"] .cc-text:not(.cc-key-disclaimer) { filter: url(#cc-opaque-plate)');
+    expect(screen.getByTestId('lottie-wrapper').style.filter).toBe('');
+  });
+});

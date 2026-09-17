@@ -75,3 +75,5 @@ export function layerClassFor(key: string): string {
 
 /** The class every placement layer carries; `layerClassFor` adds the key. */
 export const LAYER_CLASS = 'cc-layer';
+/** M39: the class every editable text layer carries, so a treatment can address the text. */
+export const TEXT_CLASS = 'cc-text';

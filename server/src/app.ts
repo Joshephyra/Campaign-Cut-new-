@@ -1,7 +1,7 @@
 import fastifyCors from '@fastify/cors';
 import fastifyMultipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
-import { ASPECTS, carriesDisclaimer, disclaimerCheck, frameFor, isAspect, TRANSITION_PRESETS, type TemplateParam } from '@campaigncut/composition';
+import { ASPECTS, carriesDisclaimer, disclaimerCheck, frameFor, isAspect, isTreatment, TREATMENTS, TRANSITION_PRESETS, type TemplateParam } from '@campaigncut/composition';
 import Fastify from 'fastify';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -173,7 +173,7 @@ export function buildApp(options: AppOptions = {}) {
 
   // ---- project management (M22) ---------------------------------------
 
-  app.patch<{ Params: { id: string }; Body: { name?: string; aspect?: string } }>('/projects/:id', async (req, reply) => {
+  app.patch<{ Params: { id: string }; Body: { name?: string; aspect?: string; treatment?: string } }>('/projects/:id', async (req, reply) => {
     const id = Number(req.params.id);
     if (!db.getProject(id)) return reply.code(404).send({ error: `No project ${id}` });
     if (req.body?.name !== undefined) {
@@ -186,7 +186,12 @@ export function buildApp(options: AppOptions = {}) {
       if (!isAspect(req.body.aspect)) return reply.code(400).send({ error: `Unknown aspect "${String(req.body.aspect)}"; use one of ${ASPECTS.join(', ')}` });
       db.setProjectAspect(id, req.body.aspect);
     }
-    if (req.body?.name === undefined && req.body?.aspect === undefined) return reply.code(400).send({ error: 'Send a name or an aspect' });
+    // M39: the style treatment across the spot.
+    if (req.body?.treatment !== undefined) {
+      if (!isTreatment(req.body.treatment)) return reply.code(400).send({ error: `Unknown treatment "${String(req.body.treatment)}"; use one of ${TREATMENTS.join(', ')}` });
+      db.setProjectTreatment(id, req.body.treatment);
+    }
+    if (req.body?.name === undefined && req.body?.aspect === undefined && req.body?.treatment === undefined) return reply.code(400).send({ error: 'Send a name, an aspect or a treatment' });
     const { values: _values, ...project } = db.getProject(id)!;
     return project;
   });

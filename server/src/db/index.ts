@@ -63,6 +63,8 @@ export type ProjectRow = {
   clientName: string | null;
   /** M36: the version's aspect ratio; 16:9 is the master. */
   aspect: string;
+  /** M39: the style treatment across the spot; clean by default. */
+  treatment: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -178,6 +180,8 @@ export type Db = Database.Database & {
   renameProject(id: number, name: string): void;
   /** M36 */
   setProjectAspect(id: number, aspect: string): void;
+  /** M39: the style treatment across the spot. */
+  setProjectTreatment(id: number, treatment: string): void;
   /** M22: copy values, timeline overrides, transitions and the music bed into a new project. */
   duplicateProject(id: number, name: string): { id: number };
   /** M22: the project and everything that hangs off it (rendered files stay on disk). */
@@ -334,6 +338,8 @@ export function openDb(file: string): Db {
   if (!projectColumns.includes('client_id')) db.exec(`ALTER TABLE project ADD COLUMN client_id INTEGER REFERENCES client(id)`);
   // M36: a project has an aspect; everything before was 16:9.
   if (!projectColumns.includes('aspect')) db.exec(`ALTER TABLE project ADD COLUMN aspect TEXT NOT NULL DEFAULT '16:9'`);
+  // M39: a project has a style treatment; everything before was clean.
+  if (!projectColumns.includes('treatment')) db.exec(`ALTER TABLE project ADD COLUMN treatment TEXT NOT NULL DEFAULT 'clean'`);
   // M20: media assets gained a kind (video or audio).
   const mediaColumns = (db.prepare(`PRAGMA table_info(media_asset)`).all() as { name: string }[]).map((c) => c.name);
   if (!mediaColumns.includes('kind')) db.exec(`ALTER TABLE media_asset ADD COLUMN kind TEXT NOT NULL DEFAULT 'video'`);
@@ -356,6 +362,7 @@ export function openDb(file: string): Db {
     listProjects: () => listProjects(db),
     renameProject: (id: number, name: string) => renameProject(db, id, name),
     setProjectAspect: (id: number, aspect: string) => setProjectAspect(db, id, aspect),
+    setProjectTreatment: (id: number, treatment: string) => setProjectTreatment(db, id, treatment),
     duplicateProject: (id: number, name: string) => duplicateProject(db, id, name),
     deleteProject: (id: number) => deleteProject(db, id),
     setProjectValues: (projectId: number, values: ProjectValue[]) => setProjectValues(db, projectId, values),
@@ -762,7 +769,7 @@ function createProject(db: Database.Database, p: ProjectInput): { id: number } {
 
 const PROJECT_SELECT = `
   SELECT p.id, p.template_id AS templateId, t.slug AS templateSlug, t.name AS templateName,
-         p.name, p.client_id AS clientId, c.name AS clientName, p.aspect AS aspect, p.created_at AS createdAt, p.updated_at AS updatedAt
+         p.name, p.client_id AS clientId, c.name AS clientName, p.aspect AS aspect, p.treatment AS treatment, p.created_at AS createdAt, p.updated_at AS updatedAt
   FROM project p JOIN template t ON t.id = p.template_id LEFT JOIN client c ON c.id = p.client_id`;
 
 function getProject(db: Database.Database, id: number): ProjectDetail | undefined {
@@ -790,11 +797,15 @@ function setProjectAspect(db: Database.Database, id: number, aspect: string): vo
   db.prepare(`UPDATE project SET aspect = ?, updated_at = datetime('now') WHERE id = ?`).run(aspect, id);
 }
 
+function setProjectTreatment(db: Database.Database, id: number, treatment: string): void {
+  db.prepare(`UPDATE project SET treatment = ?, updated_at = datetime('now') WHERE id = ?`).run(treatment, id);
+}
+
 function duplicateProject(db: Database.Database, id: number, name: string): { id: number } {
   const run = db.transaction((): { id: number } => {
-    const source = db.prepare(`SELECT template_id AS templateId, client_id AS clientId, aspect FROM project WHERE id = ?`).get(id) as { templateId: number; clientId: number | null; aspect: string } | undefined;
+    const source = db.prepare(`SELECT template_id AS templateId, client_id AS clientId, aspect, treatment FROM project WHERE id = ?`).get(id) as { templateId: number; clientId: number | null; aspect: string; treatment: string } | undefined;
     if (!source) throw new Error(`No project ${id}`);
-    const copy = Number(db.prepare(`INSERT INTO project (template_id, name, client_id, aspect) VALUES (?, ?, ?, ?)`).run(source.templateId, name, source.clientId, source.aspect).lastInsertRowid);
+    const copy = Number(db.prepare(`INSERT INTO project (template_id, name, client_id, aspect, treatment) VALUES (?, ?, ?, ?, ?)`).run(source.templateId, name, source.clientId, source.aspect, source.treatment).lastInsertRowid);
     db.prepare(`INSERT INTO project_value (project_id, element_id, param_key, value_json) SELECT ?, element_id, param_key, value_json FROM project_value WHERE project_id = ?`).run(copy, id);
     db.prepare(`INSERT INTO project_element (project_id, element_id, start_frame, end_frame, enabled) SELECT ?, element_id, start_frame, end_frame, enabled FROM project_element WHERE project_id = ?`).run(copy, id);
     db.prepare(`INSERT INTO project_transition (project_id, after_element_id, preset, duration_frames) SELECT ?, after_element_id, preset, duration_frames FROM project_transition WHERE project_id = ?`).run(copy, id);

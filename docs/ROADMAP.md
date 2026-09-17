@@ -45,7 +45,7 @@ Josh's first prototype, read feature by feature against the build. "Built" means
 |---|---|
 | Text templates: lower thirds, text on screen (stat, pull quote, kinetic line), headlines, captions (pop-on, karaoke, word pop, boxed), end cards (vote, donate, learn more), disclaimers (bottom bar, full card) | Partly: the library and its types exist (M31); the elements themselves come from After Effects templates, and today there are three plain templates. The starter pack (M38) fills every type with sixteen elements built unattended in After Effects; Germain's designed pack replaces it through the same handover. |
 | Composer: user's copy previews in every template | Not yet. |
-| Style treatments: Clean, Grit, Glow, Bubbly, Opaque | Not yet. Josh's "overall style updates". Grit/Glow/Opaque are post-effects over an element; Bubbly is a font and radius swap. |
+| Style treatments: Clean, Grit, Glow, Bubbly, Opaque | Clean, Grit, Glow and Opaque are built (M39) as looks the composition lays over the spot. Bubbly is a font swap, so it is a designed variant from After Effects (M40, parked until a designed pack exists). |
 | Favorites (elements and themes) | Not yet. |
 | Animated callouts: underline, circle or arrow on chosen words, dragged in | Not yet. Needs per-word layout inside a text element: a new element kind, not a tagged layer. |
 | Overlays: halftone, moiré, vignette, scanlines, grain, light leak | Not yet as elements; the type exists. Each is a small After Effects comp or a composition-level effect. |

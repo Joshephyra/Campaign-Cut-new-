@@ -731,6 +731,29 @@ The library had three plain templates. A first user test needs range: lower thir
 
 ---
 
+## M39 · Style treatments · DONE
+
+The prototype's Clean, Grit, Glow and Opaque: a look over the whole spot that the designs cannot be broken by. Bubbly is not a treatment (see M40).
+
+**Build**
+- `composition/src/treatments.ts`: `TREATMENTS` (clean, grit, glow, opaque), `treatmentFor` (glow takes the spot's first accent colour), `treatmentLayerFilter`. `MainProps.treatment`.
+- The composition draws each treatment, so both runners agree: grit lays a fractal-noise tile over the whole frame at 22% overlay and puts `contrast(1.12)` on each design; glow puts a two-stop drop shadow in the accent on each design (never on the footage); opaque runs every editable text layer but the disclaimer through one SVG filter that dilates the glyphs into a white plate and sets the text in dark ink. Text layers carry `cc-text` from `applyLottieValues` for that.
+- `project.treatment` (clean by default, copied by duplicate); `PATCH /projects/:id { treatment }` refuses an unknown one; the detail and the render props carry it.
+- Style panel: a "Treatment" segmented control under the colours, "across the spot"; the Player takes it at once, the project route saves it.
+
+**Tests**
+- Treatment props and filters; Main draws each treatment (grain last, filter on the design not the footage, plate filter addressed to text); text layers tagged; PATCH, detail, duplicate, render props with the spot's accent; the editor control.
+
+**Done when:** each treatment shows in the monitor and the export matches the preview with one on.
+
+---
+
+## M40 · Bubbly, as a designed variant · NOT STARTED
+
+The prototype's Bubbly is a font swap (Fredoka) and rounded corners. Text must render in the designer's font, so Bubbly is not a treatment over a design; it is a designed variant of the element, made in After Effects. `elements.json` `variants` would take a style key beside the ratio keys (`"bubbly": "02-lower-third-bubbly"`), the ingest would validate the variant carries the master's tags, and a spot with the Bubbly style would use the variant where one exists and say so where none does, exactly as the aspect versions do. Needs a designed pack to be worth building; parked until Germain's elements or a bubbly starter pack exist.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

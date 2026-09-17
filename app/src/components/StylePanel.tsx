@@ -1,8 +1,8 @@
-import { hexToRgba, type ParamValues, type TemplateParam } from '@campaigncut/composition';
+import { hexToRgba, TREATMENT_LABELS, TREATMENTS, type ParamValues, type TemplateParam, type Treatment } from '@campaigncut/composition';
 import { Palette, RotateCcw, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { Theme } from '../api';
-import { Button, ICON } from './ui';
+import { Button, ICON, Segmented } from './ui';
 
 /** One colour role as it stands across the spot. */
 export type StyleRole = {
@@ -54,6 +54,9 @@ type Props = {
   /** M33: the spot's client, when it has one, and the way to put its brand back. */
   clientName?: string | null;
   onApplyBrand?: () => void;
+  /** M39: the style treatment across the spot. */
+  treatment?: Treatment;
+  onTreatment?: (t: Treatment) => void;
 };
 
 /** <input type="color"> insists on lower-case #rrggbb. */
@@ -63,7 +66,7 @@ const lower = (hex: string) => (hexToRgba(hex) ? hex.toLowerCase() : '#000000');
  * The spot's colours: one row per colour role across every scene, changing
  * all of them at once; saved themes to apply to any spot.
  */
-export function StylePanel({ elements, values, themes, onApply, onSaveTheme, onDeleteTheme, clientName = null, onApplyBrand }: Props) {
+export function StylePanel({ elements, values, themes, onApply, onSaveTheme, onDeleteTheme, clientName = null, onApplyBrand, treatment = 'clean', onTreatment }: Props) {
   const roles = styleRoles(elements, values);
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState('');
@@ -96,6 +99,20 @@ export function StylePanel({ elements, values, themes, onApply, onSaveTheme, onD
             <RoleRow key={r.role} role={r} onChange={(hex) => onApply({ [r.role]: hex })} onReset={() => onApply({ [r.role]: r.default })} />
           ))}
         </ul>
+      )}
+
+      {onTreatment && (
+        <div className="mt-4">
+          <h3 className="text-xs font-semibold text-fg-2 mb-1">Treatment</h3>
+          <p className="text-[11px] text-fg-3 mb-2">A look over the whole spot. The designs stay as authored underneath.</p>
+          <Segmented
+            label="Treatment across the spot"
+            size="sm"
+            value={treatment}
+            options={TREATMENTS.map((t) => ({ value: t, label: TREATMENT_LABELS[t] }))}
+            onChange={onTreatment}
+          />
+        </div>
       )}
 
       <div className="mt-4 flex items-center justify-between">

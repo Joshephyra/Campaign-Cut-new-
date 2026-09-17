@@ -1,4 +1,5 @@
 import type { ElementProps } from './elements';
+import type { TreatmentProps } from './treatments';
 import type { ChromaKey } from './chroma';
 import type { TemplateFont } from './fonts';
 import type { TransitionProps } from './transitions';
@@ -94,6 +95,8 @@ export type MainProps = {
   fonts?: TemplateFont[];
   /** M36: the frame this spot renders at. Absent means 16:9 (1920x1080). Both runners read it from the same props. */
   frame?: { width: number; height: number };
+  /** M39: the style treatment over the whole spot. Absent means clean. */
+  treatment?: TreatmentProps | null;
 };
 
 /** A valid, empty Lottie for tests and placeholders. */

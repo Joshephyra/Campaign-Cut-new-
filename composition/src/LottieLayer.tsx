@@ -6,6 +6,8 @@ export type LottieLayerProps = {
   animationData: LottieAnimationData;
   /** M28: the element this Lottie belongs to, so the editor can map a layer on screen back to it. */
   elementId?: string;
+  /** M39: a CSS filter a treatment puts on the design (never on the footage). */
+  filter?: string;
 };
 
 /**
@@ -25,9 +27,9 @@ const fullFrame: CSSProperties = {
   overflow: 'hidden',
 };
 
-export function LottieLayer({ animationData, elementId }: LottieLayerProps) {
+export function LottieLayer({ animationData, elementId, filter }: LottieLayerProps) {
   return (
-    <div data-testid="lottie-wrapper" data-cc-element={elementId} style={fullFrame}>
+    <div data-testid="lottie-wrapper" data-cc-element={elementId} style={filter ? { ...fullFrame, filter } : fullFrame}>
       <Lottie
         // @remotion/lottie's type is the lottie-web AnimationItem data shape;
         // ours is a structural subset with the fields we read.

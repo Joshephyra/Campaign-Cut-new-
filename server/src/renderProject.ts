@@ -2,7 +2,7 @@ import {
   applyLottieValues,
   compositionConfig,
   fontsFor,
-  frameFor,
+  frameFor, treatmentFor,
   isAspect,
   isChromaKey,
   isMediaValue,
@@ -106,7 +106,10 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase, run
     durationInFrames: t.durationInFrames,
   }));
 
-  return { background, audio, elements, transitions, fonts, frame };
+  // M39: the treatment across the spot; glow takes the spot's accent from its values.
+  const treatment = treatmentFor(project.treatment, rows.map((e) => ({ schema: files.get(e.id)!.schema, values: valuesFor(e.id) }))) ?? null;
+
+  return { background, audio, elements, transitions, fonts, frame, treatment };
 }
 
 /**

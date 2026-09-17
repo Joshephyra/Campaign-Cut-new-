@@ -11,6 +11,8 @@ import type { ElementProps } from './elements';
 import { LottieLayer } from './LottieLayer';
 import { TemplateFonts } from './fonts';
 import { effectiveTimeline, type TransitionPreset } from './transitions';
+import { GRIT_NOISE, OPAQUE_INK, OPAQUE_PLATE_FILTER_ID, treatmentLayerFilter, type TreatmentProps } from './treatments';
+import { TEXT_CLASS } from './transform';
 
 /** Each preset carries its own props type; the series only needs the common shape. */
 type AnyPresentation = TransitionPresentation<Record<string, unknown>>;
@@ -84,22 +86,58 @@ function MediaSlot({ media, box }: { media: MainMedia; box: AutoFitBox | null })
  * centred in a box, in pixels of the frame. Authored at the frame's size,
  * it draws full-frame as always.
  */
-function ElementView({ element, frame }: { element: ElementProps; frame: Frame }) {
+function ElementView({ element, frame, treatment }: { element: ElementProps; frame: Frame; treatment?: TreatmentProps | null }) {
   const authored = { width: Number(element.lottie.w) || frame.width, height: Number(element.lottie.h) || frame.height };
   const fitted = authored.width !== frame.width || authored.height !== frame.height;
   const box = fitted ? autoFitBox(authored, frame) : null;
+  const filter = treatmentLayerFilter(treatment ?? undefined);
   return (
     <>
       {element.media && <MediaSlot media={element.media} box={box} />}
       {box ? (
         <div data-testid="autofit" style={{ position: 'absolute', left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height: `${box.height}px`, overflow: 'hidden' }}>
-          <LottieLayer animationData={element.lottie} elementId={element.id} />
+          <LottieLayer animationData={element.lottie} elementId={element.id} filter={filter} />
         </div>
       ) : (
-        <LottieLayer animationData={element.lottie} elementId={element.id} />
+        <LottieLayer animationData={element.lottie} elementId={element.id} filter={filter} />
       )}
     </>
   );
+}
+
+/**
+ * M39: what a treatment draws besides the filter on each design. Opaque
+ * puts every editable text layer (but the disclaimer) on a white plate in
+ * dark ink through one SVG filter; grit lays film grain over the whole
+ * frame, footage included. Both live in the composition, so both runners
+ * draw them alike.
+ */
+function TreatmentLayers({ treatment }: { treatment: TreatmentProps }) {
+  if (treatment.name === 'opaque') {
+    return (
+      <>
+        <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true" data-testid="opaque-plate">
+          <defs>
+            <filter id={OPAQUE_PLATE_FILTER_ID} x="-10%" y="-25%" width="120%" height="150%" colorInterpolationFilters="sRGB">
+              <feMorphology in="SourceAlpha" operator="dilate" radius="14" result="plate" />
+              <feFlood floodColor="#FFFFFF" result="white" />
+              <feComposite in="white" in2="plate" operator="in" result="plateFill" />
+              <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0.043  0 0 0 0 0.11  0 0 0 0 0.188  0 0 0 1 0" result="ink" />
+              <feMerge>
+                <feMergeNode in="plateFill" />
+                <feMergeNode in="ink" />
+              </feMerge>
+            </filter>
+          </defs>
+        </svg>
+        <style>{`[data-treatment="opaque"] .${TEXT_CLASS}:not(.cc-key-disclaimer) { filter: url(#${OPAQUE_PLATE_FILTER_ID}); color: ${OPAQUE_INK}; }`}</style>
+      </>
+    );
+  }
+  if (treatment.name === 'grit') {
+    return <AbsoluteFill data-testid="grit" style={{ backgroundImage: GRIT_NOISE, backgroundSize: '180px 180px', opacity: 0.22, mixBlendMode: 'overlay', pointerEvents: 'none' }} />;
+  }
+  return null;
 }
 
 /**
@@ -113,12 +151,13 @@ function ElementView({ element, frame }: { element: ElementProps; frame: Frame }
  * A chain is either one element in a Sequence at its in/out points, or
  * several elements joined by transitions, rendered with TransitionSeries.
  */
-export function Main({ background, audio = null, elements, transitions = [], fonts = [], frame = frameFor('16:9') }: MainProps) {
+export function Main({ background, audio = null, elements, transitions = [], fonts = [], frame = frameFor('16:9'), treatment = null }: MainProps) {
   const byId = new Map(elements.map((e) => [e.id, e] as const));
   const { chains } = effectiveTimeline(elements, transitions);
 
   return (
-    <AbsoluteFill style={{ backgroundColor: background }}>
+    <AbsoluteFill style={{ backgroundColor: background }} data-treatment={treatment?.name ?? 'clean'}>
+      {treatment && treatment.name === 'opaque' && <TreatmentLayers treatment={treatment} />}
       {audio && <Audio src={audio.src} volume={audio.volume} startFrom={audio.startFrom} />}
 
       {/* M38: the elements mount once the faces are ready, so lottie-web measures text in the right font. */}
@@ -135,7 +174,7 @@ export function Main({ background, audio = null, elements, transitions = [], fon
               durationInFrames={chain.durationInFrames}
               premountFor={PREMOUNT_FRAMES}
             >
-              <ElementView element={first} frame={frame} />
+              <ElementView element={first} frame={frame} treatment={treatment} />
             </Sequence>
           );
         }
@@ -151,7 +190,7 @@ export function Main({ background, audio = null, elements, transitions = [], fon
               {members.flatMap((element, index) => {
                 const parts = [
                   <TransitionSeries.Sequence key={element.id} durationInFrames={element.endFrame - element.startFrame}>
-                    <ElementView element={element} frame={frame} />
+                    <ElementView element={element} frame={frame} treatment={treatment} />
                   </TransitionSeries.Sequence>,
                 ];
                 const t = chain.transitions[index];
@@ -171,6 +210,7 @@ export function Main({ background, audio = null, elements, transitions = [], fon
         );
       })}
       </TemplateFonts>
+      {treatment && treatment.name === 'grit' && <TreatmentLayers treatment={treatment} />}
     </AbsoluteFill>
   );
 }

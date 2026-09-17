@@ -135,16 +135,32 @@ describe('placement layers are tagged for the monitor (M28)', () => {
 
   it('tags placement layers with cc-layer and a class for the key, whether or not a value is set', () => {
     const out = applyLottieValues(source, {}, schema);
-    expect((out.layers[0] as AnyRecord).cl).toBe(`cc-layer ${layerClassFor('headline.transform')}`);
-    expect((out.layers[1] as AnyRecord).cl).toBe(`cc-layer ${layerClassFor('stat.1.transform')}`);
+    expect((out.layers[0] as AnyRecord).cl).toMatch(new RegExp(`^cc-layer ${layerClassFor('headline.transform')}\\b`));
+    expect((out.layers[1] as AnyRecord).cl).toMatch(new RegExp(`^cc-layer ${layerClassFor('stat.1.transform')}\\b`));
     expect(layerClassFor('stat.1.transform')).toMatch(/^cc-key-[A-Za-z0-9_-]+$/);
     expect(layerClassFor('stat.1.transform')).not.toBe(layerClassFor('stat-1.transform'));
   });
 
-  it('leaves layers without a placement alone and never touches the source', () => {
+  it('gives a layer without a placement no cc-layer class and never touches the source', () => {
     const before = JSON.stringify(source);
     const out = applyLottieValues(source, { headline: 'YES' }, schema);
-    expect((out.layers[2] as AnyRecord).cl).toBeUndefined();
+    expect(String((out.layers[2] as AnyRecord).cl ?? '')).not.toContain('cc-layer');
     expect(JSON.stringify(source)).toBe(before);
+  });
+});
+
+
+describe('text layers carry cc-text (M39)', () => {
+  const schema: TemplateParam[] = [
+    { key: 'headline', role: 'headline', kind: 'text', label: 'Headline', default: 'HI', path: '/layers/0' },
+    { key: 'headline.transform', role: 'headline', kind: 'transform', label: 'Headline placement', default: DEFAULT_TRANSFORM, path: '/layers/0', for: 'headline' },
+    { key: 'disclaimer', role: 'safe.disclaimer', kind: 'text', label: 'Disclaimer', default: 'x', path: '/layers/1', locked: true },
+  ];
+  const source = lottie([structuredClone(staticLayer), { ...structuredClone(staticLayer), nm: 'cc.safe.disclaimer' }]);
+
+  it('tags every text layer with cc-text and its key, after a placement class it already has', () => {
+    const out = applyLottieValues(source, {}, schema);
+    expect((out.layers[0] as AnyRecord).cl).toBe(`cc-layer ${layerClassFor('headline.transform')} cc-text ${layerClassFor('headline')}`);
+    expect((out.layers[1] as AnyRecord).cl).toBe('cc-text cc-key-disclaimer');
   });
 });

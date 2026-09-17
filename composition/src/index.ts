@@ -30,3 +30,4 @@ export type { DisclaimerCheck, DisclaimerScene } from './compliance';
 export { ASPECTS, aspectKey, autoFitBox, frameFor, isAspect, isFullBleed } from './aspect';
 export type { Aspect, AutoFitBox, Frame } from './aspect';
 export { metadataFor } from './Root';
+export { DEFAULT_ACCENT, isTreatment, TREATMENT_LABELS, TREATMENTS, treatmentFor, treatmentLayerFilter, type Treatment, type TreatmentProps } from './treatments';

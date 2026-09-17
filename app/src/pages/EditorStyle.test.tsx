@@ -71,3 +71,34 @@ describe('Editor style (M32)', () => {
     expect(calls.filter((c) => c.url === '/api/projects/7/values' && c.init?.method === 'PUT')).toHaveLength(0); // the style route already saved it
   });
 });
+
+
+/** M39: the treatment across the spot: a segmented control, applied in the Player at once and saved through the project route. */
+describe('Editor style treatment (M39)', () => {
+  it('starts clean, and pressing Grit puts the treatment in the Player props and saves it', async () => {
+    const calls = mockApi();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      calls.push({ url, init });
+      if (url === '/api/projects/7' && init?.method === 'PATCH') return new Response(JSON.stringify({ id: 7, treatment: JSON.parse(init.body as string).treatment }), { status: 200 });
+      if (url === '/api/projects/7' && !init?.method) return new Response(JSON.stringify(detail), { status: 200 });
+      if (url.endsWith('/template.json')) return new Response(JSON.stringify(lottie([0.94, 0.35, 0.16, 1])), { status: 200 });
+      if (url === '/api/media' || url === '/api/themes') return new Response('[]', { status: 200 });
+      return new Response('not found', { status: 404 });
+    });
+    render(<Editor projectId={7} onBack={() => {}} />);
+    await waitFor(() => expect(screen.getByLabelText('Treatment across the spot')).toBeTruthy());
+    const group = screen.getByLabelText('Treatment across the spot');
+    expect(Array.from(group.querySelectorAll('button')).map((b) => b.textContent)).toEqual(['Clean', 'Grit', 'Glow', 'Opaque']);
+    const props = () => JSON.parse(screen.getByTestId('player').getAttribute('data-props')!) as { treatment: { name: string; accent?: string } | null };
+    expect(props().treatment).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Glow' }));
+    await waitFor(() => expect(props().treatment).toEqual({ name: 'glow', accent: '#F05929' }));
+    await waitFor(() => expect(calls.some((c) => c.url === '/api/projects/7' && c.init?.method === 'PATCH' && (c.init.body as string).includes('"glow"'))).toBe(true));
+    expect(screen.getByRole('button', { name: 'Glow' }).getAttribute('aria-pressed')).toBe('true');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Grit' }));
+    await waitFor(() => expect(props().treatment).toEqual({ name: 'grit' }));
+  });
+});
