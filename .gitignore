@@ -29,3 +29,6 @@ app/public/fonts/ArialNarrow-Bold.ttf
 # Impeccable build evidence (screenshots); the surface briefs and config stay tracked
 .impeccable/review/
 app/.impeccable/review/
+
+# Design references (large videos and GIFs); kept on disk, not in git
+references/
