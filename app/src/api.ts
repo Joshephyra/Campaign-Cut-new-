@@ -32,6 +32,8 @@ export type ProjectRow = {
   /** M33: the client this spot is for, or null. */
   clientId?: number | null;
   clientName?: string | null;
+  /** M36 */
+  aspect?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -54,6 +56,8 @@ export type ProjectElement = {
   templateSlug: string;
   /** M31: added from the library rather than part of the spot's template. Removable. */
   added: boolean;
+  /** M36: false when the spot is in another ratio and this element has no designer variant (it is auto-fitted from 16:9). */
+  variant?: boolean;
   zIndex: number;
   startFrame: number;
   endFrame: number;
@@ -93,8 +97,10 @@ export type RenderJob = {
 export type ProjectTransition = { afterElementId: number; preset: TransitionPreset; durationInFrames: number };
 
 export type ProjectDetail = {
-  project: { id: number; name: string; templateId: number; templateSlug: string; templateName: string; clientId?: number | null; clientName?: string | null };
+  project: { id: number; name: string; templateId: number; templateSlug: string; templateName: string; clientId?: number | null; clientName?: string | null; aspect?: string };
   template: TemplateSummary;
+  /** M36: the frame this version renders at. Absent means 16:9. */
+  frame?: { width: number; height: number };
   meta?: { fonts?: string[]; fontFiles?: TemplateFontFile[]; background?: string } | null;
   elements: ProjectElement[];
   transitions?: ProjectTransition[];
@@ -209,6 +215,10 @@ export const api = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ name }),
     }).then((r) => json<ProjectRow>(r)),
+
+  /** M36: the version's aspect ratio. */
+  setAspect: (id: number, aspect: string) =>
+    fetch(`${API}/projects/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ aspect }) }).then((r) => json<ProjectRow>(r)),
 
   duplicateProject: (id: number) => fetch(`${API}/projects/${id}/duplicate`, { method: 'POST' }).then((r) => json<{ id: number }>(r)),
 

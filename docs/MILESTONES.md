@@ -679,7 +679,7 @@ Josh's ruling on the prototype (2026-09-17): the disclaimer must be on screen fo
 
 ---
 
-## M36 · Aspect-ratio versions · TODO
+## M36 · Aspect-ratio versions · DONE
 
 Josh's ruling on the prototype (2026-09-17): 16:9 is the master; a spot is versioned into 1:1, 4:5 and 9:16.
 

@@ -27,3 +27,6 @@ export { COLOR_ROLES, ELEMENT_TYPES, ELEMENT_TYPE_LABELS, inferElementType, isEl
 export type { ElementType } from './elementTypes';
 export { carriesDisclaimer, DISCLAIMER_MIN_SECONDS, disclaimerCheck, disclaimerSeconds } from './compliance';
 export type { DisclaimerCheck, DisclaimerScene } from './compliance';
+export { ASPECTS, aspectKey, autoFitBox, frameFor, isAspect, isFullBleed } from './aspect';
+export type { Aspect, AutoFitBox, Frame } from './aspect';
+export { metadataFor } from './Root';

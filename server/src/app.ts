@@ -1,7 +1,7 @@
 import fastifyCors from '@fastify/cors';
 import fastifyMultipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
-import { carriesDisclaimer, disclaimerCheck, TRANSITION_PRESETS, type TemplateParam } from '@campaigncut/composition';
+import { ASPECTS, carriesDisclaimer, disclaimerCheck, frameFor, isAspect, TRANSITION_PRESETS, type TemplateParam } from '@campaigncut/composition';
 import Fastify from 'fastify';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -12,7 +12,7 @@ import { paths } from './paths';
 import { renderComposition } from './render';
 import { RenderQueue, type RenderFn } from './renderQueue';
 import { pexelsClient, type StockOptions } from './stock';
-import { elementLottieUrl, loadElementSchema, projectFontFiles } from './templateFiles';
+import { elementLottieUrl, hasVariant, loadElementSchema, projectFontFiles } from './templateFiles';
 import { defaultUploadsDir, makeStagingDir, problemsFrom, runIngestCommand, stagedRelativePath, type RunIngest } from './ingestUpload';
 
 export type { RunIngest } from './ingestUpload';
@@ -99,11 +99,13 @@ export function buildApp(options: AppOptions = {}) {
     return groups;
   });
 
-  /** An element as the app sees it: its DB row plus its own schema and Lottie URL (M17). */
-  const withElementFiles = <E extends { slug: string }>(templateSlug: string, e: E) => ({
+  /** An element as the app sees it: its DB row plus its own schema and Lottie URL (M17), for the spot's aspect (M36). */
+  const withElementFiles = <E extends { slug: string }>(templateSlug: string, e: E, aspect = '16:9') => ({
     ...e,
-    schema: loadElementSchema(templatesDir, templateSlug, e.slug),
-    lottieUrl: elementLottieUrl(templatesDir, templateSlug, e.slug),
+    schema: loadElementSchema(templatesDir, templateSlug, e.slug, aspect),
+    lottieUrl: elementLottieUrl(templatesDir, templateSlug, e.slug, aspect),
+    /** M36: true when a designer variant for this aspect is in use, or the spot is 16:9; false means auto-fitted. */
+    variant: aspect === '16:9' || hasVariant(templatesDir, templateSlug, e.slug, aspect),
   });
 
   app.get<{ Params: { slug: string } }>('/templates/:slug', async (req, reply) => {
@@ -170,12 +172,20 @@ export function buildApp(options: AppOptions = {}) {
 
   // ---- project management (M22) ---------------------------------------
 
-  app.patch<{ Params: { id: string }; Body: { name?: string } }>('/projects/:id', async (req, reply) => {
+  app.patch<{ Params: { id: string }; Body: { name?: string; aspect?: string } }>('/projects/:id', async (req, reply) => {
     const id = Number(req.params.id);
     if (!db.getProject(id)) return reply.code(404).send({ error: `No project ${id}` });
-    const name = String(req.body?.name ?? '').trim();
-    if (!name) return reply.code(400).send({ error: 'name must not be empty' });
-    db.renameProject(id, name);
+    if (req.body?.name !== undefined) {
+      const name = String(req.body.name).trim();
+      if (!name) return reply.code(400).send({ error: 'name must not be empty' });
+      db.renameProject(id, name);
+    }
+    // M36: the version's aspect ratio.
+    if (req.body?.aspect !== undefined) {
+      if (!isAspect(req.body.aspect)) return reply.code(400).send({ error: `Unknown aspect "${String(req.body.aspect)}"; use one of ${ASPECTS.join(', ')}` });
+      db.setProjectAspect(id, req.body.aspect);
+    }
+    if (req.body?.name === undefined && req.body?.aspect === undefined) return reply.code(400).send({ error: 'Send a name or an aspect' });
     const { values: _values, ...project } = db.getProject(id)!;
     return project;
   });
@@ -236,12 +246,15 @@ export function buildApp(options: AppOptions = {}) {
     const { values, ...rest } = project;
     const elements = db.getProjectElements(project.id);
     const meta = (readJson(path.join(dir, 'meta.json')) as Record<string, unknown> | undefined) ?? {};
+    const aspect = isAspect(project.aspect) ? project.aspect : '16:9';
     return {
       project: rest,
       template: templateJson(t),
+      // M36: the frame this version renders at.
+      frame: frameFor(aspect),
       // M31: the font files of every template an element came from, each tagged with its template.
       meta: { ...meta, fontFiles: projectFontFiles(templatesDir, t.slug, elements) },
-      elements: elements.map((e) => withElementFiles(e.templateSlug, e)),
+      elements: elements.map((e) => withElementFiles(e.templateSlug, e, aspect)),
       transitions: db.getProjectTransitions(project.id),
       audio: db.getProjectAudio(project.id),
       values,
@@ -378,7 +391,8 @@ export function buildApp(options: AppOptions = {}) {
       if (defaults.length > 0) db.setProjectValues(id, defaults);
     }
     const element = db.getProjectElements(id).find((e) => e.id === elementId)!;
-    return reply.code(201).send(withElementFiles(element.templateSlug, element));
+    const projectAspect = db.getProject(id)!.aspect;
+    return reply.code(201).send(withElementFiles(element.templateSlug, element, isAspect(projectAspect) ? projectAspect : '16:9'));
   });
 
   /** Remove an added element from a project. The spot's own elements can be hidden, not removed. */

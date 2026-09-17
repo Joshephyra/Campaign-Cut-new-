@@ -52,3 +52,13 @@ describe('Remotion root', () => {
     expect(comp.durationInFrames).toBe(90);
   });
 });
+
+/** M36: the render takes its size from the props' frame, so an export at 9:16 is 1080x1920. */
+describe('composition metadata per aspect (M36)', () => {
+  it('reports the frame from the props, 16:9 by default', async () => {
+    const { metadataFor } = await import('./Root');
+    const { defaultProps } = await import('./config');
+    expect(metadataFor(defaultProps)).toMatchObject({ width: 1920, height: 1080 });
+    expect(metadataFor({ ...defaultProps, frame: { width: 1080, height: 1920 } })).toMatchObject({ width: 1080, height: 1920 });
+  });
+});

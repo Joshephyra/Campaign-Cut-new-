@@ -373,3 +373,68 @@ describe('ingestTemplate: element types (M31)', () => {
     expect(fs.existsSync(path.join(templatesDir, 'three'))).toBe(false);
   });
 });
+
+/**
+ * M36: a designer may hand over a variant of an element for another ratio
+ * (`variants` in elements.json, one export folder per ratio). It ships
+ * beside the element with the same tags, so the same values apply.
+ */
+describe('ingestTemplate: aspect variants (M36)', () => {
+  let tmp: string;
+  let templatesDir: string;
+  let fontsDir: string;
+  let db: Db;
+
+  beforeEach(() => {
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-variants-'));
+    templatesDir = path.join(tmp, 'templates');
+    fontsDir = path.join(tmp, 'fonts');
+    fs.mkdirSync(fontsDir, { recursive: true });
+    fs.writeFileSync(path.join(fontsDir, 'IBMPlexSans-Regular.ttf'), 'plex');
+    db = openDb(':memory:');
+  });
+
+  afterEach(() => {
+    db.close();
+    fs.rmSync(tmp, { recursive: true, force: true });
+  });
+
+  const run = (input: string) => ingestTemplate({ input, adType: 'Contrast', name: 'Three Part', slug: 'three', templatesDir, fontsDir, db, renderThumbnail: fakeThumbnail });
+
+  /** A 9:16 variant of the open: the same export, resized to 1080x1920. */
+  const withVariant = (dir: string, mutateVariant?: (l: AnyRecord) => void, manifestVariant: Record<string, string> = { '9:16': '01-open-9x16' }) => {
+    fs.cpSync(path.join(dir, '01-open'), path.join(dir, '01-open-9x16'), { recursive: true });
+    editLottie(dir, '01-open-9x16', (l) => {
+      l.w = 1080;
+      l.h = 1920;
+      mutateVariant?.(l);
+    });
+    const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'elements.json'), 'utf8')) as AnyRecord[];
+    manifest[0]!.variants = manifestVariant;
+    fs.writeFileSync(path.join(dir, 'elements.json'), JSON.stringify(manifest));
+  };
+
+  it('ships a 9:16 variant beside the element with its own Lottie and schema, and records it in meta', async () => {
+    await run(copyFixture(tmp, (dir) => withVariant(dir)));
+    const variantDir = path.join(templatesDir, 'three', 'elements', 'open', 'variants', '9x16');
+    expect(fs.existsSync(path.join(variantDir, 'template.json'))).toBe(true);
+    expect(fs.existsSync(path.join(variantDir, 'schema.json'))).toBe(true);
+    const lottie = JSON.parse(fs.readFileSync(path.join(variantDir, 'template.json'), 'utf8')) as AnyRecord;
+    expect([lottie.w, lottie.h]).toEqual([1080, 1920]);
+    const meta = JSON.parse(fs.readFileSync(path.join(templatesDir, 'three', 'meta.json'), 'utf8')) as { elements: { slug: string; variants?: string[] }[] };
+    expect(meta.elements.find((e) => e.slug === 'open')!.variants).toEqual(['9:16']);
+    expect(meta.elements.find((e) => e.slug === 'lower-third')!.variants).toBeUndefined();
+  });
+
+  it('rejects a variant whose size is not the ratio\'s frame, naming the element and the ratio', async () => {
+    const input = copyFixture(tmp, (dir) => withVariant(dir, (l) => (l.h = 1900)));
+    await expect(run(input)).rejects.toMatchObject({ problems: [expect.stringMatching(/Element "open".*9:16.*1080x1900.*1080x1920/)] });
+  });
+
+  it('rejects a variant whose tags differ from the master, and an unknown ratio', async () => {
+    const dropped = copyFixture(tmp, (dir) => withVariant(dir, (l) => ((l.layers as AnyRecord[]).find((x) => x.nm === 'cc.headline')!.nm = 'plain')));
+    await expect(run(dropped)).rejects.toMatchObject({ problems: [expect.stringMatching(/Element "open".*9:16.*headline/)] });
+    const unknown = copyFixture(tmp, (dir) => withVariant(dir, undefined, { '2:3': '01-open-9x16' }));
+    await expect(run(unknown)).rejects.toMatchObject({ problems: [expect.stringMatching(/Element "open".*"2:3".*16:9, 1:1, 4:5, 9:16/)] });
+  });
+});

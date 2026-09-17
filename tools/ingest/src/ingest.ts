@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { findFontFileForStyle } from './fonts';
 import { ELEMENT_TYPES, inferElementType, isElementType, type ElementType } from './elementTypes';
+import { ASPECTS, aspectKey, frameFor, isAspect, type Aspect } from '@campaigncut/composition';
 import { generateSchema, type TagReport } from './generateSchema';
 
 /** Every problem found, so the author can fix them all at once. */
@@ -54,6 +55,8 @@ export type ElementManifestEntry = {
   name?: string;
   /** M31: one of ELEMENT_TYPES. Inferred from the slug when absent. */
   type?: string;
+  /** M36: a designer's export of this element for another ratio, by aspect ("9:16": "02-lower-third-9x16"). */
+  variants?: Record<string, string>;
   /** Defaults to the previous element's out point (0 for the first). */
   startFrame?: number;
   /** Defaults to the element's position in the list. */
@@ -65,6 +68,8 @@ export type ElementMeta = {
   name: string;
   /** M31: what the element is (ELEMENT_TYPES). */
   type: ElementType;
+  /** M36: the ratios a designer variant exists for, e.g. ["9:16"]. Absent when none. */
+  variants?: Aspect[];
   startFrame: number;
   endFrame: number;
   zIndex: number;
@@ -139,7 +144,12 @@ type DiscoveredElement = {
   jsonPath: string;
   startFrame?: number;
   zIndex?: number;
+  /** M36: designer variants for other ratios, each its own export folder. */
+  variants: { aspect: Aspect; folder: string; jsonPath: string }[];
 };
+
+/** M36: a variant, read and checked against its master. */
+type PreparedVariant = { aspect: Aspect; folder: string; lottie: LottieAnimationData; params: TemplateParam[]; fonts: string[] };
 
 /**
  * One command turns a Bodymovin export (or a folder of them) into a working
@@ -164,6 +174,7 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
     fonts: string[];
     report: TagReport[];
     durationInFrames: number;
+    preparedVariants: PreparedVariant[];
   };
   const prepared: Prepared[] = [];
   const seenSlugs = new Set<string>();
@@ -177,7 +188,24 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
     const generated = generateSchema(lottie);
     for (const e of generated.errors) problems.push(`Element "${el.slug}": ${e.message}`);
     const durationInFrames = Number(lottie.op) - Number(lottie.ip);
-    prepared.push({ ...el, lottie, params: generated.params, fonts: generated.fonts, report: generated.report, durationInFrames });
+    // M36: each variant must be the ratio's frame size and carry the master's tags, so the same values apply.
+    const variants: PreparedVariant[] = [];
+    for (const v of el.variants) {
+      const vl = JSON.parse(fs.readFileSync(v.jsonPath, 'utf8')) as LottieAnimationData;
+      const vg = generateSchema(vl);
+      for (const e of vg.errors) problems.push(`Element "${el.slug}", ${v.aspect} variant: ${e.message}`);
+      const want = frameFor(v.aspect);
+      if (Number(vl.w) !== want.width || Number(vl.h) !== want.height) {
+        problems.push(`Element "${el.slug}": the ${v.aspect} variant is ${Number(vl.w)}x${Number(vl.h)}; a ${v.aspect} export must be ${want.width}x${want.height}`);
+      }
+      const masterKeys = generated.params.map((p) => p.key).sort().join(', ');
+      const variantKeys = vg.params.map((p) => p.key).sort().join(', ');
+      if (masterKeys !== variantKeys) {
+        problems.push(`Element "${el.slug}": the ${v.aspect} variant is tagged differently from the 16:9 master (master: ${masterKeys || 'none'}; variant: ${variantKeys || 'none'}). Tag both the same so one set of values fits both.`);
+      }
+      variants.push({ aspect: v.aspect, folder: v.folder, lottie: vl, params: vg.params, fonts: vg.fonts });
+    }
+    prepared.push({ ...el, lottie, params: generated.params, fonts: generated.fonts, report: generated.report, durationInFrames, preparedVariants: variants });
   }
 
   // 3. Comp settings: taken from the first element; every other element must match.
@@ -208,12 +236,23 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
     const startFrame = el.startFrame ?? cursor;
     const endFrame = startFrame + el.durationInFrames;
     cursor = endFrame;
-    elementMetas.push({ slug: el.slug, name: el.name, type: el.type, startFrame, endFrame, zIndex: el.zIndex ?? i, durationInFrames: el.durationInFrames, fonts: el.fonts });
+    const variantAspects = el.preparedVariants.map((v) => v.aspect);
+    elementMetas.push({
+      slug: el.slug,
+      name: el.name,
+      type: el.type,
+      ...(variantAspects.length > 0 ? { variants: variantAspects } : {}),
+      startFrame,
+      endFrame,
+      zIndex: el.zIndex ?? i,
+      durationInFrames: el.durationInFrames,
+      fonts: el.fonts,
+    });
   });
   const durationInFrames = elementMetas.reduce((max, e) => Math.max(max, e.endFrame), 0);
 
   const fonts: string[] = [];
-  for (const el of prepared) for (const f of el.fonts) if (!fonts.includes(f)) fonts.push(f);
+  for (const el of prepared) for (const f of [...el.fonts, ...el.preparedVariants.flatMap((v) => v.fonts)]) if (!fonts.includes(f)) fonts.push(f);
 
   const meta: TemplateMeta = { slug, name, adType, durationInFrames, fps, width, height, fonts, fontFiles: [], elements: elementMetas, ...(background ? { background } : {}) };
   for (const field of ['durationInFrames', 'fps', 'width', 'height'] as const) {
@@ -224,10 +263,15 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
   // 5. Every referenced font FACE (family and style) must have a file (M27: a
   //    family shipped as one file renders every weight with that file). Fonts
   //    in the handover get copied in.
-  const fontDirs = [path.join(handoverDir, 'fonts'), ...prepared.map((el) => path.join(el.folder, 'fonts'))];
+  const fontDirs = [path.join(handoverDir, 'fonts'), ...prepared.flatMap((el) => [path.join(el.folder, 'fonts'), ...el.preparedVariants.map((v) => path.join(v.folder, 'fonts'))])];
   const fontCopies: Array<{ from: string; to: string }> = [];
   const fontSources: Array<{ family: string; style: string; from: string }> = [];
-  const faces = fontFaces(prepared.map((el) => ({ slug: el.slug, lottie: el.lottie, fonts: el.fonts })));
+  const faces = fontFaces(
+    prepared.flatMap((el) => [
+      { slug: el.slug, lottie: el.lottie, fonts: el.fonts },
+      ...el.preparedVariants.map((v) => ({ slug: `${el.slug} (${v.aspect})`, lottie: v.lottie, fonts: v.fonts })),
+    ]),
+  );
   for (const face of faces) {
     const inApp = findFontFileForStyle(face.family, face.style, [fontsDir]);
     if (inApp) {
@@ -275,6 +319,16 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
     fs.writeFileSync(path.join(elDir, 'schema.json'), JSON.stringify(el.params, null, 2) + '\n');
     const imagesDir = path.join(el.folder, 'images');
     if (fs.existsSync(imagesDir)) fs.cpSync(imagesDir, path.join(elDir, 'images'), { recursive: true });
+    // M36: designer variants live beside the element, one folder per ratio.
+    for (const v of el.preparedVariants) {
+      const vDir = path.join(elDir, 'variants', aspectKey(v.aspect));
+      fs.mkdirSync(vDir, { recursive: true });
+      fs.writeFileSync(path.join(vDir, 'template.json'), JSON.stringify(v.lottie, null, 2) + '\n');
+      fs.writeFileSync(path.join(vDir, 'schema.json'), JSON.stringify(v.params, null, 2) + '\n');
+      const vImages = path.join(v.folder, 'images');
+      if (fs.existsSync(vImages)) fs.cpSync(vImages, path.join(vDir, 'images'), { recursive: true });
+      log(`Wrote ${v.aspect} variant of "${el.slug}" -> ${vDir}`);
+    }
     written.push({ ...elementMetas[i]!, dir: elDir, params: el.params, report: el.report });
     log(`Wrote element "${el.slug}" (${el.params.length} param(s), frames ${elementMetas[i]!.startFrame}-${elementMetas[i]!.endFrame}) -> ${elDir}`);
   });
@@ -403,7 +457,7 @@ function discoverElements(input: string, templateSlug: string, templateName: str
   const resolved = path.resolve(input);
   if (!fs.existsSync(resolved)) throw new IngestFailure([`Input not found: ${resolved}`], []);
 
-  const single = (jsonPath: string, folder: string): DiscoveredElement => ({ slug: templateSlug, name: templateName, type: inferElementType(templateSlug), folder, jsonPath });
+  const single = (jsonPath: string, folder: string): DiscoveredElement => ({ slug: templateSlug, name: templateName, type: inferElementType(templateSlug), folder, jsonPath, variants: [] });
 
   if (fs.statSync(resolved).isFile()) {
     return { handoverDir: path.dirname(resolved), elements: [single(resolved, path.dirname(resolved))], manifestProblems: [] };
@@ -446,10 +500,36 @@ function discoverElements(input: string, templateSlug: string, templateName: str
         if (isElementType(entry.type)) type = entry.type;
         else problems.push(`Element "${elSlug}": unknown type "${String(entry.type)}" in elements.json; use one of ${ELEMENT_TYPES.join(', ')}`);
       }
+      // M36: variants by ratio, each an export folder inside the handover.
+      const variants: DiscoveredElement['variants'] = [];
+      if (entry.variants !== undefined) {
+        if (!entry.variants || typeof entry.variants !== 'object' || Array.isArray(entry.variants)) {
+          problems.push(`Element "${elSlug}": "variants" must be an object of ratio to folder, for example { "9:16": "02-lower-third-9x16" }`);
+        } else {
+          for (const [aspect, vf] of Object.entries(entry.variants)) {
+            if (!isAspect(aspect) || aspect === '16:9') {
+              problems.push(`Element "${elSlug}": unknown variant ratio "${aspect}"; use one of ${ASPECTS.join(', ')} (16:9 is the master itself)`);
+              continue;
+            }
+            const vFolder = path.join(resolved, String(vf));
+            if (!fs.existsSync(vFolder) || !fs.statSync(vFolder).isDirectory()) {
+              problems.push(`Element "${elSlug}": the ${aspect} variant names folder "${String(vf)}" but it does not exist in ${resolved}`);
+              continue;
+            }
+            const vJson = exportJsonIn(vFolder);
+            if (!vJson) {
+              problems.push(`Element "${elSlug}": the ${aspect} variant folder "${String(vf)}" holds no Bodymovin JSON`);
+              continue;
+            }
+            variants.push({ aspect, folder: vFolder, jsonPath: vJson });
+          }
+        }
+      }
       elements.push({
         slug: elSlug,
         name: entry.name?.trim() || elementNameFromSlug(elSlug),
         type,
+        variants,
         folder,
         jsonPath,
         startFrame: entry.startFrame === undefined ? undefined : Math.max(0, Math.round(Number(entry.startFrame))),
@@ -465,7 +545,7 @@ function discoverElements(input: string, templateSlug: string, templateName: str
       const jsonPath = exportJsonIn(path.join(resolved, f));
       if (!jsonPath) continue;
       const elSlug = elementSlugFromFolder(f);
-      elements.push({ slug: elSlug, name: elementNameFromSlug(elSlug), type: inferElementType(elSlug), folder: path.join(resolved, f), jsonPath });
+      elements.push({ slug: elSlug, name: elementNameFromSlug(elSlug), type: inferElementType(elSlug), folder: path.join(resolved, f), jsonPath, variants: [] });
     }
   }
 

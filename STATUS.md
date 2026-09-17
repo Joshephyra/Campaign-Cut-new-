@@ -4,6 +4,32 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M36 Aspect-ratio versions · DONE
+
+**Why**
+
+Josh's ruling after reviewing the original prototype: 16:9 is the master and a spot is versioned into 1:1, 4:5 and 9:16. CLAUDE.md now says so; automatic reflow as the way to make other ratios stays out.
+
+**What exists now**
+
+- A spot has an aspect (16:9 by default; `project.aspect`, added to old databases). The frame follows it in both runners: the Player takes its size from the project, the render's `calculateMetadata` takes it from the props, so an export in 9:16 is a 1080×1920 file named `project-<id>-<render>-9x16.mp4`. Positions stay fractions of the frame.
+- Designer variants: `elements.json` entries may carry `variants: { "9:16": "<folder>" }`. The ingest checks the export is exactly the ratio's frame and carries the same tags as the master (naming the element and ratio when not), ships it under `elements/<slug>/variants/<9x16>/` with its own schema and images, records it in `meta.json`, and includes its fonts. Both runners resolve an element's files per aspect: the variant when it exists, the master otherwise.
+- Auto-fit: a scene with no variant is contained and centred in the new frame in pixels of the frame, over the template background; a footage slot that filled the 16:9 frame fills the new frame, any other slot maps into the box. Dragging an auto-fitted layer moves it by the right amount. The scene's panel says "Auto-fitted from 16:9. Ask the designer for a 9:16 version of this scene."
+- A Version group in the top bar (16:9 · 1:1 · 4:5 · 9:16): pressing one saves it and reloads the spot at that ratio's files; the monitor takes the ratio (limited by height for tall versions) and the facts line shows the frame.
+- Docs: `docs/AE-AUTHORING.md` documents `variants`.
+- Tests: 2 aspect, 4 Main auto-fit, 1 metadata, 3 ingest variants, 4 server (file resolution, PATCH and duplicate, detail and render props, file name), 1 editor. 452 tests green.
+
+**Verified**
+
+- Real browser on the Contrast :30 spot: Version 9:16 saved, the monitor turned portrait, two auto-fit boxes drew on screen, the panel showed the note, the facts read 1080×1920; back to 16:9 afterwards.
+- A fresh spot switched to 9:16 exported through the parity script: a 1080×1920 MP4 (ffprobe), all four frames within threshold of the preview; the headline sits centred in the tall frame over the template background.
+
+**Next**
+
+Josh's call. Everything the prototype review opened is built except what he parked (the timeline).
+
+---
+
 ## 2026-09-17 · M35 The disclaimer's four seconds · DONE
 
 **Why**

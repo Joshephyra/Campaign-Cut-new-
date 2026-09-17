@@ -59,6 +59,8 @@ export type ProjectRow = {
   /** M33: the client this spot is for, or null. */
   clientId: number | null;
   clientName: string | null;
+  /** M36: the version's aspect ratio; 16:9 is the master. */
+  aspect: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -172,6 +174,8 @@ export type Db = Database.Database & {
   listProjects(): ProjectRow[];
   /** M22 */
   renameProject(id: number, name: string): void;
+  /** M36 */
+  setProjectAspect(id: number, aspect: string): void;
   /** M22: copy values, timeline overrides, transitions and the music bed into a new project. */
   duplicateProject(id: number, name: string): { id: number };
   /** M22: the project and everything that hangs off it (rendered files stay on disk). */
@@ -324,6 +328,8 @@ export function openDb(file: string): Db {
   // M33: a project may belong to a client.
   const projectColumns = (db.prepare(`PRAGMA table_info(project)`).all() as { name: string }[]).map((c) => c.name);
   if (!projectColumns.includes('client_id')) db.exec(`ALTER TABLE project ADD COLUMN client_id INTEGER REFERENCES client(id)`);
+  // M36: a project has an aspect; everything before was 16:9.
+  if (!projectColumns.includes('aspect')) db.exec(`ALTER TABLE project ADD COLUMN aspect TEXT NOT NULL DEFAULT '16:9'`);
   // M20: media assets gained a kind (video or audio).
   const mediaColumns = (db.prepare(`PRAGMA table_info(media_asset)`).all() as { name: string }[]).map((c) => c.name);
   if (!mediaColumns.includes('kind')) db.exec(`ALTER TABLE media_asset ADD COLUMN kind TEXT NOT NULL DEFAULT 'video'`);
@@ -345,6 +351,7 @@ export function openDb(file: string): Db {
     getProject: (id: number) => getProject(db, id),
     listProjects: () => listProjects(db),
     renameProject: (id: number, name: string) => renameProject(db, id, name),
+    setProjectAspect: (id: number, aspect: string) => setProjectAspect(db, id, aspect),
     duplicateProject: (id: number, name: string) => duplicateProject(db, id, name),
     deleteProject: (id: number) => deleteProject(db, id),
     setProjectValues: (projectId: number, values: ProjectValue[]) => setProjectValues(db, projectId, values),
@@ -746,7 +753,7 @@ function createProject(db: Database.Database, p: ProjectInput): { id: number } {
 
 const PROJECT_SELECT = `
   SELECT p.id, p.template_id AS templateId, t.slug AS templateSlug, t.name AS templateName,
-         p.name, p.client_id AS clientId, c.name AS clientName, p.created_at AS createdAt, p.updated_at AS updatedAt
+         p.name, p.client_id AS clientId, c.name AS clientName, p.aspect AS aspect, p.created_at AS createdAt, p.updated_at AS updatedAt
   FROM project p JOIN template t ON t.id = p.template_id LEFT JOIN client c ON c.id = p.client_id`;
 
 function getProject(db: Database.Database, id: number): ProjectDetail | undefined {
@@ -770,11 +777,15 @@ function renameProject(db: Database.Database, id: number, name: string): void {
   db.prepare(`UPDATE project SET name = ?, updated_at = datetime('now') WHERE id = ?`).run(name, id);
 }
 
+function setProjectAspect(db: Database.Database, id: number, aspect: string): void {
+  db.prepare(`UPDATE project SET aspect = ?, updated_at = datetime('now') WHERE id = ?`).run(aspect, id);
+}
+
 function duplicateProject(db: Database.Database, id: number, name: string): { id: number } {
   const run = db.transaction((): { id: number } => {
-    const source = db.prepare(`SELECT template_id AS templateId, client_id AS clientId FROM project WHERE id = ?`).get(id) as { templateId: number; clientId: number | null } | undefined;
+    const source = db.prepare(`SELECT template_id AS templateId, client_id AS clientId, aspect FROM project WHERE id = ?`).get(id) as { templateId: number; clientId: number | null; aspect: string } | undefined;
     if (!source) throw new Error(`No project ${id}`);
-    const copy = Number(db.prepare(`INSERT INTO project (template_id, name, client_id) VALUES (?, ?, ?)`).run(source.templateId, name, source.clientId).lastInsertRowid);
+    const copy = Number(db.prepare(`INSERT INTO project (template_id, name, client_id, aspect) VALUES (?, ?, ?, ?)`).run(source.templateId, name, source.clientId, source.aspect).lastInsertRowid);
     db.prepare(`INSERT INTO project_value (project_id, element_id, param_key, value_json) SELECT ?, element_id, param_key, value_json FROM project_value WHERE project_id = ?`).run(copy, id);
     db.prepare(`INSERT INTO project_element (project_id, element_id, start_frame, end_frame, enabled) SELECT ?, element_id, start_frame, end_frame, enabled FROM project_element WHERE project_id = ?`).run(copy, id);
     db.prepare(`INSERT INTO project_transition (project_id, after_element_id, preset, duration_frames) SELECT ?, after_element_id, preset, duration_frames FROM project_transition WHERE project_id = ?`).run(copy, id);

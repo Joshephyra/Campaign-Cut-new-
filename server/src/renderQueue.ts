@@ -80,7 +80,10 @@ export class RenderQueue {
     this.update(id, { status: 'rendering', progress: 0 });
     try {
       const props = buildProjectProps({ db, templatesDir, projectId: job.projectId, serverBase });
-      const fileName = `project-${job.projectId}-${id}.mp4`;
+      // M36: a version in another ratio says so in its file name.
+      const aspect = db.getProject(job.projectId)?.aspect ?? '16:9';
+      const suffix = aspect === '16:9' ? '' : `-${aspect.replace(':', 'x')}`;
+      const fileName = `project-${job.projectId}-${id}${suffix}.mp4`;
       const outputPath = path.join(rendersDir, fileName);
       let last = -1;
       await render({

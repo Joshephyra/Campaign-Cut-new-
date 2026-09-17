@@ -104,3 +104,56 @@ describe('Main names each element wrapper (M28)', () => {
     expect(screen.getByTestId('lottie-wrapper').getAttribute('data-cc-element')).toBe('e');
   });
 });
+
+/**
+ * M36: a spot in another ratio. An element whose Lottie was authored at
+ * the frame's size draws full-frame; one authored at another size (a 16:9
+ * element in a 9:16 spot with no designer variant) is auto-fitted:
+ * contained and centred in a box, its footage slot mapped into the box,
+ * except a slot that filled the 16:9 frame, which fills the new frame.
+ */
+describe('Main in another aspect ratio (M36)', () => {
+  const wide = { ...EMPTY_LOTTIE, w: 1920, h: 1080 };
+  const tall = { ...EMPTY_LOTTIE, w: 1080, h: 1920 };
+  const frame = { width: 1080, height: 1920 };
+
+  it('draws an element authored at the frame size full-frame, with no auto-fit box', () => {
+    render(<Main background="#000" frame={frame} elements={[{ ...element('e', null), lottie: tall }]} />);
+    expect(screen.queryByTestId('autofit')).toBeNull();
+    expect(screen.getByTestId('lottie-wrapper').style.width).toBe('100%');
+  });
+
+  it('auto-fits a 16:9 element into a 9:16 frame: contained, centred, in pixels of the frame', () => {
+    render(<Main background="#000" frame={frame} elements={[{ ...element('e', null), lottie: wide }]} />);
+    const box = screen.getByTestId('autofit');
+    expect(box.style.left).toBe('0px');
+    expect(box.style.top).toBe('656.25px');
+    expect(box.style.width).toBe('1080px');
+    expect(box.style.height).toBe('607.5px');
+    expect(box.contains(screen.getByTestId('lottie-wrapper'))).toBe(true);
+  });
+
+  it('maps a partial footage slot into the box, and lets a full-bleed slot fill the whole frame', () => {
+    const partial = { src: 'x.mp4', rect: { x: 0.5, y: 0, w: 0.5, h: 1 }, fit: 'cover' as const };
+    const { unmount } = render(<Main background="#000" frame={frame} elements={[{ ...element('e', partial), lottie: wide }]} />);
+    let slot = screen.getByTestId('media-slot');
+    expect(slot.style.left).toBe('540px');
+    expect(slot.style.top).toBe('656.25px');
+    expect(slot.style.width).toBe('540px');
+    expect(slot.style.height).toBe('607.5px');
+    unmount();
+
+    const full = { src: 'x.mp4', rect: { x: 0, y: 0, w: 1, h: 1 }, fit: 'cover' as const };
+    render(<Main background="#000" frame={frame} elements={[{ ...element('e', full), lottie: wide }]} />);
+    slot = screen.getByTestId('media-slot');
+    expect(slot.style.left).toBe('0%');
+    expect(slot.style.top).toBe('0%');
+    expect(slot.style.width).toBe('100%');
+    expect(slot.style.height).toBe('100%');
+  });
+
+  it('without a frame prop the composition is 16:9 and a 16:9 element is not boxed', () => {
+    render(<Main background="#000" elements={[{ ...element('e', null), lottie: wide }]} />);
+    expect(screen.queryByTestId('autofit')).toBeNull();
+  });
+});

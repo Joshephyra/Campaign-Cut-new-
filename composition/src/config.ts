@@ -92,6 +92,8 @@ export type MainProps = {
   transitions?: TransitionProps[];
   /** Fonts the template's text layers reference, at URLs this runner can fetch. Loaded before the first frame. */
   fonts?: TemplateFont[];
+  /** M36: the frame this spot renders at. Absent means 16:9 (1920x1080). Both runners read it from the same props. */
+  frame?: { width: number; height: number };
 };
 
 /** A valid, empty Lottie for tests and placeholders. */

@@ -1,8 +1,14 @@
 import {
   applyLottieValues,
+  ASPECTS,
+  autoFitBox,
   carriesDisclaimer,
   compositionConfig,
   disclaimerCheck,
+  frameFor,
+  isAspect,
+  type Aspect,
+  type Frame,
   compositionDurationWithTransitions,
   DEFAULT_TRANSFORM,
   DEFAULT_TRANSITION_FRAMES,
@@ -120,6 +126,8 @@ export function Editor({ projectId, onBack }: Props) {
   const [assets, setAssets] = useState<MediaAsset[]>([]);
   /** M25: bumped when an export finishes so the history list reloads. */
   const [exportsTick, setExportsTick] = useState(0);
+  /** The values as last saved (or loaded); the debounced save diffs against it. */
+  const lastSaved = useRef<ValuesByElement | null>(null);
 
   // M23: undo history over everything the user edits. Each change names the
   // control it came from so fast repeats (typing, dragging) fold into one step.
@@ -144,32 +152,60 @@ export function Editor({ projectId, onBack }: Props) {
     setHistoryTick((t) => t + 1);
   }, [loaded, values, elements, transitions, audio]);
 
+  /**
+   * Load (or reload) the spot: its detail and every element's Lottie. A
+   * reload after the aspect changes (M36) keeps the selection and treats the
+   * loaded values as saved.
+   */
+  const load = useCallback(
+    async (keepSelection = false) => {
+      const detail = await api.project(projectId);
+      const loadedLotties = await Promise.all(detail.elements.map(async (e) => [e.id, await api.elementLottie(e.lottieUrl)] as const));
+      const lotties: Lotties = {};
+      for (const [id, lottie] of loadedLotties) lotties[id] = lottie;
+      const initial: ValuesByElement = {};
+      for (const e of detail.elements) initial[e.id] = {};
+      for (const v of detail.values) (initial[v.elementId] ??= {})[v.key] = v.value;
+      lastSaved.current = null;
+      setValues(initial);
+      setElements(detail.elements.map((e) => ({ ...e, enabled: e.enabled ?? true })));
+      setTransitions(detail.transitions ?? []);
+      setAudio(detail.audio ?? null);
+      setSelectedId((current) => (keepSelection && current !== null && detail.elements.some((e) => e.id === current) ? current : (inStartOrder(detail.elements)[0]?.id ?? null)));
+      setLoaded({ detail, lotties });
+    },
+    [projectId],
+  );
   useEffect(() => {
     let cancelled = false;
-    api
-      .project(projectId)
-      .then(async (detail) => {
-        const loadedLotties = await Promise.all(detail.elements.map(async (e) => [e.id, await api.elementLottie(e.lottieUrl)] as const));
-        if (cancelled) return;
-        const lotties: Lotties = {};
-        for (const [id, lottie] of loadedLotties) lotties[id] = lottie;
-        const initial: ValuesByElement = {};
-        for (const e of detail.elements) initial[e.id] = {};
-        for (const v of detail.values) (initial[v.elementId] ??= {})[v.key] = v.value;
-        setValues(initial);
-        setElements(detail.elements.map((e) => ({ ...e, enabled: e.enabled ?? true })));
-        setTransitions(detail.transitions ?? []);
-        setAudio(detail.audio ?? null);
-        setSelectedId(inStartOrder(detail.elements)[0]?.id ?? null);
-        setLoaded({ detail, lotties });
-      })
-      .catch((e: Error) => {
-        if (!cancelled) setError(e.message);
-      });
+    load().catch((e: Error) => {
+      if (!cancelled) setError(e.message);
+    });
     return () => {
       cancelled = true;
     };
-  }, [projectId]);
+  }, [load]);
+
+  // M36: the version's aspect ratio. Changing it saves, then reloads the
+  // spot at that ratio's files (designer variants where they exist).
+  const aspect = (isAspect(loaded?.detail.project.aspect) ? loaded!.detail.project.aspect : '16:9') as Aspect;
+  const frame = useMemo(() => loaded?.detail.frame ?? frameFor(aspect), [loaded, aspect]);
+  const [switchingAspect, setSwitchingAspect] = useState(false);
+  const changeAspect = async (next: Aspect) => {
+    if (next === aspect || switchingAspect) return;
+    setSwitchingAspect(true);
+    setSaveState('saving');
+    try {
+      await api.setAspect(projectId, next);
+      await load(true);
+      setSaveState('saved');
+    } catch (e) {
+      setError((e as Error).message);
+      setSaveState('error');
+    } finally {
+      setSwitchingAspect(false);
+    }
+  };
 
   const refreshAssets = useCallback(
     () =>
@@ -190,7 +226,7 @@ export function Editor({ projectId, onBack }: Props) {
   }, [refreshAssets]);
 
   // Persist changed values, debounced. Only the keys that changed are sent, each with its element.
-  const lastSaved = useRef<ValuesByElement | null>(null);
+  // (Declared above the loader so a reload can reset the baseline.)
   useEffect(() => {
     if (!loaded) return;
     if (lastSaved.current === null) {
@@ -579,6 +615,23 @@ export function Editor({ projectId, onBack }: Props) {
         />
         <div className="flex items-center gap-3 shrink-0 justify-end">
           {loaded && (
+            <div role="group" aria-label="Version" className="inline-flex items-center rounded-md bg-raised border border-line p-0.5">
+              {ASPECTS.map((a) => (
+                <button
+                  key={a}
+                  type="button"
+                  aria-label={`Version ${a}`}
+                  aria-pressed={a === aspect}
+                  disabled={switchingAspect}
+                  onClick={() => void changeAspect(a)}
+                  className={`h-7 px-2.5 rounded-[6px] text-xs font-medium tabular-nums transition-colors ${a === aspect ? 'bg-blue text-white' : 'text-fg-2 hover:text-fg hover:bg-hover'} disabled:opacity-60`}
+                >
+                  {a}
+                </button>
+              ))}
+            </div>
+          )}
+          {loaded && (
             <span className="inline-flex items-center rounded-md bg-raised border border-line p-0.5">
               <IconButton label="Undo" title="Undo (Ctrl+Z)" icon={Undo2} onClick={undo} disabled={!undoAvailable} className="!w-7 !h-7" />
               <IconButton label="Redo" title="Redo (Ctrl+Shift+Z)" icon={Redo2} onClick={redo} disabled={!redoAvailable} className="!w-7 !h-7" />
@@ -623,6 +676,7 @@ export function Editor({ projectId, onBack }: Props) {
             assets={assets}
             selectedId={selected?.id}
             onSelect={setSelectedId}
+            frameSize={frame}
             schemaFor={schemaFor}
             onPress={onPress}
             onDrag={onDrag}
@@ -660,6 +714,11 @@ export function Editor({ projectId, onBack }: Props) {
                     <p className="text-[11px] text-fg-3 tabular-nums">
                       {seconds(selected.startFrame).toFixed(1)} s to {seconds(selected.endFrame).toFixed(1)} s
                     </p>
+                    {aspect !== '16:9' && selected.variant === false && (
+                      <p data-testid="autofit-note" className="mt-1 text-[11px] text-fg-2">
+                        Auto-fitted from 16:9. Ask the designer for a {aspect} version of this scene.
+                      </p>
+                    )}
                   </div>
                   <label className="flex items-center gap-2 text-xs text-fg-2 shrink-0">
                     Show
@@ -914,6 +973,7 @@ function Monitor({
   assets,
   selectedId,
   onSelect,
+  frameSize,
   schemaFor,
   onPress,
   onDrag,
@@ -933,6 +993,8 @@ function Monitor({
   assets: MediaAsset[];
   selectedId: number | undefined;
   onSelect: (id: number) => void;
+  /** M36: the frame this version renders at. */
+  frameSize: Frame;
   /** M28: an element's schema, to know which layers on screen are placements. */
   schemaFor: (elementId: number) => TemplateParam[] | undefined;
   /** M28: a press on an editable layer: select its element and make that placement the active one. */
@@ -997,7 +1059,12 @@ function Monitor({
         else x = 0;
       }
       if (x !== d.applied.x || y !== d.applied.y) {
-        onDrag(d.elementId, d.key, x - d.applied.x, y - d.applied.y);
+        // M36: an auto-fitted element is drawn in a smaller box, so a fraction of the
+        // monitor is a larger fraction of the element's own frame.
+        const source = lotties[d.elementId];
+        const authored = { width: Number(source?.w) || frameSize.width, height: Number(source?.h) || frameSize.height };
+        const box = autoFitBox(authored, frameSize);
+        onDrag(d.elementId, d.key, ((x - d.applied.x) * frameSize.width) / box.width, ((y - d.applied.y) * frameSize.height) / box.height);
         d.applied = { x, y };
         swallowClick.current = true;
       }
@@ -1141,8 +1208,8 @@ function Monitor({
   );
   const fonts = useMemo(() => fontsFor(detail.meta?.fontFiles, slug, API), [detail.meta, slug]);
   const inputProps = useMemo<MainProps>(
-    () => ({ background: detail.meta?.background ?? BACKGROUND, audio: audioProps, elements: elementProps, transitions: transitionProps, fonts }),
-    [detail.meta, audioProps, elementProps, transitionProps, fonts],
+    () => ({ background: detail.meta?.background ?? BACKGROUND, audio: audioProps, elements: elementProps, transitions: transitionProps, fonts, frame: frameSize }),
+    [detail.meta, audioProps, elementProps, transitionProps, fonts, frameSize],
   );
   const durationInFrames = compositionDurationWithTransitions(elementProps, transitionProps);
 
@@ -1225,7 +1292,8 @@ function Monitor({
   return (
     <section className="flex-1 min-w-0 flex flex-col bg-stage">
       <div className="flex-1 min-h-0 flex items-center justify-center p-6">
-        <div className="w-full max-w-[1400px]" style={{ maxHeight: '100%' }}>
+        {/* M36: the monitor takes the version's ratio; a tall version is limited by height, a wide one by width. */}
+        <div className="w-full max-w-[1400px]" style={{ maxWidth: `min(1400px, calc((100vh - 300px) * ${frameSize.width / frameSize.height}))` }}>
           {/* Program monitor. Nothing sits over the video at rest. */}
           <div
             data-testid="monitor"
@@ -1251,8 +1319,8 @@ function Monitor({
               inputProps={inputProps}
               durationInFrames={durationInFrames}
               fps={compositionConfig.fps}
-              compositionWidth={compositionConfig.width}
-              compositionHeight={compositionConfig.height}
+              compositionWidth={frameSize.width}
+              compositionHeight={frameSize.height}
               initialFrame={initialFrame}
               controls={false}
               clickToPlay={false}
@@ -1340,7 +1408,7 @@ function Monitor({
             <span>Drag a headline or logo to move it · double-click text to type · drop a clip on the footage</span>
             <span className="ml-auto flex gap-3 text-[11px] text-fg-3 tabular-nums">
               <span>
-                {compositionConfig.width}×{compositionConfig.height}
+                {frameSize.width}×{frameSize.height}
               </span>
               <span>{compositionConfig.fps} fps</span>
               <span>{seconds(durationInFrames).toFixed(1)} s</span>

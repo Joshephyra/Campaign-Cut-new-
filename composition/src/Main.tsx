@@ -2,7 +2,9 @@ import { linearTiming, TransitionSeries, type TransitionPresentation } from '@re
 import { fade } from '@remotion/transitions/fade';
 import { slide } from '@remotion/transitions/slide';
 import { wipe } from '@remotion/transitions/wipe';
+import type { CSSProperties } from 'react';
 import { AbsoluteFill, Audio, OffthreadVideo, Sequence } from 'remotion';
+import { autoFitBox, frameFor, isFullBleed, type AutoFitBox, type Frame } from './aspect';
 import { chromaFilter } from './chroma';
 import { PREMOUNT_FRAMES, type MainMedia, type MainProps } from './config';
 import type { ElementProps } from './elements';
@@ -32,17 +34,20 @@ function presentationFor(preset: TransitionPreset): AnyPresentation {
  * inside the element's Sequence, so it starts with the element and its
  * trim is relative to the element's in point.
  */
-function MediaSlot({ media }: { media: MainMedia }) {
+function MediaSlot({ media, box }: { media: MainMedia; box: AutoFitBox | null }) {
   const key = media.key ? chromaFilter(media.key) : null;
+  // M36: in an auto-fitted element, a slot that filled the authored frame
+  // fills the new one; any other slot maps into the element's box.
+  const geometry: CSSProperties =
+    box === null || isFullBleed(media.rect)
+      ? { left: `${media.rect.x * 100}%`, top: `${media.rect.y * 100}%`, width: `${media.rect.w * 100}%`, height: `${media.rect.h * 100}%` }
+      : { left: `${box.left + media.rect.x * box.width}px`, top: `${box.top + media.rect.y * box.height}px`, width: `${media.rect.w * box.width}px`, height: `${media.rect.h * box.height}px` };
   return (
     <div
       data-testid="media-slot"
       style={{
         position: 'absolute',
-        left: `${media.rect.x * 100}%`,
-        top: `${media.rect.y * 100}%`,
-        width: `${media.rect.w * 100}%`,
-        height: `${media.rect.h * 100}%`,
+        ...geometry,
         overflow: 'hidden',
         // Letterbox bars are black; with a key the background must show through the keyed pixels.
         backgroundColor: key ? 'transparent' : '#000000',
@@ -72,12 +77,27 @@ function MediaSlot({ media }: { media: MainMedia }) {
   );
 }
 
-/** One element as it plays: its footage (below) and its Lottie (above). */
-function ElementView({ element }: { element: ElementProps }) {
+/**
+ * One element as it plays: its footage (below) and its Lottie (above).
+ * M36: an element authored at another size than the frame (a 16:9 element
+ * in a 9:16 spot with no designer variant) is auto-fitted: contained and
+ * centred in a box, in pixels of the frame. Authored at the frame's size,
+ * it draws full-frame as always.
+ */
+function ElementView({ element, frame }: { element: ElementProps; frame: Frame }) {
+  const authored = { width: Number(element.lottie.w) || frame.width, height: Number(element.lottie.h) || frame.height };
+  const fitted = authored.width !== frame.width || authored.height !== frame.height;
+  const box = fitted ? autoFitBox(authored, frame) : null;
   return (
     <>
-      {element.media && <MediaSlot media={element.media} />}
-      <LottieLayer animationData={element.lottie} elementId={element.id} />
+      {element.media && <MediaSlot media={element.media} box={box} />}
+      {box ? (
+        <div data-testid="autofit" style={{ position: 'absolute', left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height: `${box.height}px`, overflow: 'hidden' }}>
+          <LottieLayer animationData={element.lottie} elementId={element.id} />
+        </div>
+      ) : (
+        <LottieLayer animationData={element.lottie} elementId={element.id} />
+      )}
     </>
   );
 }
@@ -93,7 +113,7 @@ function ElementView({ element }: { element: ElementProps }) {
  * A chain is either one element in a Sequence at its in/out points, or
  * several elements joined by transitions, rendered with TransitionSeries.
  */
-export function Main({ background, audio = null, elements, transitions = [], fonts = [] }: MainProps) {
+export function Main({ background, audio = null, elements, transitions = [], fonts = [], frame = frameFor('16:9') }: MainProps) {
   const byId = new Map(elements.map((e) => [e.id, e] as const));
   const { chains } = effectiveTimeline(elements, transitions);
 
@@ -114,7 +134,7 @@ export function Main({ background, audio = null, elements, transitions = [], fon
               durationInFrames={chain.durationInFrames}
               premountFor={PREMOUNT_FRAMES}
             >
-              <ElementView element={first} />
+              <ElementView element={first} frame={frame} />
             </Sequence>
           );
         }
@@ -130,7 +150,7 @@ export function Main({ background, audio = null, elements, transitions = [], fon
               {members.flatMap((element, index) => {
                 const parts = [
                   <TransitionSeries.Sequence key={element.id} durationInFrames={element.endFrame - element.startFrame}>
-                    <ElementView element={element} />
+                    <ElementView element={element} frame={frame} />
                   </TransitionSeries.Sequence>,
                 ];
                 const t = chain.transitions[index];

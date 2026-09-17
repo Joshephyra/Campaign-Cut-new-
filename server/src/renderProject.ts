@@ -2,6 +2,8 @@ import {
   applyLottieValues,
   compositionConfig,
   fontsFor,
+  frameFor,
+  isAspect,
   isChromaKey,
   isMediaValue,
   mediaFillRect,
@@ -51,7 +53,10 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase, run
   const fonts = fontsFor(projectFontFiles(templatesDir, project.templateSlug, rows), project.templateSlug, serverBase);
   const background = meta.background ?? DEFAULT_BACKGROUND;
 
-  const files = new Map(rows.map((e) => [e.id, loadElementFiles(templatesDir, e.templateSlug, e.slug)] as const));
+  // M36: the spot's aspect picks each element's files (a designer variant where one exists) and the frame.
+  const aspect = isAspect(project.aspect) ? project.aspect : '16:9';
+  const frame = frameFor(aspect);
+  const files = new Map(rows.map((e) => [e.id, loadElementFiles(templatesDir, e.templateSlug, e.slug, aspect)] as const));
   const valuesFor = (elementId: number): ParamValues => {
     const raw: ParamValues = {};
     for (const v of project.values) if (v.elementId === elementId) raw[v.key] = v.value;
@@ -89,7 +94,7 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase, run
 
   const elements = rows.map((e) => {
     const { lottie: source, schema } = files.get(e.id)!;
-    const resolvedSource = resolveLottieAssets(source, `${serverBase}${elementBaseUrl(templatesDir, e.templateSlug, e.slug)}`);
+    const resolvedSource = resolveLottieAssets(source, `${serverBase}${elementBaseUrl(templatesDir, e.templateSlug, e.slug, aspect)}`);
     const values = withBaseUrl(valuesFor(e.id), schema, serverBase);
     const lottie = applyLottieValues(resolvedSource, values, schema);
     return { id: String(e.id), lottie, startFrame: e.startFrame, endFrame: e.endFrame, zIndex: e.zIndex, enabled: e.enabled, media: mediaFor(e.id, source, schema) };
@@ -101,7 +106,7 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase, run
     durationInFrames: t.durationInFrames,
   }));
 
-  return { background, audio, elements, transitions, fonts };
+  return { background, audio, elements, transitions, fonts, frame };
 }
 
 /**
