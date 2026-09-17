@@ -69,15 +69,15 @@ describe('Editor undo and redo', () => {
     await waitFor(() => expect(playerHeadline()).toBe('VOTE'));
   });
 
-  it('undoes a timeline move and saves the old in and out points', async () => {
+  it('undoes hiding an element and saves it shown again', async () => {
     const calls = mockApi();
     render(<Editor projectId={7} onBack={() => {}} />);
-    await waitFor(() => expect(screen.getByLabelText('Toggle demo')).toBeTruthy());
-    fireEvent.click(screen.getByLabelText('Toggle demo')); // off
+    await waitFor(() => expect(screen.getByLabelText('Toggle Demo')).toBeTruthy());
+    fireEvent.click(screen.getByLabelText('Toggle Demo')); // off
     await waitFor(() => expect(calls.some((c) => c.url === '/api/projects/7/elements/3' && (c.init!.body as string).includes('"enabled":false'))).toBe(true));
 
     fireEvent.click(screen.getByLabelText('Undo'));
-    expect((screen.getByLabelText('Toggle demo') as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByLabelText('Toggle Demo') as HTMLInputElement).checked).toBe(true);
     await waitFor(() => {
       const last = calls.filter((c) => c.url === '/api/projects/7/elements/3').at(-1)!;
       expect(JSON.parse(last.init!.body as string)).toMatchObject({ enabled: true });

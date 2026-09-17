@@ -3,6 +3,7 @@ import {
   compositionConfig,
   compositionDurationWithTransitions,
   DEFAULT_TRANSFORM,
+  DEFAULT_TRANSITION_FRAMES,
   EMPTY_LOTTIE,
   fontsFor,
   isChromaKey,
@@ -13,6 +14,7 @@ import {
   mediaSourceFor,
   mediaTiming,
   resolveLottieAssets,
+  TRANSITION_PRESETS,
   withBaseUrl,
   type ElementProps,
   type LottieAnimationData,
@@ -24,14 +26,24 @@ import {
   type TransitionProps,
 } from '@campaigncut/composition';
 import { Player, type PlayerRef } from '@remotion/player';
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { ChevronLeft, EyeOff, Maximize2, Pause, Pencil, Play, Redo2, Undo2, Volume2, VolumeX } from 'lucide-react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type DragEvent as ReactDragEvent,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import { API, api, type MediaAsset, type ProjectAudio, type ProjectDetail, type ProjectElement, type ProjectTransition } from '../api';
-import { AudioPanel } from '../components/AudioPanel';
 import { ExportHistory } from '../components/ExportHistory';
 import { ExportPanel } from '../components/ExportPanel';
 import { Inspector } from '../components/Inspector';
-import { MediaPanel } from '../components/MediaPanel';
-import { Timeline, type ElementPatch } from '../components/Timeline';
+import { ASSET_DRAG_TYPE, MediaPanel } from '../components/MediaPanel';
+import { IconButton, Section, Segmented, Slider, Switch, Wordmark } from '../components/ui';
 import { canRedo, canUndo, createHistory, isTextEntry, pushHistory, redoHistory, undoHistory, undoRedoFor, type History } from '../history';
 import { findLayerBoxes, pickLayer, type Box } from '../monitorHit';
 import { measurePlayback, type PlaybackSummary } from '../perf';
@@ -55,15 +67,39 @@ type Loaded = { detail: ProjectDetail; lotties: Lotties };
 type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
 /** M23: everything undo can bring back. */
 type Snapshot = { values: ValuesByElement; elements: ProjectElement[]; transitions: ProjectTransition[]; audio: ProjectAudio | null };
+/** M30: a patch to an element's timing or visibility. */
+type ElementPatch = Partial<Pick<ProjectElement, 'startFrame' | 'endFrame' | 'enabled'>>;
 
 /** Elements as they play: earliest first, then bottom of the stack first. */
 function inStartOrder<T extends { startFrame: number; zIndex: number }>(elements: T[]): T[] {
   return [...elements].sort((a, b) => a.startFrame - b.startFrame || a.zIndex - b.zIndex);
 }
 
-/** The element whose media slot the Footage panel drives: the first, in start order, that has one. */
+/** The element whose media slot the library drives: the first, in start order, that has one. */
 function mediaElementOf(elements: ProjectElement[]): ProjectElement | undefined {
   return inStartOrder(elements).find((e) => e.schema.some((p) => p.kind === 'media'));
+}
+
+/** Boundaries exist between consecutive ENABLED elements in start order; a transition lives on each. */
+function boundariesAfter(elements: ProjectElement[]): Set<number> {
+  const inOrder = inStartOrder(elements.filter((e) => e.enabled));
+  return new Set(inOrder.slice(0, -1).map((e) => e.id));
+}
+
+const seconds = (frames: number) => frames / compositionConfig.fps;
+
+/**
+ * M30: the frame to show a scene on. Frame 0 of a scene is the start of its
+ * entrance, usually empty; a second in (or the middle of a short scene) the
+ * design is on screen and there is something to press.
+ */
+export function holdFrame(e: { startFrame: number; endFrame: number }): number {
+  return e.startFrame + Math.min(compositionConfig.fps, Math.floor((e.endFrame - e.startFrame) / 2));
+}
+
+/** Seconds with tenths for the transport, the same format the chips and the panel use. */
+function clock(frames: number): string {
+  return `${seconds(Math.max(0, frames)).toFixed(1)} s`;
 }
 
 export function Editor({ projectId, onBack }: Props) {
@@ -129,13 +165,23 @@ export function Editor({ projectId, onBack }: Props) {
     };
   }, [projectId]);
 
-  const refreshAssets = useCallback(() => {
-    api
-      .media()
-      .then(setAssets)
-      .catch(() => setAssets([]));
-  }, []);
-  useEffect(refreshAssets, [refreshAssets]);
+  const refreshAssets = useCallback(
+    () =>
+      api
+        .media()
+        .then((list) => {
+          setAssets(list);
+          return list;
+        })
+        .catch(() => {
+          setAssets([]);
+          return [] as MediaAsset[];
+        }),
+    [],
+  );
+  useEffect(() => {
+    void refreshAssets();
+  }, [refreshAssets]);
 
   // Persist changed values, debounced. Only the keys that changed are sent, each with its element.
   const lastSaved = useRef<ValuesByElement | null>(null);
@@ -169,14 +215,10 @@ export function Editor({ projectId, onBack }: Props) {
     return () => clearTimeout(timer);
   }, [values, loaded, projectId]);
 
-  // Persist element moves and toggles, debounced per element.
+  // Persist element timing and visibility, debounced per element.
   const pendingPatches = useRef(new Map<number, ElementPatch>());
   const patchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onElementChange = (id: number, patch: ElementPatch) => {
-    changeKey.current = `element:${id}`;
-    setElements((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
-    pendingPatches.current.set(id, { ...pendingPatches.current.get(id), ...patch });
-    setSaveState('dirty');
+  const flushPatches = () => {
     if (patchTimer.current) clearTimeout(patchTimer.current);
     patchTimer.current = setTimeout(async () => {
       const batch = Array.from(pendingPatches.current.entries());
@@ -189,6 +231,37 @@ export function Editor({ projectId, onBack }: Props) {
         setSaveState('error');
       }
     }, SAVE_DEBOUNCE_MS);
+  };
+  const onElementChange = (id: number, patch: ElementPatch) => {
+    changeKey.current = `element:${id}`;
+    setElements((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+    pendingPatches.current.set(id, { ...pendingPatches.current.get(id), ...patch });
+    setSaveState('dirty');
+    flushPatches();
+  };
+
+  /**
+   * M30: make an element longer or shorter. Everything that started after
+   * it ended moves with its end, so the spot stays as the designer paced
+   * it; an element that overlapped it keeps its place.
+   */
+  const onLengthChange = (id: number, frames: number) => {
+    const target = elements.find((e) => e.id === id);
+    if (!target) return;
+    const oldEnd = target.endFrame;
+    const newEnd = target.startFrame + Math.max(1, Math.round(frames));
+    const delta = newEnd - oldEnd;
+    if (delta === 0) return;
+    changeKey.current = `length:${id}`;
+    const patches = new Map<number, ElementPatch>();
+    patches.set(id, { startFrame: target.startFrame, endFrame: newEnd });
+    for (const e of elements) {
+      if (e.id !== id && e.startFrame >= oldEnd) patches.set(e.id, { startFrame: e.startFrame + delta, endFrame: e.endFrame + delta });
+    }
+    setElements((prev) => prev.map((e) => (patches.has(e.id) ? { ...e, ...patches.get(e.id) } : e)));
+    for (const [elementId, patch] of patches) pendingPatches.current.set(elementId, { ...pendingPatches.current.get(elementId), ...patch });
+    setSaveState('dirty');
+    flushPatches();
   };
 
   /** Choose the transition after an element. Saved immediately; a cut removes the row. */
@@ -265,7 +338,7 @@ export function Editor({ projectId, onBack }: Props) {
   };
   const undoRef = useRef({ undo, redo });
   undoRef.current = { undo, redo };
-  // M25: arrow keys nudge the placement being dragged (half a percent of the frame, 2% with Shift).
+  // M25: arrow keys nudge the active placement (half a percent of the frame, 2% with Shift).
   const nudgeRef = useRef<((dx: number, dy: number) => void) | null>(null);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -300,10 +373,15 @@ export function Editor({ projectId, onBack }: Props) {
     changeKey.current = changed ? `${selected.id}:${changed}` : null;
     setValues({ ...values, [selected.id]: next });
   };
+  /** One value of one element, from the monitor (typing on the video, dropping a clip). */
+  const setElementValue = (elementId: number, key: string, value: unknown) => {
+    changeKey.current = `${elementId}:${key}`;
+    setValues((prev) => ({ ...prev, [elementId]: { ...prev[elementId], [key]: value } }));
+  };
 
   // M28: the placement last pressed on the monitor. Dragging adds the
   // fraction of the monitor travelled to that layer's offset; arrow keys
-  // nudge it. Choosing another element in the inspector lets it go.
+  // nudge it. Choosing another element in the panel lets it go.
   const [active, setActive] = useState<{ elementId: number; key: string } | null>(null);
   useEffect(() => setActive((a) => (a && a.elementId !== selectedId ? null : a)), [selectedId]);
   const onPress = (elementId: number, key: string) => {
@@ -321,25 +399,26 @@ export function Editor({ projectId, onBack }: Props) {
   nudgeRef.current = active ? (dx, dy) => onDrag(active.elementId, active.key, dx, dy) : null;
   const schemaFor = useCallback((elementId: number) => elements.find((e) => e.id === elementId)?.schema, [elements]);
 
+  /** M30: a clip lands in an element's slot, from a press in the library or a drop on the video. */
+  const assignClip = (element: ProjectElement, assetId: number) => {
+    const mediaParam = element.schema.find((p) => p.kind === 'media');
+    if (!mediaParam) return;
+    const current = values[element.id]?.[mediaParam.key];
+    setElementValue(element.id, mediaParam.key, { assetId, fit: isMediaValue(current) ? current.fit : 'cover' });
+  };
+
   /**
-   * The Footage panel's "use this clip" goes to the SELECTED element when it
-   * has a cc.mediaFill slot, else to the first element that does (M21).
+   * The library's press goes to the SELECTED element when it has a
+   * cc.mediaFill slot, else to the first element that does (M21).
    */
   const mediaElement = selected?.schema.some((p) => p.kind === 'media') ? selected : mediaElementOf(elements);
   const mediaParam = mediaElement?.schema.find((p) => p.kind === 'media');
   const selectFootage = (asset: MediaAsset) => {
-    // M20: an audio row in the Footage panel picks the music bed, not the slot.
     if (asset.kind === 'audio') {
       void onAudioChange({ assetId: asset.id, volume: audio?.volume ?? 1, inS: audio?.inS ?? 0 });
       return;
     }
-    if (!mediaElement || !mediaParam) return;
-    const current = values[mediaElement.id]?.[mediaParam.key];
-    changeKey.current = `${mediaElement.id}:${mediaParam.key}`;
-    setValues({
-      ...values,
-      [mediaElement.id]: { ...values[mediaElement.id], [mediaParam.key]: { assetId: asset.id, fit: isMediaValue(current) ? current.fit : 'cover' } },
-    });
+    if (mediaElement) assignClip(mediaElement, asset.id);
   };
 
   const selectedAssetId = (() => {
@@ -347,52 +426,46 @@ export function Editor({ projectId, onBack }: Props) {
     return isMediaValue(v) ? v.assetId : undefined;
   })();
 
+  const boundaries = boundariesAfter(elements);
+
   return (
-    <main className="min-h-screen bg-ink text-fg flex flex-col">
-      <header className="border-b border-hairline px-6 h-14 flex items-center justify-between shrink-0 gap-6">
-        <div className="flex items-center gap-5 min-w-0">
-          <button type="button" onClick={onBack} className="text-xs text-muted hover:text-fg shrink-0">
-            ← Library
+    <main className="h-screen bg-bg text-fg flex flex-col overflow-hidden">
+      <header className="h-[52px] px-4 flex items-center justify-between shrink-0 gap-4 border-b border-line bg-panel">
+        <div className="flex items-center gap-3 min-w-0 w-[280px] shrink-0">
+          <button type="button" onClick={onBack} className="inline-flex items-center gap-0.5 h-8 pl-1 pr-2 rounded-md text-xs font-medium text-fg-2 hover:text-fg hover:bg-hover transition-colors">
+            <ChevronLeft size={16} strokeWidth={1.75} aria-hidden="true" />
+            Library
           </button>
-          <div className="w-px h-5 bg-hairline shrink-0" aria-hidden="true" />
-          <ProjectName
-            name={loaded?.detail.project.name ?? null}
-            templateName={loaded?.detail.template.name ?? null}
-            onRename={async (name) => {
-              const row = await api.renameProject(projectId, name);
-              setLoaded((prev) => (prev ? { ...prev, detail: { ...prev.detail, project: { ...prev.detail.project, name: row.name } } } : prev));
-            }}
-          />
+          <Wordmark className="hidden xl:inline-flex" />
         </div>
-        <div className="flex items-center gap-5 shrink-0">
+        <ProjectName
+          name={loaded?.detail.project.name ?? null}
+          templateName={loaded?.detail.template.name ?? null}
+          onRename={async (name) => {
+            const row = await api.renameProject(projectId, name);
+            setLoaded((prev) => (prev ? { ...prev, detail: { ...prev.detail, project: { ...prev.detail.project, name: row.name } } } : prev));
+          }}
+        />
+        <div className="flex items-center gap-3 shrink-0 justify-end">
           {loaded && (
-            <span className="flex border border-hairline text-xs">
-              <button type="button" aria-label="Undo" title="Undo (Ctrl+Z)" onClick={undo} disabled={!undoAvailable} className="px-2.5 py-1 text-muted hover:text-fg disabled:opacity-40">
-                Undo
-              </button>
-              <button
-                type="button"
-                aria-label="Redo"
-                title="Redo (Ctrl+Shift+Z)"
-                onClick={redo}
-                disabled={!redoAvailable}
-                className="px-2.5 py-1 text-muted hover:text-fg disabled:opacity-40 border-l border-hairline"
-              >
-                Redo
-              </button>
+            <span className="inline-flex items-center rounded-md bg-raised border border-line p-0.5">
+              <IconButton label="Undo" title="Undo (Ctrl+Z)" icon={Undo2} onClick={undo} disabled={!undoAvailable} className="!w-7 !h-7" />
+              <IconButton label="Redo" title="Redo (Ctrl+Shift+Z)" icon={Redo2} onClick={redo} disabled={!redoAvailable} className="!w-7 !h-7" />
             </span>
           )}
-          <span className="font-mono text-xs w-20 text-right">
-            <SaveIndicator state={saveState} />
-          </span>
+          <span className="text-xs w-20 text-right">{loaded && <SaveIndicator state={saveState} />}</span>
           {loaded && <ExportPanel projectId={projectId} onFinished={() => setExportsTick((t) => t + 1)} />}
         </div>
       </header>
 
-      {error && <p className="font-mono text-xs text-danger p-8">Could not open the project: {error}</p>}
-      {!loaded && !error && <p className="font-mono text-xs text-muted p-8">Loading…</p>}
+      {error && <p className="text-xs text-red p-8">Could not open the project: {error}</p>}
+      {!loaded && !error && <p className="text-xs text-fg-3 p-8">Loading…</p>}
       {loaded && (
         <div className="flex flex-1 min-h-0">
+          <aside className="w-[280px] shrink-0 border-r border-line bg-panel overflow-y-auto">
+            <MediaPanel onSelect={selectFootage} selectedId={selectedAssetId} onChange={setAssets} audio={audio} onAudioChange={onAudioChange} />
+          </aside>
+
           <Monitor
             loaded={loaded}
             values={values}
@@ -402,59 +475,123 @@ export function Editor({ projectId, onBack }: Props) {
             assets={assets}
             selectedId={selected?.id}
             onSelect={setSelectedId}
-            onElementChange={onElementChange}
-            onTransitionChange={onTransitionChange}
             schemaFor={schemaFor}
             onPress={onPress}
             onDrag={onDrag}
+            onTextEdit={setElementValue}
+            onDropAsset={(elementId, assetId) => {
+              const element = elements.find((e) => e.id === elementId);
+              if (element) {
+                setSelectedId(elementId);
+                assignClip(element, assetId);
+              }
+            }}
+            onDropFile={async (elementId, file) => {
+              const uploaded = await api.uploadMedia(file);
+              const list = await refreshAssets();
+              const element = elements.find((e) => e.id === elementId);
+              const asset = list.find((a) => a.id === uploaded.id) ?? uploaded;
+              if (element && asset.kind !== 'audio') {
+                setSelectedId(elementId);
+                assignClip(element, asset.id);
+              }
+            }}
           />
-          <aside className="w-[22rem] border-l border-hairline shrink-0 overflow-y-auto">
-            <div className="px-6 py-5 border-b border-hairline">
-              {elements.length > 1 ? (
-                <div className="flex flex-wrap border border-hairline mb-5" role="tablist" aria-label="Elements">
-                  {inStartOrder(elements).map((e) => (
-                    <button
-                      key={e.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={e.id === selected?.id}
-                      data-testid={`element-tab-${e.id}`}
-                      onClick={() => setSelectedId(e.id)}
-                      className={`text-xs px-3 py-1.5 -mb-px -mr-px border-b border-r border-hairline ${e.id === selected?.id ? 'bg-cobalt text-white' : 'text-muted hover:text-fg'}`}
-                    >
-                      {e.name}
-                    </button>
-                  ))}
+
+          <aside className="w-[320px] shrink-0 border-l border-line bg-panel overflow-y-auto">
+            {selected && (
+              <>
+                <div className="px-5 pt-4 pb-3 border-b border-line flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <h2 className="text-lg font-semibold tracking-tight truncate">{selected.name}</h2>
+                    <p className="text-[11px] text-fg-3 tabular-nums">
+                      {seconds(selected.startFrame).toFixed(1)} s to {seconds(selected.endFrame).toFixed(1)} s
+                    </p>
+                  </div>
+                  <label className="flex items-center gap-2 text-xs text-fg-2 shrink-0">
+                    Show
+                    <Switch label={`Toggle ${selected.name}`} checked={selected.enabled} onChange={(enabled) => onElementChange(selected.id, { enabled })} />
+                  </label>
                 </div>
-              ) : (
-                <h2 className="text-[11px] uppercase tracking-[0.2em] text-muted mb-4">{selected?.name ?? 'Element'}</h2>
-              )}
-              {selected && (
-                <Inspector
-                  key={selected.id}
-                  schema={selected.schema}
-                  values={values[selected.id] ?? {}}
-                  onChange={setSelectedValues}
-                  assets={assets}
-                  templateSlug={loaded.detail.template.slug}
-                  elementBaseUrl={selected.lottieUrl.replace(/\/template\.json$/, '')}
-                  activeKey={active && active.elementId === selected.id ? active.key : null}
-                />
-              )}
-            </div>
-            <div className="px-6 py-5 border-b border-hairline">
-              <MediaPanel onSelect={selectFootage} selectedId={selectedAssetId} onChange={setAssets} />
-            </div>
-            <div className="px-6 py-5 border-b border-hairline">
-              <AudioPanel assets={assets} audio={audio} onChange={onAudioChange} />
-            </div>
-            <div className="px-6 py-5">
+                <div className="px-5 py-4 border-b border-line">
+                  <Inspector
+                    key={selected.id}
+                    schema={selected.schema}
+                    values={values[selected.id] ?? {}}
+                    onChange={setSelectedValues}
+                    assets={assets}
+                    templateSlug={loaded.detail.template.slug}
+                    elementBaseUrl={selected.lottieUrl.replace(/\/template\.json$/, '')}
+                    activeKey={active && active.elementId === selected.id ? active.key : null}
+                  />
+                </div>
+                <Section title="Timing">
+                  <Slider
+                    label={`${selected.name} length`}
+                    name="Length"
+                    min={1}
+                    max={Math.max(10, Math.ceil(seconds(selected.endFrame - selected.startFrame) * 2))}
+                    step={0.5}
+                    value={Math.round(seconds(selected.endFrame - selected.startFrame) * 2) / 2}
+                    format={(v) => `${v.toFixed(1)} s`}
+                    onChange={(s) => onLengthChange(selected.id, s * compositionConfig.fps)}
+                  />
+                  <p className="text-[11px] text-fg-3 mt-1.5">Lengthen it when the footage needs more room. What follows moves with it.</p>
+                </Section>
+                {boundaries.has(selected.id) && (
+                  <Section title="How it ends">
+                    <TransitionControl element={selected} transition={transitions.find((t) => t.afterElementId === selected.id)} onChange={(t) => void onTransitionChange(selected.id, t)} />
+                  </Section>
+                )}
+              </>
+            )}
+            <Section title="Exports">
               <ExportHistory projectId={projectId} refreshKey={exportsTick} />
-            </div>
+            </Section>
           </aside>
         </div>
       )}
     </main>
+  );
+}
+
+const PRESET_LABEL: Record<TransitionPreset, string> = { cut: 'Cut', fade: 'Fade', wipe: 'Wipe', slide: 'Slide' };
+
+/** M30: the transition on the boundary after an element, in its panel: a segmented row and a length slider in seconds. */
+function TransitionControl({
+  element,
+  transition,
+  onChange,
+}: {
+  element: ProjectElement;
+  transition: ProjectTransition | undefined;
+  onChange: (t: { preset: TransitionPreset; durationInFrames: number }) => void;
+}) {
+  const preset = transition?.preset ?? 'cut';
+  const length = transition?.durationInFrames ?? DEFAULT_TRANSITION_FRAMES;
+  return (
+    <div className="flex flex-col gap-3">
+      <Segmented
+        label={`Transition after ${element.slug}`}
+        size="sm"
+        value={preset}
+        options={TRANSITION_PRESETS.map((p) => ({ value: p, label: PRESET_LABEL[p] }))}
+        onChange={(p) => onChange({ preset: p, durationInFrames: length })}
+        className="w-full [&>button]:flex-1"
+      />
+      {preset !== 'cut' && (
+        <Slider
+          label={`Transition length after ${element.slug}`}
+          name="Over"
+          min={3}
+          max={Math.max(60, length)}
+          step={1}
+          value={length}
+          format={(v) => `${seconds(v).toFixed(1)} s`}
+          onChange={(n) => onChange({ preset, durationInFrames: Math.max(1, Math.round(n) || 1) })}
+        />
+      )}
+    </div>
   );
 }
 
@@ -485,37 +622,41 @@ function ProjectName({ name, templateName, onRename }: { name: string | null; te
           if (e.key === 'Escape') setEditing(false);
         }}
         onBlur={() => void commit()}
-        className="bg-panel border border-cobalt px-2 py-0.5 text-sm text-fg focus:outline-none"
+        className="field max-w-sm !py-1.5 text-center font-semibold"
       />
     );
   }
   return (
-    <h1 className="text-sm font-semibold tracking-tight flex items-baseline gap-3 min-w-0">
+    <h1 className="text-[13px] font-semibold tracking-tight flex items-center justify-center gap-2 min-w-0 flex-1">
       <span className="truncate">{name ?? '…'}</span>
-      {templateName && <span className="text-xs font-normal text-muted truncate">{templateName}</span>}
+      {templateName && (
+        <>
+          <span aria-hidden="true" className="text-fg-3 font-normal">
+            ·
+          </span>
+          <span className="text-xs font-normal text-fg-3 truncate">{templateName}</span>
+        </>
+      )}
       {name !== null && (
-        <button
-          type="button"
-          aria-label="Rename project"
+        <IconButton
+          label="Rename project"
+          icon={Pencil}
+          className="!w-7 !h-7 shrink-0"
           onClick={() => {
             setDraft(name);
             setError(null);
             setEditing(true);
           }}
-          className="text-xs font-normal text-muted hover:text-fg shrink-0"
-        >
-          Rename
-        </button>
+        />
       )}
-      {error && <span className="font-mono text-[10px] font-normal text-danger">{error}</span>}
+      {error && <span className="text-[11px] font-normal text-red">{error}</span>}
     </h1>
   );
 }
 
 function SaveIndicator({ state }: { state: SaveState }) {
-  if (state === 'idle') return null;
-  const text = { dirty: 'Unsaved', saving: 'Saving…', saved: 'Saved', error: 'Save failed' }[state];
-  const colour = state === 'error' ? 'text-danger' : state === 'saved' ? 'text-muted' : 'text-cobalt';
+  const text = { idle: 'Saved', dirty: 'Unsaved', saving: 'Saving…', saved: 'Saved', error: 'Save failed' }[state];
+  const colour = state === 'error' ? 'text-red' : state === 'saved' || state === 'idle' ? 'text-fg-3' : 'text-blue';
   return <span className={colour}>{text}</span>;
 }
 
@@ -528,6 +669,8 @@ function useDebounced<T>(value: T, delay: number): T {
   }, [value, delay]);
   return debounced;
 }
+
+type Outline = { left: number; top: number; width: number; height: number };
 
 /**
  * The PREVIEW RUNNER's props. Same composition as the server, handed the
@@ -544,11 +687,12 @@ function Monitor({
   assets,
   selectedId,
   onSelect,
-  onElementChange,
-  onTransitionChange,
   schemaFor,
   onPress,
   onDrag,
+  onTextEdit,
+  onDropAsset,
+  onDropFile,
 }: {
   loaded: Loaded;
   values: ValuesByElement;
@@ -559,26 +703,31 @@ function Monitor({
   assets: MediaAsset[];
   selectedId: number | undefined;
   onSelect: (id: number) => void;
-  onElementChange: (id: number, patch: ElementPatch) => void;
-  onTransitionChange: (afterElementId: number, t: { preset: TransitionPreset; durationInFrames: number }) => void;
   /** M28: an element's schema, to know which layers on screen are placements. */
   schemaFor: (elementId: number) => TemplateParam[] | undefined;
   /** M28: a press on an editable layer: select its element and make that placement the active one. */
   onPress: (elementId: number, key: string) => void;
   /** Fractions of the monitor the pointer moved since the last call, for one placement. */
   onDrag: (elementId: number, key: string, dx: number, dy: number) => void;
+  /** M30: typing on the video changes one text value. */
+  onTextEdit: (elementId: number, key: string, value: string) => void;
+  /** M30: a library clip dropped on the video lands in this element's slot. */
+  onDropAsset: (elementId: number, assetId: number) => void;
+  /** M30: a file from the desktop dropped on the video is uploaded, then lands in the slot. */
+  onDropFile: (elementId: number, file: File) => Promise<void>;
 }) {
   const { detail, lotties } = loaded;
   const slug = detail.template.slug;
 
   // M28 direct manipulation. A press on an editable layer (found by its box
   // in the rendered SVG) starts a drag; the preview itself is the feedback.
-  // The only thing drawn is a hairline around the layer under the pointer,
-  // while it is under the pointer: nothing at rest.
+  // The only things drawn over the video: a hairline around the layer under
+  // the pointer, the in-place text editor while typing, and the slot's
+  // outline while a clip is dragged over it. Nothing at rest.
   const drag = useRef<{ elementId: number; key: string; originX: number; originY: number; applied: { x: number; y: number }; box: Box } | null>(null);
   const swallowClick = useRef(false);
-  const [outline, setOutline] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
-  const relative = (box: Box, monitor: DOMRect, dx = 0, dy = 0) => ({ left: box.left - monitor.left + dx, top: box.top - monitor.top + dy, width: box.width, height: box.height });
+  const [outline, setOutline] = useState<Outline | null>(null);
+  const relative = (box: Box, monitor: DOMRect, dx = 0, dy = 0): Outline => ({ left: box.left - monitor.left + dx, top: box.top - monitor.top + dy, width: box.width, height: box.height });
   const layerAt = (monitor: HTMLElement, x: number, y: number) => pickLayer(findLayerBoxes(monitor, schemaFor), x, y);
 
   const onMonitorDown = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -638,6 +787,72 @@ function Monitor({
     e.preventDefault();
   };
 
+  // M30: type on the video. A double-click on a text layer opens a field
+  // anchored to that layer; every keystroke reaches the composition.
+  const [editing, setEditing] = useState<{ elementId: number; key: string; label: string; box: Outline; original: string } | null>(null);
+  const onMonitorDoubleClick = (e: ReactMouseEvent<HTMLDivElement>) => {
+    const monitor = e.currentTarget;
+    const hit = layerAt(monitor, e.clientX, e.clientY);
+    if (!hit) return;
+    const schema = schemaFor(hit.elementId) ?? [];
+    const placement = schema.find((p) => p.kind === 'transform' && p.key === hit.key);
+    const text = placement?.for ? schema.find((p) => p.key === placement.for && p.kind === 'text') : undefined;
+    if (!text) return;
+    e.stopPropagation();
+    e.preventDefault();
+    playerRef.current?.pause?.();
+    const current = values[hit.elementId]?.[text.key];
+    const original = typeof current === 'string' ? current : String(text.default ?? '');
+    onSelect(hit.elementId);
+    setEditing({ elementId: hit.elementId, key: text.key, label: text.label, box: relative(hit.rect, monitor.getBoundingClientRect()), original });
+    setOutline(null);
+  };
+  const editingValue = editing ? values[editing.elementId]?.[editing.key] : undefined;
+  const editingText = typeof editingValue === 'string' ? editingValue : (editing?.original ?? '');
+  const editingParam = editing ? schemaFor(editing.elementId)?.find((p) => p.key === editing.key) : undefined;
+
+  // M30: drop a clip on the video. While a library clip (or a video file)
+  // is over the monitor, the footage slot of the scene on screen lights up.
+  const [dropBox, setDropBox] = useState<{ elementId: number; box: Outline; label: string } | null>(null);
+  const [frame, setFrame] = useState(0);
+  const dropTargetAt = (monitorRect: DOMRect) => {
+    const onScreen = [...elements].filter((e) => e.enabled && frame >= e.startFrame && frame < e.endFrame && e.schema.some((p) => p.kind === 'media')).sort((a, b) => b.zIndex - a.zIndex)[0];
+    const target = onScreen ?? mediaElementOf(elements);
+    if (!target) return null;
+    const mediaParam = target.schema.find((p) => p.kind === 'media')!;
+    const source = lotties[target.id];
+    const rect = source ? mediaFillRect(source, mediaParam.path) : null;
+    const box: Outline = rect
+      ? { left: rect.x * monitorRect.width, top: rect.y * monitorRect.height, width: rect.w * monitorRect.width, height: rect.h * monitorRect.height }
+      : { left: 0, top: 0, width: monitorRect.width, height: monitorRect.height };
+    return { elementId: target.id, box, label: `${mediaParam.label} · ${target.name}` };
+  };
+  const carriesClip = (e: ReactDragEvent) => Array.from(e.dataTransfer?.types ?? []).some((t) => t === ASSET_DRAG_TYPE || t === 'Files');
+  const onMonitorDragOver = (e: ReactDragEvent<HTMLDivElement>) => {
+    if (!carriesClip(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    if (!dropBox) setDropBox(dropTargetAt(e.currentTarget.getBoundingClientRect()));
+  };
+  const onMonitorDragLeave = (e: ReactDragEvent<HTMLDivElement>) => {
+    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+    setDropBox(null);
+  };
+  const onMonitorDrop = (e: ReactDragEvent<HTMLDivElement>) => {
+    if (!carriesClip(e)) return;
+    e.preventDefault();
+    const target = dropBox ?? dropTargetAt(e.currentTarget.getBoundingClientRect());
+    setDropBox(null);
+    if (!target) return;
+    const id = Number(e.dataTransfer.getData(ASSET_DRAG_TYPE));
+    if (Number.isFinite(id) && id > 0) {
+      onDropAsset(target.elementId, id);
+      return;
+    }
+    const file = Array.from(e.dataTransfer.files ?? []).find((f) => f.type.startsWith('video/'));
+    if (file) void onDropFile(target.elementId, file);
+  };
+
   const renderedValues = useDebounced(values, RENDER_DEBOUNCE_MS);
 
   /** M21: an element's own footage for its slot, from its own value, at the PREVIEW runner's proxy URL. */
@@ -695,101 +910,246 @@ function Monitor({
   );
   const durationInFrames = compositionDurationWithTransitions(elementProps, transitionProps);
 
-  // Playhead: follow the Player, and drive it when the timeline is scrubbed.
+  // Playhead: follow the Player, and drive it from the scene strip and the
+  // transport. The Player's own chrome is off: the transport is drawn under
+  // the monitor in the world's vocabulary, so nothing sits over the video.
   const playerRef = useRef<PlayerRef>(null);
-  const [frame, setFrame] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [muted, setMuted] = useState(false);
   useEffect(() => {
     const player = playerRef.current;
     if (!player) return;
     const onFrame = (e: { detail: { frame: number } }) => setFrame(e.detail.frame);
+    const onPlay = () => setPlaying(true);
+    const onPause = () => setPlaying(false);
     player.addEventListener('frameupdate', onFrame);
-    return () => player.removeEventListener('frameupdate', onFrame);
+    player.addEventListener('play', onPlay);
+    player.addEventListener('pause', onPause);
+    player.addEventListener('ended', onPause);
+    return () => {
+      player.removeEventListener('frameupdate', onFrame);
+      player.removeEventListener('play', onPlay);
+      player.removeEventListener('pause', onPause);
+      player.removeEventListener('ended', onPause);
+    };
   }, [loaded]);
   const seek = (f: number) => {
     playerRef.current?.seekTo(f);
     setFrame(f);
   };
+  const togglePlay = () => {
+    const player = playerRef.current;
+    if (!player) return;
+    if (player.isPlaying?.()) player.pause();
+    else player.play?.();
+  };
+  const toggleMute = () => {
+    const player = playerRef.current;
+    if (!player) return;
+    if (player.isMuted?.()) player.unmute?.();
+    else player.mute?.();
+    setMuted(player.isMuted?.() ?? !muted);
+  };
+  // Space plays and pauses, outside text fields.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== ' ' || isTextEntry(e.target)) return;
+      e.preventDefault();
+      togglePlay();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+  // Open on a frame where the first scene's design is on screen, not on the empty first frame of its entrance.
+  const firstScene = inStartOrder(elements)[0];
+  const initialFrame = firstScene ? holdFrame(firstScene) : 0;
+  useEffect(() => setFrame(initialFrame), [loaded]); // eslint-disable-line react-hooks/exhaustive-deps -- the opening frame, once
 
   // M12 measurement mode: open the editor with ?perf=<seconds> and the Player
   // is played from the start for that long while frame updates are counted.
-  // The result lands in the footer and on window.__ccPerf for scripts.
+  // The result lands under the monitor and on window.__ccPerf for scripts.
   const [perf, setPerf] = useState<PlaybackSummary | null>(null);
   useEffect(() => {
-    const seconds = Number(new URLSearchParams(window.location.search).get('perf'));
+    const secondsToRun = Number(new URLSearchParams(window.location.search).get('perf'));
     const player = playerRef.current;
-    if (!seconds || !player) return;
+    if (!secondsToRun || !player) return;
     const t = setTimeout(async () => {
-      const result = await measurePlayback(player, seconds, compositionConfig.fps);
+      const result = await measurePlayback(player, secondsToRun, compositionConfig.fps);
       (window as unknown as { __ccPerf?: PlaybackSummary }).__ccPerf = result;
       setPerf(result);
     }, 1500);
     return () => clearTimeout(t);
   }, [loaded]);
 
+  const scenes = inStartOrder(elements);
+  const editorTop = editing ? Math.min(editing.box.top + editing.box.height + 8, Math.max(0, editing.box.top)) : 0;
+
   return (
-    // Program monitor. Nothing ever overlays this visually, with one documented
-    // exception (M28): a hairline around the editable layer under the pointer,
-    // only while it is under the pointer or being dragged. Never a panel.
-    <section className="flex-1 p-8 min-w-0 overflow-y-auto">
-      <div
-        data-testid="monitor"
-        className="relative select-none"
-        style={{ cursor: outline ? 'move' : undefined, touchAction: 'none' }}
-        onPointerDownCapture={onMonitorDown}
-        onPointerMoveCapture={onMonitorMove}
-        onPointerUpCapture={onMonitorUp}
-        onPointerCancelCapture={onMonitorUp}
-        onPointerLeave={() => {
-          if (!drag.current) setOutline(null);
-        }}
-        onClickCapture={onMonitorClick}
-      >
-        <Player
-          ref={playerRef}
-          component={Main}
-          inputProps={inputProps}
-          durationInFrames={durationInFrames}
-          fps={compositionConfig.fps}
-          compositionWidth={compositionConfig.width}
-          compositionHeight={compositionConfig.height}
-          controls
-          loop
-          style={{ width: '100%' }}
-        />
-        {outline && (
+    <section className="flex-1 min-w-0 flex flex-col bg-stage">
+      <div className="flex-1 min-h-0 flex items-center justify-center p-6">
+        <div className="w-full max-w-[1400px]" style={{ maxHeight: '100%' }}>
+          {/* Program monitor. Nothing sits over the video at rest. */}
           <div
-            data-testid="layer-outline"
-            aria-hidden="true"
-            className="absolute border border-cobalt"
-            style={{ pointerEvents: 'none', left: outline.left, top: outline.top, width: outline.width, height: outline.height }}
-          />
-        )}
+            data-testid="monitor"
+            className="relative select-none rounded-lg overflow-hidden bg-black shadow-float"
+            style={{ cursor: outline ? 'move' : undefined, touchAction: 'none' }}
+            onPointerDownCapture={onMonitorDown}
+            onPointerMoveCapture={onMonitorMove}
+            onPointerUpCapture={onMonitorUp}
+            onPointerCancelCapture={onMonitorUp}
+            onPointerLeave={() => {
+              if (!drag.current) setOutline(null);
+            }}
+            onClickCapture={onMonitorClick}
+            onDoubleClickCapture={onMonitorDoubleClick}
+            onDragOver={onMonitorDragOver}
+            onDragEnter={onMonitorDragOver}
+            onDragLeave={onMonitorDragLeave}
+            onDrop={onMonitorDrop}
+          >
+            <Player
+              ref={playerRef}
+              component={Main}
+              inputProps={inputProps}
+              durationInFrames={durationInFrames}
+              fps={compositionConfig.fps}
+              compositionWidth={compositionConfig.width}
+              compositionHeight={compositionConfig.height}
+              initialFrame={initialFrame}
+              controls={false}
+              clickToPlay={false}
+              loop
+              style={{ width: '100%' }}
+            />
+            {outline && !editing && (
+              <div
+                data-testid="layer-outline"
+                aria-hidden="true"
+                className="absolute rounded-xs ring-1 ring-blue ring-inset"
+                style={{ pointerEvents: 'none', left: outline.left, top: outline.top, width: outline.width, height: outline.height }}
+              />
+            )}
+            {dropBox && (
+              <div
+                data-testid="drop-target"
+                aria-hidden="true"
+                className="absolute rounded-md border-2 border-dashed border-blue bg-blue-tint flex items-end justify-start p-2 cc-appear"
+                style={{ pointerEvents: 'none', left: dropBox.box.left, top: dropBox.box.top, width: dropBox.box.width, height: dropBox.box.height }}
+              >
+                <span className="px-2 py-1 rounded-sm bg-blue text-white text-xs font-medium">Drop to use here · {dropBox.label}</span>
+              </div>
+            )}
+            {editing && editingParam && (
+              <div
+                className="absolute z-10 cc-appear"
+                style={{ left: Math.max(8, Math.min(editing.box.left, 100000)), top: editorTop, width: Math.max(260, Math.min(editing.box.width + 24, 520)) }}
+                onPointerDownCapture={(e) => e.stopPropagation()}
+                onDoubleClickCapture={(e) => e.stopPropagation()}
+              >
+                <div className="rounded-lg bg-panel/95 backdrop-blur border border-blue shadow-float p-2">
+                  <textarea
+                    autoFocus
+                    aria-label={`Edit ${editing.label} on the video`}
+                    rows={editingText.length > 40 ? 3 : 1}
+                    value={editingText}
+                    maxLength={editingParam.maxChars}
+                    onChange={(e) => onTextEdit(editing.elementId, editing.key, editingParam.maxChars ? e.target.value.slice(0, editingParam.maxChars) : e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        setEditing(null);
+                      }
+                      if (e.key === 'Escape') {
+                        e.preventDefault();
+                        onTextEdit(editing.elementId, editing.key, editing.original);
+                        setEditing(null);
+                      }
+                    }}
+                    onBlur={() => setEditing(null)}
+                    className="w-full resize-none bg-transparent text-[15px] font-medium text-fg outline-none px-1.5 py-1"
+                  />
+                  <div className="flex items-center justify-between px-1.5 pt-1 text-[11px] text-fg-3">
+                    <span>{editing.label}</span>
+                    <span>
+                      Enter to finish · Esc to cancel{editingParam.maxChars ? ` · ${editingText.length}/${editingParam.maxChars}` : ''}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          {/* The transport, in the world's vocabulary, under the video rather than on it. */}
+          <div className="mt-3 flex items-center gap-3">
+            <IconButton label={playing ? 'Pause' : 'Play'} title={playing ? 'Pause (Space)' : 'Play (Space)'} icon={playing ? Pause : Play} onClick={togglePlay} className="!w-9 !h-9 bg-blue text-white hover:bg-blue-hover hover:text-white shrink-0" />
+            <span className="text-xs text-fg tabular-nums shrink-0 w-24">
+              {clock(frame)} <span className="text-fg-3">/ {clock(durationInFrames)}</span>
+            </span>
+            <input
+              type="range"
+              className="slider flex-1 min-w-0"
+              aria-label="Scrub"
+              min={0}
+              max={Math.max(1, durationInFrames - 1)}
+              step={1}
+              value={Math.min(frame, Math.max(0, durationInFrames - 1))}
+              style={{ '--p': `${(Math.min(frame, durationInFrames) / Math.max(1, durationInFrames)) * 100}%` } as CSSProperties}
+              onChange={(e) => seek(Number(e.target.value))}
+            />
+            <IconButton label={muted ? 'Unmute' : 'Mute'} icon={muted ? VolumeX : Volume2} onClick={toggleMute} className="shrink-0" />
+            <IconButton label="Full screen" icon={Maximize2} onClick={() => playerRef.current?.requestFullscreen?.()} className="shrink-0" />
+          </div>
+          <p className="text-xs text-fg-2 mt-2 flex flex-wrap gap-x-4 gap-y-1">
+            <span>Drag a headline or logo to move it · double-click text to type · drop a clip on the footage</span>
+            <span className="ml-auto flex gap-3 text-[11px] text-fg-3 tabular-nums">
+              <span>
+                {compositionConfig.width}×{compositionConfig.height}
+              </span>
+              <span>{compositionConfig.fps} fps</span>
+              <span>{seconds(durationInFrames).toFixed(1)} s</span>
+              {hasFootage && <span>preview at proxy quality</span>}
+            </span>
+            {perf && (
+              <span data-testid="perf-result" className={perf.meetsTarget ? 'text-green w-full' : 'text-red w-full'}>
+                measured {perf.fps.toFixed(1)} fps over {perf.seconds.toFixed(1)} s, {perf.droppedFrames} dropped, worst gap {Math.round(perf.worstGapMs)} ms
+              </span>
+            )}
+          </p>
+        </div>
       </div>
-      <p className="font-mono text-[11px] text-muted mt-3 flex gap-4">
-        <span>
-          {compositionConfig.width}×{compositionConfig.height}
-        </span>
-        <span>{compositionConfig.fps} fps</span>
-        <span>{(durationInFrames / compositionConfig.fps).toFixed(1)} s</span>
-        {hasFootage && <span>preview footage at proxy quality</span>}
-        {perf && (
-          <span data-testid="perf-result" className={perf.meetsTarget ? ' text-emerald-400' : ' text-danger'}>
-            {' · measured '}{perf.fps.toFixed(1)} fps over {perf.seconds.toFixed(1)} s, {perf.droppedFrames} dropped, worst gap {Math.round(perf.worstGapMs)} ms
-          </span>
-        )}
-      </p>
-      <Timeline
-        elements={elements}
-        fps={compositionConfig.fps}
-        durationInFrames={durationInFrames}
-        frame={frame}
-        onSeek={seek}
-        onChange={onElementChange}
-        transitions={transitions}
-        onTransitionChange={onTransitionChange}
-        selectedId={selectedId}
-        onSelect={onSelect}
-      />
+
+      {/* M30: the scene strip. Press a scene to see it and edit it. */}
+      <div className="shrink-0 border-t border-line bg-panel px-6 py-3 flex items-stretch gap-2 overflow-x-auto">
+        {scenes.map((e) => {
+          const isSelected = e.id === selectedId;
+          const onScreen = e.enabled && frame >= e.startFrame && frame < e.endFrame;
+          return (
+            <button
+              key={e.id}
+              type="button"
+              aria-label={`Select ${e.name}`}
+              data-testid={`scene-${e.id}`}
+              data-selected={isSelected ? 'true' : 'false'}
+              aria-pressed={isSelected}
+              onClick={() => {
+                onSelect(e.id);
+                seek(holdFrame(e));
+              }}
+              style={{ flexGrow: Math.max(1, seconds(e.endFrame - e.startFrame)) }}
+              className={`group basis-0 min-w-28 flex flex-col items-start gap-0.5 rounded-lg px-3 py-2 text-left transition-colors ${
+                onScreen ? 'bg-blue text-white' : 'bg-raised text-fg hover:bg-hover'
+              } ${isSelected ? 'ring-2 ring-blue ring-offset-2 ring-offset-panel' : ''} ${e.enabled ? '' : 'opacity-60'}`}
+            >
+              <span className="flex items-center gap-1.5 text-[13px] font-medium">
+                {e.name}
+                {!e.enabled && <EyeOff size={12} strokeWidth={1.75} aria-hidden="true" className={onScreen ? 'text-white/70' : 'text-fg-3'} />}
+              </span>
+              <span className={`text-[11px] tabular-nums ${onScreen ? 'text-white/75' : 'text-fg-3'}`}>
+                {seconds(e.startFrame).toFixed(1)} s · {seconds(e.endFrame - e.startFrame).toFixed(1)} s long
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </section>
   );
 }

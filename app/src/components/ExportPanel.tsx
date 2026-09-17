@@ -1,5 +1,7 @@
+import { Download, Loader2, Share } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { api, type RenderJob } from '../api';
+import { Button, ICON } from './ui';
 
 type Props = {
   projectId: number;
@@ -50,28 +52,25 @@ export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished }: Pr
   const busy = job !== null && (job.status === 'queued' || job.status === 'rendering');
 
   return (
-    <div className="flex items-center gap-3 font-mono text-xs">
-      {job?.status === 'queued' && <span className="text-muted">Queued</span>}
+    <div className="flex items-center gap-3 text-xs">
+      {job?.status === 'queued' && <span className="text-fg-2">Queued</span>}
       {job?.status === 'rendering' && (
-        <span className="text-cobalt">
-          Rendering <span>{`${Math.round(job.progress * 100)}%`}</span>
+        <span className="inline-flex items-center gap-2 text-fg-2">
+          <Loader2 size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" className="animate-spin text-blue" />
+          Rendering <span className="text-fg tabular-nums">{`${Math.round(job.progress * 100)}%`}</span>
         </span>
       )}
       {job?.status === 'done' && job.outputUrl && (
-        <a href={api.fileUrl(job.outputUrl)} download className="text-cobalt underline underline-offset-2">
+        <a href={api.fileUrl(job.outputUrl)} download className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md text-[13px] font-medium text-fg bg-raised border border-line hover:bg-hover">
+          <Download size={ICON.size} strokeWidth={ICON.strokeWidth} aria-hidden="true" />
           Download MP4
         </a>
       )}
-      {job?.status === 'failed' && <span className="text-danger">Export failed: {job.error ?? 'unknown error'}</span>}
-      {error && <span className="text-danger">{error}</span>}
-      <button
-        type="button"
-        onClick={() => void start()}
-        disabled={busy}
-        className="border border-fg px-4 py-1.5 text-xs font-sans font-semibold text-fg hover:bg-fg hover:text-ink disabled:opacity-50 disabled:cursor-wait"
-      >
+      {job?.status === 'failed' && <span className="text-red max-w-64 truncate" title={job.error ?? ''}>Export failed: {job.error ?? 'unknown error'}</span>}
+      {error && <span className="text-red">{error}</span>}
+      <Button variant="primary" icon={Share} onClick={() => void start()} disabled={busy} className={busy ? 'cursor-wait' : ''}>
         Export MP4
-      </button>
+      </Button>
     </div>
   );
 }

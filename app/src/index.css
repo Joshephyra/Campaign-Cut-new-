@@ -1,57 +1,269 @@
 @import "tailwindcss";
 
-/* Interface fonts. Template fonts are loaded separately (M13). */
+/*
+ * Interface face: Public Sans (the US Web Design System's typeface, SIL OFL),
+ * self-hosted as one variable file. Template fonts are loaded separately (M13).
+ */
 @font-face {
-  font-family: "IBM Plex Sans";
+  font-family: "Public Sans";
   font-style: normal;
-  font-weight: 400;
-  src: url("/fonts/IBMPlexSans-Regular.ttf") format("truetype");
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/PublicSans-Variable.woff2") format("woff2");
 }
 @font-face {
-  font-family: "IBM Plex Sans";
-  font-style: normal;
-  font-weight: 700;
-  src: url("/fonts/IBMPlexSans-Bold.ttf") format("truetype");
-}
-@font-face {
-  font-family: "IBM Plex Mono";
-  font-style: normal;
+  font-family: "Public Sans";
+  font-style: italic;
   font-weight: 400;
-  src: url("/fonts/IBMPlexMono-Regular.ttf") format("truetype");
+  font-display: swap;
+  src: url("/fonts/PublicSans-Italic.woff2") format("woff2");
 }
 
 /*
- * The Console (SPEC.md section 4, DESIGN.md):
- *   hairlines, not cards; no drop shadows; zero border radius;
- *   cobalt only on active states; Plex Sans for interface, Plex Mono for facts.
+ * The world (M30): a dark studio ground so footage colour reads true, two
+ * panel tones and one hairline, one accent (campaign blue) that is filled on
+ * the primary action and the selection and tinted on hover and drop targets.
+ * Red is for danger only. 8 px radius on controls, 12 px on panels.
+ * DESIGN.md records the system; these tokens are its source.
  */
 @theme {
-  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --font-sans: "Public Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 
-  --color-ink: #0b0b0c;
-  --color-panel: #141518;
-  --color-hairline: #26282c;
-  --color-fg: #e6e6e6;
-  --color-muted: #8b8f98;
-  --color-cobalt: #2b54e6;
-  --color-danger: #e0564b;
+  --color-bg: #0b0d12;
+  --color-stage: #07080b;
+  --color-panel: #12151c;
+  --color-raised: #1a1e27;
+  --color-hover: #20252f;
+  --color-line: #262b36;
+  --color-line-strong: #343b48;
+  --color-fg: #f4f6fa;
+  --color-fg-2: #a9b1c1;
+  --color-fg-3: #7f8899;
+  --color-blue: #2f6bff;
+  --color-blue-hover: #4a7eff;
+  --color-blue-deep: #1b48c2;
+  --color-blue-tint: rgba(47, 107, 255, 0.16);
+  --color-red: #e5484d;
+  --color-red-tint: rgba(229, 72, 77, 0.14);
+  --color-green: #3dd68c;
 
-  --radius-xs: 0;
-  --radius-sm: 0;
-  --radius-md: 0;
-  --radius-lg: 0;
-  --radius-xl: 0;
+  /* Names older components still use; all resolve into the same palette. */
+  --color-ink: #0b0d12;
+  --color-hairline: #262b36;
+  --color-muted: #a9b1c1;
+  --color-cobalt: #2f6bff;
+  --color-danger: #e5484d;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --shadow-float: 0 12px 32px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.35);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 html,
 body {
-  background: var(--color-ink);
+  background: var(--color-bg);
   color: var(--color-fg);
   font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "tnum" 1, "cv11" 1;
 }
 
+#root {
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgba(47, 107, 255, 0.35);
+  color: var(--color-fg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Scrollbars belong to the palette, not the platform. */
 * {
-  border-radius: 0;
-  box-shadow: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Text fields */
+.field {
+  width: 100%;
+  background: var(--color-raised);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  color: var(--color-fg);
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+.field::placeholder {
+  color: var(--color-fg-3);
+}
+.field:hover {
+  border-color: var(--color-line-strong);
+}
+.field:focus {
+  outline: none;
+  border-color: var(--color-blue);
+  background: var(--color-panel);
+}
+.field[aria-invalid="true"] {
+  border-color: var(--color-red);
+}
+
+/* Range sliders: a filled track and a round thumb, the same in every browser. */
+input[type="range"].slider {
+  --p: 50%;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 20px;
+  background: transparent;
+  margin: 0;
+  cursor: pointer;
+}
+input[type="range"].slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--color-blue) 0 var(--p), var(--color-line-strong) var(--p) 100%);
+}
+input[type="range"].slider::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-line-strong);
+}
+input[type="range"].slider::-moz-range-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-blue);
+}
+input[type="range"].slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 2px solid var(--color-blue);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  transition: transform 120ms ease;
+}
+input[type="range"].slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 2px solid var(--color-blue);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+input[type="range"].slider:hover::-webkit-slider-thumb,
+input[type="range"].slider:focus-visible::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+input[type="range"].slider:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Switches */
+input[type="checkbox"].switch {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--color-line-strong);
+  position: relative;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+  flex-shrink: 0;
+}
+input[type="checkbox"].switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  transition: transform 150ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+input[type="checkbox"].switch:checked {
+  background: var(--color-blue);
+}
+input[type="checkbox"].switch:checked::after {
+  transform: translateX(14px);
+}
+
+/* Colour swatches */
+input[type="color"].swatch {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: transparent;
+  cursor: pointer;
+  overflow: hidden;
+}
+input[type="color"].swatch::-webkit-color-swatch-wrapper {
+  padding: 3px;
+}
+input[type="color"].swatch::-webkit-color-swatch {
+  border: none;
+  border-radius: 5px;
+}
+input[type="color"].swatch::-moz-color-swatch {
+  border: none;
+  border-radius: 5px;
+}
+
+/* The one authored motion: things that appear on the video ease in from where they are. */
+@keyframes cc-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.cc-appear {
+  animation: cc-appear 160ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cc-appear {
+    animation: none;
+  }
 }

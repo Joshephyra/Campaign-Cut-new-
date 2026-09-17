@@ -91,7 +91,7 @@ describe('Editor with several elements', () => {
     );
   });
 
-  it('selecting the lower third in the timeline switches the inspector to its controls', async () => {
+  it('selecting the lower third in the scene strip switches the inspector to its controls', async () => {
     mockApi();
     render(<Editor projectId={7} onBack={() => {}} />);
     await waitFor(() => expect(screen.getByLabelText('Headline')).toBeTruthy());
@@ -99,14 +99,14 @@ describe('Editor with several elements', () => {
     await waitFor(() => expect(screen.getByLabelText('Subhead')).toBeTruthy());
     expect(screen.queryByLabelText('Headline')).toBeNull();
     expect((screen.getByLabelText('Subhead') as HTMLInputElement).value).toBe('LOWER SAVED');
-    expect(screen.getByTestId('element-row-4').getAttribute('data-selected')).toBe('true');
+    expect(screen.getByTestId('scene-4').getAttribute('data-selected')).toBe('true');
   });
 
   it('the element tabs above the inspector select too, and edits save with that element\'s id', async () => {
     const fetchMock = mockApi();
     render(<Editor projectId={7} onBack={() => {}} />);
     await waitFor(() => expect(screen.getByLabelText('Headline')).toBeTruthy());
-    fireEvent.click(screen.getByTestId('element-tab-4'));
+    fireEvent.click(screen.getByTestId('scene-4'));
     await waitFor(() => expect(screen.getByLabelText('Subhead')).toBeTruthy());
 
     fireEvent.change(screen.getByLabelText('Subhead'), { target: { value: 'NEW LOWER' } });

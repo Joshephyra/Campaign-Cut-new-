@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { Button } from './ui';
 
 type Props = {
   children: ReactNode;
@@ -28,24 +29,24 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (!this.state.error) return this.props.children;
     return (
-      <main role="alert" className="min-h-screen bg-ink text-fg p-8 flex flex-col gap-4 max-w-3xl">
-        <h1 className="text-sm font-semibold tracking-tight">Something went wrong in the editor</h1>
-        <p className="font-mono text-xs text-danger whitespace-pre-wrap">{this.state.error.message}</p>
-        <p className="font-mono text-xs text-muted">Your last saved changes are safe on the server. Reload the page to try again, or go back.</p>
-        <div className="flex gap-3">
-          <button type="button" onClick={() => window.location.reload()} className="border border-hairline px-3 py-1 font-mono text-xs hover:border-cobalt">
-            Reload
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              this.setState({ error: null });
-              this.props.onEscape();
-            }}
-            className="border border-hairline px-3 py-1 font-mono text-xs hover:border-cobalt"
-          >
-            {this.props.escapeLabel}
-          </button>
+      <main role="alert" className="min-h-screen bg-bg text-fg flex items-center justify-center p-8">
+        <div className="w-full max-w-xl rounded-xl bg-panel border border-line p-6 flex flex-col gap-4">
+          <h1 className="text-lg font-semibold tracking-tight">Something went wrong in the editor</h1>
+          <p className="text-xs text-red whitespace-pre-wrap rounded-md bg-red-tint p-3">{this.state.error.message}</p>
+          <p className="text-xs text-fg-2">Your last saved changes are safe on the server. Reload the page to try again, or go back.</p>
+          <div className="flex gap-2">
+            <Button variant="primary" onClick={() => window.location.reload()}>
+              Reload
+            </Button>
+            <Button
+              onClick={() => {
+                this.setState({ error: null });
+                this.props.onEscape();
+              }}
+            >
+              {this.props.escapeLabel}
+            </Button>
+          </div>
         </div>
       </main>
     );

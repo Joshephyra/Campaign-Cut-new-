@@ -1,5 +1,7 @@
+import { Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api, type RenderJob } from '../api';
+import { ICON } from './ui';
 
 type Props = {
   projectId: number;
@@ -28,20 +30,20 @@ export function ExportHistory({ projectId, refreshKey = 0 }: Props) {
 
   return (
     <div>
-      <h2 className="text-[11px] uppercase tracking-[0.2em] text-muted mb-3">Exports</h2>
-      {renders === null && <p className="font-mono text-[10px] text-muted">Loading…</p>}
-      {renders?.length === 0 && <p className="font-mono text-[10px] text-muted">No exports yet. Export MP4 is in the header.</p>}
+      {renders === null && <p className="text-xs text-fg-3">Loading…</p>}
+      {renders?.length === 0 && <p className="text-xs text-fg-2">No exports yet. Export MP4 is in the top bar.</p>}
       {renders && renders.length > 0 && (
-        <ul data-testid="export-history" className="border border-hairline divide-y divide-hairline font-mono text-[11px]">
+        <ul data-testid="export-history" className="flex flex-col gap-1 text-xs">
           {renders.map((r) => (
-            <li key={r.id} className="flex items-center justify-between gap-3 px-2 py-1.5">
-              <span className="text-muted">{(r.updatedAt ?? r.createdAt ?? '').slice(0, 16) || `render ${r.id}`}</span>
+            <li key={r.id} className="flex items-center justify-between gap-3 h-9 px-3 rounded-md bg-raised">
+              <span className="text-fg-2 tabular-nums">{(r.updatedAt ?? r.createdAt ?? '').slice(0, 16) || `render ${r.id}`}</span>
               {r.status === 'done' && r.outputUrl ? (
-                <a href={api.fileUrl(r.outputUrl)} download className="text-cobalt underline underline-offset-2">
+                <a href={api.fileUrl(r.outputUrl)} download className="inline-flex items-center gap-1.5 text-blue hover:text-blue-hover font-medium">
+                  <Download size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" />
                   Download
                 </a>
               ) : (
-                <span className="text-danger truncate" title={r.error ?? ''}>
+                <span className="text-red truncate" title={r.error ?? ''}>
                   failed{r.error ? `: ${r.error}` : ''}
                 </span>
               )}

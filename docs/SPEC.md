@@ -162,33 +162,46 @@ No user table. No workspace table. No permissions table.
 
 ## 4. The editor surface
 
-Three regions.
+The video is the interface (M30). Three columns under one top bar.
 
-**Program monitor.** The Remotion `<Player>`. **Nothing ever overlays it.** No modals, no toasts, no floating panels on top of the video. This is a hard rule from `DESIGN.md` and it exists because a video editor's monitor has to be trustworthy.
+**Top bar.** Library link and wordmark, the project name (rename in place) with its template, Undo/Redo, the save state, and Export MP4 as the primary action.
 
-**Timeline.** The element stack in order, with in and out points. Elements can be moved in time and toggled on and off. They cannot be added from a general library in this phase.
+**Library (left).** Everything the user has uploaded: footage as thumbnails to press or drag onto the video, and the music bed (one track, volume, start point).
 
-**Inspector.** Generated from the selected element's schema.
+**Program monitor (centre).** The Remotion `<Player>`. Editing happens on it:
+
+- press an editable layer and drag it; a hairline outline follows the layer under the pointer;
+- double-click a text layer and type into a field anchored to it, every keystroke live;
+- drag a clip from the library over the video: the footage slot of the scene on screen lights up, and the drop lands the clip in it (a video file from the desktop uploads first).
+
+Nothing else ever sits over the video: no modals, no toasts, no floating panels. The outline, the in-place field and the drop target are the documented exceptions, present only while the pointer is doing that thing. A video editor's monitor has to be trustworthy.
+
+**Scene strip.** Under the monitor, one chip per element in play order with its start and length. Pressing a chip selects the element and moves the player to its start. There is no timeline: timing is the designer's, with the one adjustment below.
+
+**Panel (right).** Generated from the selected element's schema, plus the element's own controls.
 
 | Control | Behavior |
 |---|---|
-| Text | Per text role. Enforce `maxChars` from the schema. |
-| Color | Per color role. Hex input plus swatch. |
+| Show | Hide the element from the spot. |
+| Text | Per text role. Enforce `maxChars` from the schema. Also editable on the video. |
+| Placement | Drag on the video; Size and Tilt sliders; Reset to authored. |
+| Color | Per color role. Swatch plus hex. |
 | Logo | Image upload, fitted into the authored slot. |
-| Footage | Upload and swap the background media. |
-| Transitions | Between elements. `@remotion/transitions` presets. Not authored in AE. |
+| Footage | The clip in the slot (picked in the library or dropped on the video), fill or fit, a two-handle trim bar, mute, chroma key. |
+| Length | A slider; lengthening a scene moves the scenes that started after it. |
+| How it ends | Cut, Fade, Wipe or Slide into the next scene, with a length. Only where a scene follows. |
 | Disclaimer | Text field. Position and size locked. |
-| Background removal | See section 7. |
+| Exports | This project's earlier renders. |
 
-### Design system: The Console
+### Design system
 
-`docs/DESIGN.md` is the source of truth. Summary:
+`docs/DESIGN.md` is the source of truth, written from the built world by the Impeccable documenter. Summary:
 
-- Hairlines, not cards. No drop shadows.
-- Zero border radius.
-- Cobalt (`#2B54E6`) is the accent and appears **only** on active states.
-- IBM Plex Sans for interface text. IBM Plex Mono for facts, measurements, timecodes, and filenames.
-- Nothing overlays the program monitor.
+- The category standard played straight: CapCut's craft level, made political for Democratic campaigns (Josh, 2026-09-17).
+- Dark studio ground so footage colour reads true; two panel tones; one hairline.
+- One accent, campaign blue: filled on the primary action and the selection, tinted on hover and drop targets. Red for danger only.
+- Public Sans, self-hosted, tabular numerals for facts. Lucide icons at one stroke.
+- 8 px radius on controls, 12 px on panels. Shared primitives in `app/src/components/ui.tsx`.
 
 ---
 

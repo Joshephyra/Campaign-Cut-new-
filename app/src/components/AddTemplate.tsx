@@ -1,5 +1,7 @@
+import { FolderUp } from 'lucide-react';
 import { useRef, useState, type FormEvent } from 'react';
 import { api, type IngestAnswer } from '../api';
+import { Button, FieldLabel } from './ui';
 
 /** The ad types the library groups by; anything typed is accepted too. */
 const AD_TYPES = ['Contrast', 'Bio', 'Issue', 'GOTV', 'Endorsement'];
@@ -7,6 +9,9 @@ const AD_TYPES = ['Contrast', 'Bio', 'Issue', 'GOTV', 'Endorsement'];
 type Props = {
   /** Called after a successful ingest so the library reloads. */
   onIngested: (slug: string) => void;
+  /** M30: the library's top-bar button opens the form from outside. Uncontrolled when absent. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 /**
@@ -15,8 +20,13 @@ type Props = {
  * an ad type, press Ingest. The server runs the same ingest command and
  * its output, problems included, comes back here.
  */
-export function AddTemplate({ onIngested }: Props) {
-  const [open, setOpen] = useState(false);
+export function AddTemplate({ onIngested, open: openProp, onOpenChange }: Props) {
+  const [openState, setOpenState] = useState(false);
+  const open = openProp ?? openState;
+  const setOpen = (next: boolean) => {
+    setOpenState(next);
+    onOpenChange?.(next);
+  };
   const [name, setName] = useState('');
   const [adType, setAdType] = useState('Contrast');
   const [files, setFiles] = useState<{ path: string; file: File }[]>([]);
@@ -54,76 +64,88 @@ export function AddTemplate({ onIngested }: Props) {
   return (
     <section className="mb-10">
       <div className="flex items-baseline justify-between mb-3">
-        <span className="text-[11px] uppercase tracking-[0.2em] text-muted">Add template</span>
-        <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="font-mono text-xs text-cobalt">
-          {open ? 'Close' : 'From an After Effects export…'}
-        </button>
+        <span className="text-base font-semibold tracking-tight">Add a template</span>
+        {open && (
+          <button type="button" aria-expanded={open} onClick={() => setOpen(false)} className="text-xs font-medium text-fg-3 hover:text-fg transition-colors">
+            Close
+          </button>
+        )}
       </div>
+      {!open && (
+        <button
+          type="button"
+          aria-expanded={false}
+          onClick={() => setOpen(true)}
+          className="w-full flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-line-strong hover:border-blue hover:bg-blue-tint/40 p-8 text-center transition-colors"
+        >
+          <FolderUp size={22} strokeWidth={1.75} aria-hidden="true" className="text-blue" />
+          <span className="text-[13px] font-medium text-fg">From an After Effects export…</span>
+          <span className="text-xs text-fg-3">A handover folder of Bodymovin exports, fonts and the reference render becomes a template in the library.</span>
+        </button>
+      )}
       {open && (
-        <form onSubmit={(e) => void submit(e)} className="border border-hairline p-4 flex flex-col gap-3 max-w-2xl">
-          <p className="font-mono text-[10px] text-muted">
+        <form onSubmit={(e) => void submit(e)} className="rounded-xl bg-panel border border-line p-5 flex flex-col gap-4 max-w-2xl">
+          <p className="text-xs text-fg-2">
             Pick the handover folder: one Bodymovin export, or one sub-folder per element with an optional elements.json, plus fonts/ and reference.mp4. See docs/AE-AUTHORING.md.
           </p>
-          <label className="text-xs text-muted flex flex-col gap-1">
-            Handover folder
-            <input
-              ref={folderInput}
-              type="file"
-              data-testid="handover-input"
-              aria-label="Handover folder"
-              multiple
-              // @ts-expect-error non-standard attribute understood by every desktop browser
-              webkitdirectory=""
-              directory=""
-              onChange={(e) => onFolder(e.target.files)}
-              className="font-mono text-xs"
-            />
-            {folderName && (
-              <span className="font-mono text-[10px]">
-                {files.length} file{files.length === 1 ? '' : 's'} from "{folderName}"
-              </span>
-            )}
-          </label>
-          <label className="text-xs text-muted flex flex-col gap-1">
-            Template name
-            <input aria-label="Template name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Contrast :30 / Split Record" className="bg-panel border border-hairline px-2 py-1.5 text-sm text-fg focus:outline-none focus:border-cobalt" />
-          </label>
-          <label className="text-xs text-muted flex flex-col gap-1">
-            Ad type
-            <input aria-label="Ad type" list="ad-types" value={adType} onChange={(e) => setAdType(e.target.value)} className="bg-panel border border-hairline px-2 py-1.5 text-sm text-fg focus:outline-none focus:border-cobalt" />
-            <datalist id="ad-types">
-              {AD_TYPES.map((t) => (
-                <option key={t} value={t} />
-              ))}
-            </datalist>
-          </label>
+          <div>
+            <FieldLabel>Handover folder</FieldLabel>
+            <label className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-line-strong hover:border-blue hover:bg-blue-tint/40 p-6 cursor-pointer transition-colors text-center">
+              <FolderUp size={22} strokeWidth={1.75} aria-hidden="true" className="text-blue" />
+              <span className="text-[13px] font-medium text-fg">{folderName ? `${files.length} file${files.length === 1 ? '' : 's'} from "${folderName}"` : 'Choose the handover folder'}</span>
+              <span className="text-xs text-fg-3">The whole folder: the Bodymovin exports, fonts and reference render</span>
+              <input
+                ref={folderInput}
+                type="file"
+                data-testid="handover-input"
+                aria-label="Handover folder"
+                multiple
+                // @ts-expect-error non-standard attribute understood by every desktop browser
+                webkitdirectory=""
+                directory=""
+                onChange={(e) => onFolder(e.target.files)}
+                className="sr-only"
+              />
+            </label>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <FieldLabel htmlFor="template-name">Template name</FieldLabel>
+              <input id="template-name" aria-label="Template name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Contrast :30 / Split Record" className="field" />
+            </div>
+            <div>
+              <FieldLabel htmlFor="ad-type">Ad type</FieldLabel>
+              <input id="ad-type" aria-label="Ad type" list="ad-types" value={adType} onChange={(e) => setAdType(e.target.value)} className="field" />
+              <datalist id="ad-types">
+                {AD_TYPES.map((t) => (
+                  <option key={t} value={t} />
+                ))}
+              </datalist>
+            </div>
+          </div>
           <div className="flex items-center gap-3">
-            <button
-              type="submit"
-              disabled={busy || files.length === 0 || !name.trim() || !adType.trim()}
-              className="px-3 py-1.5 border border-cobalt text-cobalt text-xs font-mono hover:bg-cobalt hover:text-white disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-cobalt"
-            >
+            <Button type="submit" variant="primary" disabled={busy || files.length === 0 || !name.trim() || !adType.trim()}>
               {busy ? 'Ingesting… (the thumbnail render takes a moment)' : 'Ingest'}
-            </button>
-            {error && <span className="font-mono text-xs text-danger">{error}</span>}
+            </Button>
+            {error && <span className="text-xs text-red">{error}</span>}
           </div>
           {answer && !answer.ok && (
-            <div data-testid="ingest-problems" className="border border-danger p-3">
-              <p className="font-mono text-xs text-danger mb-2">
+            <div data-testid="ingest-problems" className="rounded-lg bg-red-tint border border-red/40 p-3">
+              <p className="text-xs text-red font-medium mb-2">
                 Ingest rejected. {answer.problems.length} problem{answer.problems.length === 1 ? '' : 's'}. Nothing written.
               </p>
-              <ul className="font-mono text-[11px] text-fg list-disc pl-4 flex flex-col gap-1">
+              <ul className="text-xs text-fg list-disc pl-4 flex flex-col gap-1">
                 {answer.problems.map((p) => (
                   <li key={p}>{p}</li>
                 ))}
               </ul>
             </div>
           )}
-          {answer?.ok && <p className="font-mono text-xs text-emerald-400">Ingested "{answer.slug}". It is in the library below.</p>}
+          {answer?.ok && <p className="text-xs text-green">Ingested "{answer.slug}". It is in the library above.</p>}
           {answer && (
-            <details className="font-mono text-[10px] text-muted">
-              <summary>Full output</summary>
-              <pre className="whitespace-pre-wrap mt-2">{answer.output}</pre>
+            <details className="text-[11px] text-fg-3">
+              <summary className="cursor-pointer">Full output</summary>
+              <pre className="whitespace-pre-wrap mt-2 rounded-md bg-stage p-3 text-fg-2">{answer.output}</pre>
             </details>
           )}
         </form>

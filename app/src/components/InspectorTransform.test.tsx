@@ -29,7 +29,7 @@ describe('Inspector placement control', () => {
     expect(tilt.type).toBe('range');
     expect(size.value).toBe('100');
     expect(tilt.value).toBe('0');
-    expect(block.textContent).toMatch(/drag it on the monitor/i);
+    expect(block.textContent).toMatch(/drag it on the video/i);
     expect(screen.queryByLabelText('Headline X')).toBeNull();
     expect(screen.queryByLabelText('Headline Y')).toBeNull();
     expect(screen.queryByLabelText(/drag headline on monitor/i)).toBeNull();

@@ -129,12 +129,12 @@ describe('Editor: drag a layer on the monitor', () => {
     const fetchMock = mockApi();
     mockMonitorSize();
     const monitor = await open();
-    expect(screen.getByTestId('element-tab-3').getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByTestId('scene-3').getAttribute('data-selected')).toBe('true');
 
     fireEvent.pointerDown(monitor, { clientX: 600, clientY: 350, buttons: 1, pointerId: 1 });
     fireEvent.pointerUp(monitor, { clientX: 600, clientY: 350, pointerId: 1 });
 
-    await waitFor(() => expect(screen.getByTestId('element-tab-4').getAttribute('aria-selected')).toBe('true'));
+    await waitFor(() => expect(screen.getByTestId('scene-4').getAttribute('data-selected')).toBe('true'));
     expect(screen.getByTestId('param-headline').getAttribute('data-active')).toBe('true');
     await new Promise((r) => setTimeout(r, 500));
     expect(playerPosition(1)).toEqual([100, 200, 0]);
@@ -150,7 +150,7 @@ describe('Editor: drag a layer on the monitor', () => {
     fireEvent.pointerUp(monitor, { clientX: 480, clientY: 95, pointerId: 1 });
     await new Promise((r) => setTimeout(r, 200));
     expect(playerPosition(0)).toEqual([100, 200, 0]);
-    expect(screen.getByTestId('element-tab-3').getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByTestId('scene-3').getAttribute('data-selected')).toBe('true');
   });
 
   it('Shift keeps the drag to one axis', async () => {

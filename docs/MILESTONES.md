@@ -584,6 +584,22 @@ The rest of Josh's verdict: less rigid numbers, fewer selects, a more polished l
 
 ---
 
+## M30 · The video is the interface · DONE
+
+Josh's verdict on M29 (2026-09-17): "polished and professional", the timeline "weird", edit on the video itself. Built with the Impeccable skill: init interview, product record, the category standard taken as the direction (CapCut's craft level, made political for Democratic campaigns), code-led, finish review, DESIGN.md.
+
+**Build**
+- No timeline. A scene strip under the monitor: press a scene to select it and see it. Timing is the designer's, with a Length slider in the scene's panel that ripples what follows. Show/hide and "how it ends" (Cut, Fade, Wipe, Slide plus a length) live in the panel.
+- On the video: double-click a text layer to type in an in-place field anchored to it, every keystroke live; drag a clip from the library onto the video and the footage slot lights up before the drop (a video file from the desktop uploads and lands the same way); press-and-drag placement stays from M28.
+- A new visual world: Public Sans (the US government's typeface) self-hosted; a dark studio ground with two panel tones and one hairline; one accent, campaign blue; 8/12 px radii; Lucide icons; themed sliders, switches, swatches, scrollbars, focus and selection. Shared primitives in `ui.tsx`. Library page in the same shell. `PRODUCT.md` and `app/.impeccable/surfaces/…` carry the product truth and the direction contract; `DESIGN.md` records the system.
+
+**Tests**
+- Scene chips select and seek; Show hides and saves; the transition control appears only where a scene follows and saves; Length ripples later scenes and saves each; double-click opens the in-place editor, Enter commits to composition and panel and saves, Escape restores, a miss does nothing; library clips are draggable, dragging over the video shows the slot, a drop assigns the clip and saves. The Player stub now records seeks and pauses.
+
+**Done when:** the Impeccable finish review's disposition is ship (or its open findings are Josh's call), DESIGN.md exists, and Josh sees it.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

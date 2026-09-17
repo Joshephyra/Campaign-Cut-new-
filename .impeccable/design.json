@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-17T07:20:00Z",
+  "title": "Design System: CampaignCut",
+  "extensions": {
+    "colorMeta": {
+      "blue": { "role": "primary", "displayName": "Campaign Blue", "canonical": "#2f6bff", "tonalRamp": ["#0a1a4d", "#12297a", "#1b48c2", "#2f6bff", "#4a7eff", "#7ea2ff", "#b3c7ff", "#e3ebff"] },
+      "blue-hover": { "role": "primary", "displayName": "Blue Hover", "canonical": "#4a7eff", "tonalRamp": ["#0a1a4d", "#12297a", "#1b48c2", "#2f6bff", "#4a7eff", "#7ea2ff", "#b3c7ff", "#e3ebff"] },
+      "blue-deep": { "role": "primary", "displayName": "Blue Deep", "canonical": "#1b48c2", "tonalRamp": ["#0a1a4d", "#12297a", "#1b48c2", "#2f6bff", "#4a7eff", "#7ea2ff", "#b3c7ff", "#e3ebff"] },
+      "blue-tint": { "role": "primary", "displayName": "Blue Tint (16%)", "canonical": "rgba(47, 107, 255, 0.16)", "tonalRamp": ["rgba(47,107,255,0.08)", "rgba(47,107,255,0.16)", "rgba(47,107,255,0.24)", "rgba(47,107,255,0.35)", "rgba(47,107,255,0.5)", "rgba(47,107,255,0.65)", "rgba(47,107,255,0.8)", "rgba(47,107,255,1)"] },
+      "red": { "role": "secondary", "displayName": "Signal Red", "canonical": "#e5484d", "tonalRamp": ["#3d0f12", "#66181c", "#9a2529", "#c4383d", "#e5484d", "#ee7175", "#f5a3a5", "#fbdcdd"] },
+      "red-tint": { "role": "secondary", "displayName": "Red Tint (14%)", "canonical": "rgba(229, 72, 77, 0.14)", "tonalRamp": ["rgba(229,72,77,0.07)", "rgba(229,72,77,0.14)", "rgba(229,72,77,0.24)", "rgba(229,72,77,0.4)", "rgba(229,72,77,0.55)", "rgba(229,72,77,0.7)", "rgba(229,72,77,0.85)", "rgba(229,72,77,1)"] },
+      "green": { "role": "secondary", "displayName": "Pass Green", "canonical": "#3dd68c", "tonalRamp": ["#0b3a24", "#125c39", "#1a8552", "#28ad6d", "#3dd68c", "#6ee2a9", "#a3edc7", "#d9f8e8"] },
+      "stage": { "role": "neutral", "displayName": "Stage", "canonical": "#07080b", "tonalRamp": ["#07080b", "#0b0d12", "#12151c", "#1a1e27", "#20252f", "#262b36", "#343b48", "#7f8899"] },
+      "bg": { "role": "neutral", "displayName": "Ground", "canonical": "#0b0d12", "tonalRamp": ["#07080b", "#0b0d12", "#12151c", "#1a1e27", "#20252f", "#262b36", "#343b48", "#7f8899"] },
+      "panel": { "role": "neutral", "displayName": "Panel", "canonical": "#12151c", "tonalRamp": ["#07080b", "#0b0d12", "#12151c", "#1a1e27", "#20252f", "#262b36", "#343b48", "#7f8899"] },
+      "raised": { "role": "neutral", "displayName": "Raised", "canonical": "#1a1e27", "tonalRamp": ["#07080b", "#0b0d12", "#12151c", "#1a1e27", "#20252f", "#262b36", "#343b48", "#7f8899"] },
+      "hover": { "role": "neutral", "displayName": "Hover", "canonical": "#20252f", "tonalRamp": ["#07080b", "#0b0d12", "#12151c", "#1a1e27", "#20252f", "#262b36", "#343b48", "#7f8899"] },
+      "line": { "role": "neutral", "displayName": "Line", "canonical": "#262b36", "tonalRamp": ["#07080b", "#0b0d12", "#12151c", "#1a1e27", "#20252f", "#262b36", "#343b48", "#7f8899"] },
+      "line-strong": { "role": "neutral", "displayName": "Line Strong", "canonical": "#343b48", "tonalRamp": ["#07080b", "#0b0d12", "#12151c", "#1a1e27", "#20252f", "#262b36", "#343b48", "#7f8899"] },
+      "fg": { "role": "neutral", "displayName": "Foreground", "canonical": "#f4f6fa", "tonalRamp": ["#343b48", "#4d5566", "#66707f", "#7f8899", "#a9b1c1", "#c8cfdb", "#e2e6ee", "#f4f6fa"] },
+      "fg-2": { "role": "neutral", "displayName": "Foreground 2", "canonical": "#a9b1c1", "tonalRamp": ["#343b48", "#4d5566", "#66707f", "#7f8899", "#a9b1c1", "#c8cfdb", "#e2e6ee", "#f4f6fa"] },
+      "fg-3": { "role": "neutral", "displayName": "Foreground 3", "canonical": "#7f8899", "tonalRamp": ["#343b48", "#4d5566", "#66707f", "#7f8899", "#a9b1c1", "#c8cfdb", "#e2e6ee", "#f4f6fa"] },
+      "white": { "role": "neutral", "displayName": "White", "canonical": "#ffffff", "tonalRamp": ["#343b48", "#4d5566", "#66707f", "#7f8899", "#a9b1c1", "#c8cfdb", "#e2e6ee", "#ffffff"] }
+    },
+    "aliases": {
+      "ink": "bg",
+      "hairline": "line",
+      "muted": "fg-2",
+      "cobalt": "blue",
+      "danger": "red",
+      "note": "Names older components still use; they resolve into the same palette and are not a second palette. New work uses the canonical names."
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Headline", "purpose": "The selected element's name at the top of the properties panel; the error page title." },
+      "title": { "displayName": "Title", "purpose": "Library group headings." },
+      "section": { "displayName": "Section", "purpose": "Panel section titles and the project name in the top bar." },
+      "body": { "displayName": "Body", "purpose": "Field text, buttons, scene chip names." },
+      "label": { "displayName": "Label", "purpose": "Field names, slider names, top-bar links, small buttons, the transport clock." },
+      "fact": { "displayName": "Fact", "purpose": "Durations, sizes, timestamps, hints and counters, always tabular." },
+      "wordmark": { "displayName": "Wordmark", "purpose": "CampaignCut beside the blue play mark." }
+    },
+    "shadows": [
+      { "name": "card", "value": "0 1px 2px rgba(0, 0, 0, 0.3)", "purpose": "The primary button, the active segmented pill, trim handles: filled blue things sitting a hair above their surface." },
+      { "name": "float", "value": "0 12px 32px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.35)", "purpose": "The monitor and the in-place text editor, the two things that float over the stage." },
+      { "name": "thumb", "value": "0 1px 3px rgba(0, 0, 0, 0.5)", "purpose": "Slider thumbs (the switch knob uses 0 1px 2px rgba(0,0,0,0.4))." }
+    ],
+    "motion": [
+      { "name": "ease-appear", "value": "cubic-bezier(0.2, 0.8, 0.2, 1)", "purpose": "The one authored ease: cc-appear overlays and the switch knob." },
+      { "name": "duration-appear", "value": "160ms", "purpose": "cc-appear: opacity 0 to 1 and scale 0.985 to 1 for anything that appears over the video; none under prefers-reduced-motion." },
+      { "name": "duration-state", "value": "150ms ease", "purpose": "Colour and border transitions on every control." },
+      { "name": "duration-thumb", "value": "120ms ease", "purpose": "Slider thumb scale to 1.15 on hover and focus." },
+      { "name": "duration-thumbnail", "value": "300ms", "purpose": "Library card thumbnail scale to 1.02 on hover." }
+    ],
+    "breakpoints": [
+      { "name": "floor", "value": "1280px", "note": "Laptop width and up; no reflow below." },
+      { "name": "xl", "value": "1280px", "note": "The wordmark shows in the editor top bar from here." }
+    ],
+    "focus": { "value": "outline: 2px solid var(--color-blue); outline-offset: 2px; border-radius: var(--radius-sm)", "note": "Tiles and cards use a 2px blue ring instead; fields swap the outline for a blue border." },
+    "selection": { "value": "background: rgba(47, 107, 255, 0.35); color: var(--color-fg)" },
+    "icons": { "library": "lucide-react", "size": 16, "smallSize": 14, "strokeWidth": 1.75 }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one filled action on a surface: Export MP4, Add template, Ingest.",
+      "html": "<button class=\"ds-btn ds-btn-primary\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8\"/><polyline points=\"16 6 12 2 8 6\"/><line x1=\"12\" x2=\"12\" y1=\"2\" y2=\"15\"/></svg>Export MP4</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 14px; font-family: 'Public Sans', ui-sans-serif, system-ui, sans-serif; font-size: 13px; font-weight: 500; border-radius: var(--radius-md, 8px); border: 1px solid transparent; cursor: pointer; white-space: nowrap; transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease; } .ds-btn:focus-visible { outline: 2px solid var(--color-blue, #2f6bff); outline-offset: 2px; } .ds-btn:disabled { opacity: 0.4; pointer-events: none; } .ds-btn-primary { background: var(--color-blue, #2f6bff); color: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.3); } .ds-btn-primary:hover { background: var(--color-blue-hover, #4a7eff); } .ds-btn-primary:active { background: var(--color-blue-deep, #1b48c2); }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "The default button: raised fill with a hairline. Upload, Download.",
+      "html": "<button class=\"ds-btn ds-btn-secondary\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><polyline points=\"17 8 12 3 7 8\"/><line x1=\"12\" x2=\"12\" y1=\"3\" y2=\"15\"/></svg>Upload</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 14px; font-family: 'Public Sans', ui-sans-serif, system-ui, sans-serif; font-size: 13px; font-weight: 500; border-radius: var(--radius-md, 8px); border: 1px solid transparent; cursor: pointer; white-space: nowrap; transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease; } .ds-btn:focus-visible { outline: 2px solid var(--color-blue, #2f6bff); outline-offset: 2px; } .ds-btn-secondary { background: var(--color-raised, #1a1e27); color: var(--color-fg, #f4f6fa); border-color: var(--color-line, #262b36); } .ds-btn-secondary:hover { background: var(--color-hover, #20252f); border-color: var(--color-line-strong, #343b48); }"
+    },
+    {
+      "name": "Ghost and Danger Buttons",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Ghost for Cancel and Keep; danger (red text, red tint on hover) only for confirming a delete.",
+      "html": "<span style=\"display:inline-flex;gap:8px\"><button class=\"ds-btn ds-btn-ghost\">Keep</button><button class=\"ds-btn ds-btn-danger\">Delete</button></span>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 14px; font-family: 'Public Sans', ui-sans-serif, system-ui, sans-serif; font-size: 13px; font-weight: 500; border-radius: var(--radius-md, 8px); border: 1px solid transparent; background: transparent; cursor: pointer; white-space: nowrap; transition: background-color 150ms ease, color 150ms ease; } .ds-btn:focus-visible { outline: 2px solid var(--color-blue, #2f6bff); outline-offset: 2px; } .ds-btn-ghost { color: var(--color-fg-2, #a9b1c1); } .ds-btn-ghost:hover { color: var(--color-fg, #f4f6fa); background: var(--color-hover, #20252f); } .ds-btn-danger { color: var(--color-red, #e5484d); } .ds-btn-danger:hover { background: var(--color-red-tint, rgba(229,72,77,0.14)); }"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "chip",
+      "refersTo": "segmented",
+      "description": "A row of mutually exclusive choices; the active one is filled blue. Footage fit, how a scene ends.",
+      "html": "<div class=\"ds-seg\" role=\"group\" aria-label=\"How it ends\"><button class=\"ds-seg-opt\">Cut</button><button class=\"ds-seg-opt\">Fade</button><button class=\"ds-seg-opt is-active\" aria-pressed=\"true\">Wipe</button><button class=\"ds-seg-opt\">Slide</button></div>",
+      "css": ".ds-seg { display: inline-flex; padding: 2px; background: var(--color-raised, #1a1e27); border: 1px solid var(--color-line, #262b36); border-radius: var(--radius-md, 8px); } .ds-seg-opt { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; font-family: 'Public Sans', ui-sans-serif, system-ui, sans-serif; font-size: 13px; font-weight: 500; color: var(--color-fg-2, #a9b1c1); background: transparent; border: 0; border-radius: 6px; cursor: pointer; white-space: nowrap; transition: background-color 150ms ease, color 150ms ease; } .ds-seg-opt:hover { color: var(--color-fg, #f4f6fa); background: var(--color-hover, #20252f); } .ds-seg-opt.is-active { background: var(--color-blue, #2f6bff); color: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.3); } .ds-seg-opt:focus-visible { outline: 2px solid var(--color-blue, #2f6bff); outline-offset: 2px; }"
+    },
+    {
+      "name": "Slider",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "A labelled range with a filled blue track, a round white thumb and the value read out beside it.",
+      "html": "<label class=\"ds-slider-row\"><span class=\"ds-slider-name\">Size</span><input type=\"range\" class=\"ds-slider\" min=\"0\" max=\"200\" value=\"100\" style=\"--p:50%\" aria-label=\"Size\"><span class=\"ds-slider-value\">100%</span></label>",
+      "css": ".ds-slider-row { display: flex; align-items: center; gap: 12px; font-family: 'Public Sans', ui-sans-serif, system-ui, sans-serif; font-size: 12px; color: var(--color-fg-2, #a9b1c1); width: 260px; } .ds-slider-name { width: 56px; flex-shrink: 0; } .ds-slider-value { width: 56px; text-align: right; color: var(--color-fg, #f4f6fa); font-variant-numeric: tabular-nums; flex-shrink: 0; } .ds-slider { --p: 50%; appearance: none; -webkit-appearance: none; flex: 1; min-width: 0; height: 20px; background: transparent; margin: 0; cursor: pointer; } .ds-slider::-webkit-slider-runnable-track { height: 4px; border-radius: 999px; background: linear-gradient(to right, var(--color-blue, #2f6bff) 0 var(--p), var(--color-line-strong, #343b48) var(--p) 100%); } .ds-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5px; border-radius: 999px; background: #fff; border: 2px solid var(--color-blue, #2f6bff); box-shadow: 0 1px 3px rgba(0,0,0,0.5); transition: transform 120ms ease; } .ds-slider:hover::-webkit-slider-thumb, .ds-slider:focus-visible::-webkit-slider-thumb { transform: scale(1.15); } .ds-slider::-moz-range-track { height: 4px; border-radius: 999px; background: var(--color-line-strong, #343b48); } .ds-slider::-moz-range-progress { height: 4px; border-radius: 999px; background: var(--color-blue, #2f6bff); } .ds-slider::-moz-range-thumb { width: 14px; height: 14px; border-radius: 999px; background: #fff; border: 2px solid var(--color-blue, #2f6bff); box-shadow: 0 1px 3px rgba(0,0,0,0.5); }"
+    },
+    {
+      "name": "Switch",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "On/off: Show, Mute footage sound, Key out green screen.",
+      "html": "<label style=\"display:inline-flex;align-items:center;gap:8px;font-family:'Public Sans',system-ui,sans-serif;font-size:12px;color:var(--color-fg-2,#a9b1c1)\">Show <input type=\"checkbox\" role=\"switch\" class=\"ds-switch\" checked aria-label=\"Show\"></label>",
+      "css": ".ds-switch { appearance: none; -webkit-appearance: none; width: 34px; height: 20px; border-radius: 999px; background: var(--color-line-strong, #343b48); position: relative; cursor: pointer; transition: background-color 150ms ease; flex-shrink: 0; margin: 0; } .ds-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 999px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.4); transition: transform 150ms cubic-bezier(0.2, 0.8, 0.2, 1); } .ds-switch:checked { background: var(--color-blue, #2f6bff); } .ds-switch:checked::after { transform: translateX(14px); } .ds-switch:focus-visible { outline: 2px solid var(--color-blue, #2f6bff); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "A labelled field with an optional fact on the right; raised fill, hairline, blue border on focus.",
+      "html": "<div class=\"ds-field-wrap\"><div class=\"ds-field-label\"><label for=\"ds-headline\">Headline</label><span>17/36</span></div><input id=\"ds-headline\" class=\"ds-field\" value=\"Tell me something\"></div>",
+      "css": ".ds-field-wrap { width: 280px; font-family: 'Public Sans', ui-sans-serif, system-ui, sans-serif; } .ds-field-label { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; } .ds-field-label label { font-size: 12px; font-weight: 500; color: var(--color-fg-2, #a9b1c1); } .ds-field-label span { font-size: 11px; color: var(--color-fg-3, #7f8899); font-variant-numeric: tabular-nums; } .ds-field { width: 100%; background: var(--color-raised, #1a1e27); border: 1px solid var(--color-line, #262b36); border-radius: var(--radius-md, 8px); color: var(--color-fg, #f4f6fa); padding: 8px 10px; font-size: 13px; line-height: 1.4; font-family: inherit; transition: border-color 150ms ease, background-color 150ms ease; } .ds-field::placeholder { color: var(--color-fg-3, #7f8899); } .ds-field:hover { border-color: var(--color-line-strong, #343b48); } .ds-field:focus { outline: none; border-color: var(--color-blue, #2f6bff); background: var(--color-panel, #12151c); } .ds-field[aria-invalid='true'] { border-color: var(--color-red, #e5484d); }"
+    },
+    {
+      "name": "Top Bar",
+      "kind": "nav",
+      "refersTo": "top-bar",
+      "description": "52px bar: wordmark left, project name centre, Undo/Redo pair, save state and the filled Export button right.",
+      "html": "<header class=\"ds-topbar\"><span class=\"ds-wordmark\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 22 22\" aria-hidden=\"true\"><rect width=\"22\" height=\"22\" rx=\"6\" fill=\"var(--color-blue, #2f6bff)\"/><path d=\"M8.5 6.5v9l7-4.5z\" fill=\"#fff\"/></svg>CampaignCut</span><span class=\"ds-topbar-title\">Contrast :30 project <span class=\"ds-topbar-sub\">· Contrast :30</span></span><span class=\"ds-topbar-right\"><span class=\"ds-topbar-pair\"><button class=\"ds-iconbtn\" aria-label=\"Undo\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 14 4 9l5-5\"/><path d=\"M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11\"/></svg></button><button class=\"ds-iconbtn\" aria-label=\"Redo\" disabled><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m15 14 5-5-5-5\"/><path d=\"M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13\"/></svg></button></span><span class=\"ds-topbar-saved\">Saved</span><button class=\"ds-btn-primary\">Export MP4</button></span></header>",
+      "css": ".ds-topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 52px; padding: 0 16px; background: var(--color-panel, #12151c); border-bottom: 1px solid var(--color-line, #262b36); font-family: 'Public Sans', ui-sans-serif, system-ui, sans-serif; color: var(--color-fg, #f4f6fa); width: 720px; } .ds-wordmark { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; letter-spacing: -0.025em; width: 200px; } .ds-topbar-title { flex: 1; text-align: center; font-size: 13px; font-weight: 600; letter-spacing: -0.025em; } .ds-topbar-sub { font-size: 12px; font-weight: 400; color: var(--color-fg-3, #7f8899); } .ds-topbar-right { display: inline-flex; align-items: center; gap: 12px; } .ds-topbar-pair { display: inline-flex; padding: 2px; background: var(--color-raised, #1a1e27); border: 1px solid var(--color-line, #262b36); border-radius: 8px; } .ds-iconbtn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 0; border-radius: 8px; background: transparent; color: var(--color-fg-2, #a9b1c1); cursor: pointer; transition: background-color 150ms ease, color 150ms ease; } .ds-iconbtn:hover { color: var(--color-fg, #f4f6fa); background: var(--color-hover, #20252f); } .ds-iconbtn:disabled { opacity: 0.35; pointer-events: none; } .ds-topbar-saved { font-size: 12px; color: var(--color-fg-2, #a9b1c1); } .ds-btn-primary { height: 36px; padding: 0 14px; font: 500 13px 'Public Sans', system-ui, sans-serif; color: #fff; background: var(--color-blue, #2f6bff); border: 0; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.3); cursor: pointer; transition: background-color 150ms ease; } .ds-btn-primary:hover { background: var(--color-blue-hover, #4a7eff); } .ds-btn-primary:active { background: var(--color-blue-deep, #1b48c2); }"
+    },
+    {
+      "name": "Scene Chip",
+      "kind": "chip",
+      "refersTo": "scene-chip",
+      "description": "The scene strip under the monitor: chips proportional to length; the one on screen filled blue, the selected one ringed.",
+      "html": "<div class=\"ds-strip\"><button class=\"ds-chip is-onscreen is-selected\"><span class=\"ds-chip-name\">Open</span><span class=\"ds-chip-fact\">0.0 s · 4.0 s long</span></button><button class=\"ds-chip\"><span class=\"ds-chip-name\">Lower third</span><span class=\"ds-chip-fact\">1.2 s · 5.0 s long</span></button><button class=\"ds-chip\"><span class=\"ds-chip-name\">End card</span><span class=\"ds-chip-fact\">25.0 s · 5.0 s long</span></button></div>",
+      "css": ".ds-strip { display: flex; align-items: stretch; gap: 8px; padding: 12px 24px; background: var(--color-panel, #12151c); border-top: 1px solid var(--color-line, #262b36); width: 560px; } .ds-chip { flex: 1 1 0; min-width: 112px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 12px; border: 0; border-radius: 12px; background: var(--color-raised, #1a1e27); color: var(--color-fg, #f4f6fa); text-align: left; cursor: pointer; font-family: 'Public Sans', ui-sans-serif, system-ui, sans-serif; transition: background-color 150ms ease; } .ds-chip:hover { background: var(--color-hover, #20252f); } .ds-chip-name { font-size: 13px; font-weight: 500; } .ds-chip-fact { font-size: 11px; color: var(--color-fg-3, #7f8899); font-variant-numeric: tabular-nums; } .ds-chip.is-onscreen { background: var(--color-blue, #2f6bff); color: #fff; } .ds-chip.is-onscreen .ds-chip-fact { color: rgba(255,255,255,0.75); } .ds-chip.is-selected { box-shadow: 0 0 0 2px var(--color-panel, #12151c), 0 0 0 4px var(--color-blue, #2f6bff); } .ds-chip:focus-visible { outline: 2px solid var(--color-blue, #2f6bff); outline-offset: 2px; }"
+    },
+    {
+      "name": "Footage Tile",
+      "kind": "card",
+      "refersTo": "tile",
+      "description": "A thumbnail card in the library grid: 16:9 frame on stage, duration badge, name and facts; blue ring when in use.",
+      "html": "<button class=\"ds-tile is-selected\"><span class=\"ds-tile-thumb\"><span class=\"ds-tile-inuse\">In use</span><span class=\"ds-tile-time\">00:15:00</span></span><span class=\"ds-tile-body\"><span class=\"ds-tile-name\">HMPPA_Terms.mp4</span><span class=\"ds-tile-fact\">1920×1080 · 23.98 fps</span></span></button>",
+      "css": ".ds-tile { width: 124px; display: block; padding: 0; text-align: left; border-radius: 12px; overflow: hidden; background: var(--color-raised, #1a1e27); border: 1px solid var(--color-line, #262b36); cursor: grab; font-family: 'Public Sans', ui-sans-serif, system-ui, sans-serif; color: var(--color-fg, #f4f6fa); transition: border-color 150ms ease; } .ds-tile:hover { border-color: var(--color-line-strong, #343b48); } .ds-tile.is-selected { border-color: var(--color-blue, #2f6bff); box-shadow: 0 0 0 1px var(--color-blue, #2f6bff); } .ds-tile:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-blue, #2f6bff); } .ds-tile-thumb { display: block; position: relative; aspect-ratio: 16 / 9; background: var(--color-stage, #07080b); } .ds-tile-time { position: absolute; bottom: 4px; right: 4px; padding: 1px 4px; border-radius: 4px; background: rgba(0,0,0,0.7); font-size: 10px; font-variant-numeric: tabular-nums; } .ds-tile-inuse { position: absolute; top: 4px; left: 4px; padding: 1px 6px; border-radius: 4px; background: var(--color-blue, #2f6bff); color: #fff; font-size: 10px; font-weight: 600; } .ds-tile-body { display: block; padding: 6px 8px; } .ds-tile-name { display: block; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-tile-fact { display: block; margin-top: 2px; font-size: 11px; color: var(--color-fg-3, #7f8899); font-variant-numeric: tabular-nums; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Studio Monitor",
+    "overview": "CampaignCut is a dark studio built around one trustworthy screen. The video plays in the centre on a near-black stage; everything a campaign staffer edits is edited on the video itself, and the panels around it only name what is selected and offer the few controls the designer allowed. The world is the category standard (a CapCut-grade desktop editor) played straight and made political: one Democratic campaign blue does every job an accent can do, the type is Public Sans (the US government's own face), and nothing decorative competes with the footage.\n\nDensity is a working tool's: 13 px body, 12 px labels, 11 px facts with tabular numerals, 36 px controls, 20 px panel gutters. Surfaces are tonal steps of the same blue-grey rather than lines; a single hairline separates the three columns and the sections within them. Radii are soft and consistent (8 px on controls, 12 px on panels and tiles), sliders are filled tracks with a round white thumb, choices are segmented pills, on/off is a switch. Motion is one 160 ms ease-in used only for things that appear over the video.\n\nThis world replaces the earlier \"Console\" look (hairlines everywhere, zero radius, IBM Plex, cobalt, monospace facts). Those choices are evidence only; nothing here extends them.",
+    "keyCharacteristics": [
+      "Dark blue-grey studio ground so footage colour reads true; the monitor is the only pure black.",
+      "One accent (campaign blue) filled on the primary action and the current selection, tinted on hover and drop targets; red for danger only; green for one pass/fail readout.",
+      "Public Sans everywhere in the UI at a tight 11/12/13/15/16/18 px scale, semibold headings with tight tracking, tabular numerals on every number.",
+      "Tonal layering (stage, bg, panel, raised, hover) plus one hairline; shadows appear only under things that float over the video.",
+      "CapCut's control vocabulary played straight: filled sliders, segmented pills, switches, thumbnail grids, 16 px Lucide icons at 1.75 stroke.",
+      "Nothing sits over the video at rest."
+    ],
+    "rules": [
+      { "name": "The One Blue Rule", "body": "Campaign blue is the only accent. Filled means \"the action or the thing selected\"; tinted means \"about to become selected\" (hover, drop target, active row). If two blue fills are visible in one panel, one of them is wrong.", "section": "colors" },
+      { "name": "The Red Is Danger Rule", "body": "Red appears only when something failed or is about to be destroyed. It is never a highlight, a brand note or a required-field marker.", "section": "colors" },
+      { "name": "The Footage Owns Colour Rule", "body": "The interface has one hue. Anything colourful on screen is the user's video, logo or accent swatch, never the chrome.", "section": "colors" },
+      { "name": "The Tabular Numbers Rule", "body": "Every number a user compares (times, sizes, fps, percentages, hex codes) sits in tabular figures so it does not jitter as it changes. There is no monospace font in this world.", "section": "typography" },
+      { "name": "The Sentence Case Rule", "body": "Every heading, label and button is sentence case. The only uppercase text is a hex colour code in its field.", "section": "typography" },
+      { "name": "The Flat Panel Rule", "body": "Panels, fields, tiles and rows never carry a shadow. If something needs to look nearer, it moves one tonal step up (panel to raised to hover); it does not lift.", "section": "elevation" },
+      { "name": "The Nothing At Rest Rule", "body": "Nothing is drawn over the video at rest. The only overlays are the hairline blue outline around the layer under the pointer, the in-place text editor while typing, and the dashed blue drop target while a clip is dragged over the footage. Each appears with the one cc-appear motion (160 ms, ease cubic-bezier(0.2, 0.8, 0.2, 1), from 98.5% scale) and is removed outright, and none animates under prefers-reduced-motion.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use one blue fill per surface for the action or the selection, and blue tint (16%) for hover, drop targets and active rows.",
+      "Do step surfaces tonally (stage, bg, panel, raised, hover) and separate with one 1 px line hairline; go to line-strong only on hover, on dashed drop zones and on unfilled tracks.",
+      "Do keep the radius pairing: 8 px on controls, 6 px on an option nested inside a control, 12 px on panels, tiles and chips, 16 px on outer cards, pills only on sliders, switches and scrollbars.",
+      "Do set every number in tabular figures at 11 or 12 px, in fg for the value and fg-3 for the fact.",
+      "Do build every control from ui.tsx (Button, IconButton, Segmented, Slider, Switch, Section, FieldLabel) and Lucide at 16 px / 1.75 stroke (14 px inside small controls).",
+      "Do draw overlays on the video only in response to the pointer, with cc-appear, and remove them outright when the pointer leaves.",
+      "Do write labels and buttons in sentence case at 12 or 13 px; reserve 18 px semibold for the one selected-element name."
+    ],
+    "donts": [
+      "Don't put anything over the video at rest: no watermark, no safe-zone guides, no persistent handles, no player chrome.",
+      "Don't use red for anything but failure and destructive confirmation, and don't use green as a button, badge or accent.",
+      "Don't add a second accent, a gradient, or a brand colour to the chrome; the footage and the user's own accent swatch are the only colour on screen.",
+      "Don't put shadows on panels, fields, tiles or rows; only the monitor, the text editor, filled blue controls and round knobs carry one.",
+      "Don't use a monospace face, uppercase labels, letter-spaced kickers or eyebrow lines; the old Console look (IBM Plex, zero radius, hairlines everywhere, cobalt) is replaced, not extended.",
+      "Don't reach for the alias tokens (ink, hairline, muted, cobalt, danger) in new work; they exist only so untouched components keep compiling.",
+      "Don't introduce dropdowns or typed number fields for what a slider, segmented control, switch or drag on the video can do.",
+      "Don't reflow below 1280 px or collapse the columns; this is a laptop-width tool."
+    ]
+  }
+}

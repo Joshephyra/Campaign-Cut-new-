@@ -4,6 +4,38 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M30 The video is the interface · DONE
+
+**Why**
+
+Josh on M29: a good step, still "rudimentary"; he wants it polished and professional, the timeline gone ("the then cut seems weird"), and editing on the video itself: drag things in, edit on the video. He asked to lean into the Impeccable skill.
+
+**How it was decided**
+
+- Impeccable's init interview: the user is broader than one staffer (agencies and consultants with several clients); success is an export they trust. `PRODUCT.md` at the root records it.
+- Visual direction: Josh took the category standard, played straight: sit alongside CapCut at its craft level, "but better designed and made to look political for Democratic campaigns". The direction roll ran (seed 667390b7) and the user's choice binds. Code-led (no image generation here). The direction contract lives in `app/.impeccable/surfaces/app-src-pages-editor-tsx.md`.
+- No timeline. Timing stays the designer's, with a Length slider per scene for when footage needs more room; transitions and show/hide moved into the scene's panel.
+
+**What exists now**
+
+- The world: Public Sans (self-hosted, one variable file), a dark studio ground with two panel tones and one hairline, one accent (campaign blue) filled on the primary action and the selection and tinted on hover and drop targets, red for danger only, 8/12 px radii, Lucide icons, themed sliders, switches, swatches, scrollbars, focus and selection. Shared controls in `app/src/components/ui.tsx`. The library page shares the shell.
+- The editor: top bar (Library, wordmark, project name, Undo/Redo, save state, Export); library on the left (footage thumbnails to press or drag, music bed with volume and start); the monitor in the centre at the largest 16:9 the width allows; a scene strip under it; the scene's panel on the right (Show, the generated controls, Timing, How it ends) with Exports at the bottom.
+- On the video: press-and-drag placement (M28) with the hairline outline; double-click a text layer to type in an in-place field anchored below it, every keystroke live, Enter to finish, Escape to put it back; drag a clip from the library over the video and the footage slot of the scene on screen lights up blue with "Drop to use here", the drop lands it; a video file dragged from the desktop uploads and lands the same way.
+- Length: lengthening a scene moves every scene that started after it; overlapping scenes stay. Saved per element.
+- Removed: the Timeline component and its tests. `docs/SPEC.md` section 4 rewritten for the new surface; `DESIGN.md` at the root records the system.
+- Tests: 9 new editor tests (scenes, show, how it ends, length ripple, in-place typing commit and cancel, drop a clip); the Player stub now records seeks and pauses. 383 tests green across the repo. The Impeccable detector ran over every changed file: no findings.
+
+**Verified**
+
+- Headless Chrome captures at 1440×900 and 1280×800 (`.impeccable/review/`, gitignored): the three columns, the monitor, the scene strip, the panel and the library all render in the new world with Public Sans.
+- The in-app pane cannot emulate a laptop width, so Josh's own eyes at his width are still owed.
+
+**Finish review**
+
+The Impeccable finish reviewer (a fresh agent, screenshots and contract only) returned **fix** with seven material findings: the monitor opened on the empty first frame of the entrance animation (nothing to press); the Player's stock controls sat over the video; the on-screen scene chip was not filled; the library had no primary action and ended on a heading with a link; one type step was missing; the top-bar name cluster ran together and the save state was invisible at idle; the stacked Footage/Music sections were an uncited deviation from the brief. All seven were fixed in one batch: the Player opens on a scene's hold frame (a second in) and chips seek there; the Player chrome is off and a transport (play, clock, scrub, mute, full screen, Space to play) sits under the monitor in the world's controls; the on-screen chip is filled blue and chips are proportional to length; the library's top bar has a filled "Add template" button and the add section is a dashed region; the panel name is 18 px and the monitor hint 12 px; the name cluster has a middle dot and a pencil, "Saved" shows at idle; the brief cites the stacked sections. The verdict pass scored six resolved and one partial (the add region was not yet visible) and named one regression (a fourth time format on the transport clock); both were fixed, recaptured and scored resolved. Final disposition: **ship**, remaining: clear. `docs/DESIGN.md` and `.impeccable/design.json` record the built system.
+
+---
+
 ## 2026-09-17 · M29 Fewer dropdowns, fewer numbers, a cleaner surface · DONE
 
 **Why**
