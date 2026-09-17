@@ -51,7 +51,7 @@ export function Inspector({ schema, values, onChange, assets = [], templateSlug 
   return (
     <div className="flex flex-col gap-5">
       {schema
-        .filter((param) => param.kind !== 'transform')
+        .filter((param) => param.kind !== 'transform' && param.kind !== 'follow')
         .map((param) => {
           const placement = placementFor(param.key);
           const active = placement !== undefined && placement.key === activeKey;

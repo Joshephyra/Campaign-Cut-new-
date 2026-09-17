@@ -1,7 +1,7 @@
 import {
   accentOf,
   applyLottieValues,
-  calloutsFrom,
+  fitSpecsFrom, calloutsFrom,
   ASPECTS,
   autoFitBox,
   compositionConfig,
@@ -1485,7 +1485,7 @@ function Monitor({
         const resolvedSource = source ? resolveLottieAssets(source, base) : EMPTY_LOTTIE;
         const resolvedValues = withBaseUrl(renderedValues[e.id] ?? {}, e.schema, API);
         const lottie = applyLottieValues(resolvedSource, resolvedValues, e.schema);
-        return { id: String(e.id), lottie, startFrame: e.startFrame, endFrame: e.endFrame, zIndex: e.zIndex, enabled: e.enabled, media: mediaFor(e), callouts: calloutsFrom(e.schema, resolvedValues, accentOf(e.schema, resolvedValues)) };
+        return { id: String(e.id), lottie, startFrame: e.startFrame, endFrame: e.endFrame, zIndex: e.zIndex, enabled: e.enabled, media: mediaFor(e), callouts: calloutsFrom(e.schema, resolvedValues, accentOf(e.schema, resolvedValues)), fit: fitSpecsFrom(e.schema) };
       }),
     [elements, lotties, renderedValues, mediaFor],
   );

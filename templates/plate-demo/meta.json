@@ -1,0 +1,38 @@
+{
+  "slug": "plate-demo",
+  "name": "Plate demo",
+  "adType": "Demo",
+  "durationInFrames": 150,
+  "fps": 30,
+  "width": 1920,
+  "height": 1080,
+  "fonts": [
+    "IBM Plex Sans"
+  ],
+  "fontFiles": [
+    {
+      "family": "IBM Plex Sans",
+      "style": "Bold",
+      "file": "IBMPlexSans-Bold.ttf"
+    },
+    {
+      "family": "IBM Plex Sans",
+      "style": "Regular",
+      "file": "IBMPlexSans-Regular.ttf"
+    }
+  ],
+  "elements": [
+    {
+      "slug": "plate-demo",
+      "name": "Plate demo",
+      "type": "overlay",
+      "startFrame": 0,
+      "endFrame": 150,
+      "zIndex": 0,
+      "durationInFrames": 150,
+      "fonts": [
+        "IBM Plex Sans"
+      ]
+    }
+  ]
+}

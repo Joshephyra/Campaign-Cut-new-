@@ -74,6 +74,8 @@ describe('the sample plan obeys the ingest rules', () => {
           color: layer.kind === 'shape',
           image: layer.kind === 'image',
           media: layer.kind === 'solid' || layer.kind === 'shape',
+          follow: false, // never a role of its own: cc.headline.1.plate parses as headline
+
           transform: false,
         }[spec!.kind];
         expect(kindOk, `${comp.slug}: ${layer.name} is a ${layer.kind} layer`).toBe(true);

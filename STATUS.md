@@ -4,6 +4,25 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M60 + M61 The design follows the copy · DONE
+
+**What exists now**
+
+- `cc.<text tag>.plate` and `.underline` on a shape or image layer bind it to that text (schema kind `follow`, hidden from the panel). `composition/src/fit.ts`: measured in the real font once the faces are loaded, every follower moves by the width difference in the direction the text grows; box text shrinks to its box first (down to half, never below the authored copy's width); the character limit of box text doubles to match. Both runners run it in Chrome from the same specs (`ElementProps.fit`).
+- Docs: SPEC 1.1, AE-AUTHORING ("Plates and underlines that follow the copy"), the handover guide (plates `cc.headline.N.plate`, underlines `cc.headline.3.underline` / `.5.underline`, parent them to their text; box text shrinks). `templates/plate-demo` (ad type Demo) is a tiny ingested demo: a headline on a red plate with a yellow drawn-on underline, a box-text subhead.
+
+**Verified**
+
+- Tests: 11 pure, 3 tag/schema/pre-flight, 2 real-render. 589 tests green; typecheck clean in every workspace.
+- Real render, kept under `.impeccable/review/fit-*.png` (`CC_KEEP_FRAMES=1`): the red plate ends exactly at the end of "VOTE NOW FOR MARIA" where it ended at "VOTE NOW"; box text that wrapped to three lines untouched renders smaller on one line fitted.
+- Real browser on the Plate demo spot: the headline typed to "VOTE NOW FOR MARIA RIVERA" and the red plate and the yellow underline followed it live; the subhead limit read 22/22 before the re-ingest and the box text shrank once it could be typed past its box.
+
+**Next**
+
+The designer's handover folder, then the acceptance session. The guide is current for M57 to M61.
+
+---
+
 ## 2026-09-17 · M59 Fonts without a handover · DONE
 
 - The ingest finds a face in the handover, the app's fonts, the font library (`media/fonts`, uploaded under "Fonts on hand" in Add a template), the fonts installed on this computer (matched by the names inside each file) or Google Fonts (exact weight and slant, TTF), in that order; every find is copied in under the face's own name; a face found nowhere fails the ingest naming every place looked.

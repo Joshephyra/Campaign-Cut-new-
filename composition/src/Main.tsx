@@ -1,10 +1,12 @@
 import { linearTiming, TransitionSeries, type TransitionPresentation } from '@remotion/transitions';
+import { useMemo } from 'react';
 import { fade } from '@remotion/transitions/fade';
 import { slide } from '@remotion/transitions/slide';
 import { wipe } from '@remotion/transitions/wipe';
 import type { CSSProperties } from 'react';
 import { AbsoluteFill, Audio, OffthreadVideo, Sequence } from 'remotion';
 import { autoFitBox, frameFor, isFullBleed, type AutoFitBox, type Frame } from './aspect';
+import { canvasMeasure, fitLottie } from './fit';
 import { chromaFilter } from './chroma';
 import { PREMOUNT_FRAMES, type MainMedia, type MainProps } from './config';
 import type { ElementProps } from './elements';
@@ -86,7 +88,9 @@ function MediaSlot({ media, box }: { media: MainMedia; box: AutoFitBox | null })
  * it draws full-frame as always.
  */
 function ElementView({ element, frame, treatment }: { element: ElementProps; frame: Frame; treatment?: TreatmentProps | null }) {
-  const authored = { width: Number(element.lottie.w) || frame.width, height: Number(element.lottie.h) || frame.height };
+  // M60/M61: measured in the loaded font (this mounts inside TemplateFonts), the plates and underlines follow the copy and box text shrinks to its box.
+  const lottie = useMemo(() => (element.fit && element.fit.length > 0 ? fitLottie(element.lottie, element.fit, canvasMeasure) : element.lottie), [element.lottie, element.fit]);
+  const authored = { width: Number(lottie.w) || frame.width, height: Number(lottie.h) || frame.height };
   const fitted = authored.width !== frame.width || authored.height !== frame.height;
   const box = fitted ? autoFitBox(authored, frame) : null;
   const filter = treatmentLayerFilter(treatment ?? undefined);
@@ -95,10 +99,10 @@ function ElementView({ element, frame, treatment }: { element: ElementProps; fra
       {element.media && <MediaSlot media={element.media} box={box} />}
       {box ? (
         <div data-testid="autofit" style={{ position: 'absolute', left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height: `${box.height}px`, overflow: 'hidden' }}>
-          <LottieLayer animationData={element.lottie} elementId={element.id} filter={filter} callouts={element.callouts} startFrame={0} />
+          <LottieLayer animationData={lottie} elementId={element.id} filter={filter} callouts={element.callouts} startFrame={0} />
         </div>
       ) : (
-        <LottieLayer animationData={element.lottie} elementId={element.id} filter={filter} callouts={element.callouts} startFrame={0} />
+        <LottieLayer animationData={lottie} elementId={element.id} filter={filter} callouts={element.callouts} startFrame={0} />
       )}
     </>
   );

@@ -61,3 +61,14 @@ Select a scene with a headline. Under its text field, "Call out a word": press a
 - Close After Effects (File > Exit); an unattended run left it open on an empty project.
 - Watch `media/renders/parity-project-8.mp4` once: the export of the spot from nothing, with a lower third and a disclaimer.
 - Germain's verdict on `media/fidelity/contrast-30-*` and `media/fidelity/starter-pack-*` strips (reference left, our render middle, difference right).
+
+## 13. The design follows the copy (M60, M61)
+
+Open the library and press "Plate demo" under Demo. A headline sits on a red plate with a yellow underline drawing on under it.
+
+1. Type a longer headline. The plate and the underline end where the new text ends, at once.
+2. Type a shorter one. They pull in.
+3. Type a long subhead (it is box text). Instead of wrapping, it sets itself smaller until it fits its box, down to half size.
+4. Export. The MP4 shows the same plate and the same size as the preview: both runners measure the same font.
+
+In After Effects this is one rename per plate: `cc.headline.plate`, `cc.headline.underline`, parented to the text. Nothing appears in the panel for them.

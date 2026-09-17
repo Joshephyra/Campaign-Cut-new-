@@ -1,4 +1,5 @@
 import type { Callout } from './callouts';
+import type { FitSpec } from './fit';
 import type { LottieAnimationData, MainMedia } from './config';
 
 /**
@@ -18,6 +19,8 @@ export type ElementProps = {
   media?: MainMedia | null;
   /** M56: callouts on words of this element's text. */
   callouts?: Callout[];
+  /** M60: the texts whose plates and underlines follow the copy, and box text to shrink to its box (M61). */
+  fit?: FitSpec[];
 };
 
 /** The composition lasts until the latest enabled element ends. Never less than one frame. */

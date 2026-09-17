@@ -63,15 +63,22 @@ var CC_PREFLIGHT = (function () {
     return s;
   }
 
-  /* cc.<role> or cc.<role>.<n>. Case-sensitive. */
+  /* cc.<role> or cc.<role>.<n>, optionally .plate / .underline (M60). Case-sensitive. */
   function parseTag(layerName) {
     var tag = trim(layerName);
     if (tag.substring(0, 3) !== 'cc.') return null;
     var rest = tag.substring(3);
     if (rest.length === 0) return null;
+    var follows = null;
+    var f = /^(.+)\.(plate|underline)$/.exec(rest);
+    if (f) {
+      rest = f[1];
+      follows = f[2];
+    }
     var m = /^(.+)\.(\d+)$/.exec(rest);
-    if (m) return { tag: tag, role: m[1], index: parseInt(m[2], 10) };
-    return { tag: tag, role: rest, index: null };
+    var out = m ? { tag: tag, role: m[1], index: parseInt(m[2], 10) } : { tag: tag, role: rest, index: null };
+    if (follows) out.follows = follows;
+    return out;
   }
 
   function quote(s) {
@@ -94,6 +101,7 @@ var CC_PREFLIGHT = (function () {
     var notes = [];
     var fonts = [];
     var seenKeys = [];
+    var followers = [];
 
     lines.push('CampaignCut pre-flight report');
     lines.push('=============================');
@@ -145,6 +153,20 @@ var CC_PREFLIGHT = (function () {
         tags.push({ layer: parsed.tag, status: 'error' });
         continue;
       }
+      if (parsed.follows) {
+        /* M60: a plate or underline that follows a text: a shape or image layer, never text; its text must be tagged too */
+        if (spec.kind !== 'text') {
+          problems.push(quote(parsed.tag) + ': only a text can have a ' + parsed.follows + '; "' + parsed.role + '" is a ' + spec.kind + ' role');
+          tags.push({ layer: parsed.tag, status: 'error' });
+        } else if (isText || env.isCameraOrLight(layer)) {
+          problems.push(quote(parsed.tag) + ': a ' + parsed.follows + ' must be a shape layer or an image layer, so its width can follow the copy');
+          tags.push({ layer: parsed.tag, status: 'error' });
+        } else {
+          followers.push({ tag: parsed.tag, key: parsed.role + (parsed.index === null ? '' : '.' + parsed.index), textTag: 'cc.' + parsed.role + (parsed.index === null ? '' : '.' + parsed.index), follows: parsed.follows });
+          tags.push({ layer: parsed.tag, status: 'follow', detail: '  follows ' + 'cc.' + parsed.role + (parsed.index === null ? '' : '.' + parsed.index) });
+        }
+        continue;
+      }
       if (spec.repeated && parsed.index === null) {
         problems.push(quote(parsed.tag) + ': role "' + parsed.role + '" is repeated and needs an index, e.g. cc.' + parsed.role + '.1');
         tags.push({ layer: parsed.tag, status: 'error' });
@@ -193,6 +215,10 @@ var CC_PREFLIGHT = (function () {
         if (td) extra = td.boxText ? '  box text, ' + td.fontSize + 'px' : '  point text (no character limit can be derived), ' + td.fontSize + 'px';
       }
       tags.push({ layer: parsed.tag, status: spec.kind, detail: extra });
+    }
+
+    for (var fw = 0; fw < followers.length; fw++) {
+      if (!contains(seenKeys, followers[fw].key)) problems.push(quote(followers[fw].tag) + ': follows ' + followers[fw].textTag + ', but no text layer carries that tag');
     }
 
     lines.push('Tags found: ' + tags.length);

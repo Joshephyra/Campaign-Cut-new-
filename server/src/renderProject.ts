@@ -1,5 +1,5 @@
 import {
-  accentOf, applyLottieValues, calloutsFrom,
+  accentOf, applyLottieValues, fitSpecsFrom, calloutsFrom,
   compositionConfig,
   fontsFor,
   frameFor, treatmentFor,
@@ -99,7 +99,7 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase, run
     const resolvedSource = resolveLottieAssets(source, `${serverBase}${elementBaseUrl(templatesDir, e.templateSlug, e.slug, aspect)}`);
     const values = withBaseUrl(valuesFor(e.id), schema, serverBase);
     const lottie = applyLottieValues(resolvedSource, values, schema);
-    return { id: String(e.id), lottie, startFrame: e.startFrame, endFrame: e.endFrame, zIndex: e.zIndex, enabled: e.enabled, media: mediaFor(e.id, source, schema), callouts: calloutsFrom(schema, values, accentOf(schema, values)) };
+    return { id: String(e.id), lottie, startFrame: e.startFrame, endFrame: e.endFrame, zIndex: e.zIndex, enabled: e.enabled, media: mediaFor(e.id, source, schema), callouts: calloutsFrom(schema, values, accentOf(schema, values)), fit: fitSpecsFrom(schema) };
   });
 
   const transitions = db.getProjectTransitions(projectId).map((t) => ({

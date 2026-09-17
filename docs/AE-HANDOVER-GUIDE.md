@@ -41,8 +41,8 @@ We looked at `DGA_Ayudando y Perjudicando_6s_Gif_V2.gif`: 1080 by 1080, 6 second
 | "PERJUDICA" | Tag it. | `cc.headline.4` |
 | "A LAS FAMILIAS" | Tag it. | `cc.headline.5` |
 | "DE NEVADA." in red | Tag it. | `cc.headline.6` |
-| The cream torn-paper plates behind each line | Lock them. Torn edges are PNGs. Draw each plate wide enough for longer copy than yours; the plate does not grow when the user types more. | `plate-1` … `plate-6` |
-| The red underline that draws on under "MULTIMILLONARIOS" and "FAMILIAS" | Lock it: a shape layer with a stroke and an animated Trim Paths travels perfectly. It will not move if the user changes that word. See 4.5 for the alternative. | `underline-1`, `underline-2` |
+| The cream torn-paper plates behind each line | Tag each one after its line, and it grows and shrinks with the user's copy. A PNG plate is stretched sideways (the torn edge stretches a little with it); a shape plate keeps its corners. Parent each plate to its text layer. | `cc.headline.1.plate` … `cc.headline.6.plate` |
+| The red underline that draws on under "MULTIMILLONARIOS" and "FAMILIAS" | Tag it after its line: a shape layer with a stroke and an animated Trim Paths travels perfectly, and its right end now follows the copy. Parent it to the text layer. | `cc.headline.3.underline`, `cc.headline.5.underline` |
 | "PAID FOR BY A MORE AFFORDABLE NEVADA" | Tag it. Editable words, locked position and size. Keep it on screen for the whole 6 seconds. | `cc.safe.disclaimer` |
 
 Two beats, one comp. Keep the whole 6 seconds in one comp; the beat-2 text layers simply start at 3 seconds. That keeps your timing exact and avoids splitting shared layers. (If you would rather each beat be its own scene in the app, see Appendix B.)
@@ -117,7 +117,7 @@ For every text layer that will be tagged:
 
 - **One line per layer.** The app edits each line in a single-line field. A two-line headline is two layers. The GIF already has each line on its own plate, so this is probably how it is built.
 - **Type the capitals.** Do not rely on the Character panel's All Caps button; Lottie has no such switch, so it exports what you typed. Select the text, and type it in capitals.
-- **Paragraph text, not point text.** If the layer is point text, the app cannot derive a character limit. Convert: right-click the layer in the comp viewer with the Type tool > Convert to Paragraph Text. Then drag the box wide: the user's character limit comes from the box you draw. Campaign copy runs long.
+- **Paragraph text, not point text.** If the layer is point text, the app cannot derive a character limit and cannot shrink long copy to fit. Convert: right-click the layer in the comp viewer with the Type tool > Convert to Paragraph Text. Then drag the box as wide as the line may ever be: the user's character limit comes from the box you draw, and copy that runs past it is set smaller to fit. Campaign copy runs long.
 - **Left, centre or right alignment as you like.** All three travel.
 - **Keep the font, size, tracking and leading.** They travel and are locked.
 - **No faux bold or faux italic** from the Character panel. Use the real Bold face.
@@ -152,7 +152,12 @@ cc.headline.6         DE NEVADA.
 cc.image.1            the Lombardo cut-out
 cc.image.2            the Musk photo inside the polaroid
 cc.safe.disclaimer    PAID FOR BY A MORE AFFORDABLE NEVADA
+cc.headline.1.plate   the plate behind AYUDA        (and .2 to .6 for the other plates)
+cc.headline.3.underline   the underline under MULTIMILLONARIOS
+cc.headline.5.underline   the underline under FAMILIAS
 ```
+
+The plates and underlines are followers, not fields: nothing appears for them in the panel. They move when their line's copy changes.
 
 In the app these appear as Subhead 1, Headline 1 to Headline 6, Subhead 2, Photo 1, Photo 2, Disclaimer, each pre-filled with what you authored. `cc.logo` is reserved for an actual logo, which a client's brand kit fills automatically; this piece has none.
 
@@ -165,6 +170,7 @@ In the app these appear as Subhead 1, Headline 1 to Headline 6, Subhead 2, Photo
 - **A text tag must be on a text layer.** `cc.headline.1` on a shape is a rejection.
 - **`cc.image.1` and `cc.logo` must be on an image layer** (footage), not a shape, solid or precomp. A photo inside a precomp is not reachable; put the photo layer in the main comp.
 - **The disclaimer tag is `cc.safe.disclaimer`**, with `safe` in the middle, and no number.
+- **A plate or underline must be a shape layer or an image layer**, named after a text that is tagged in the same comp. `cc.headline.7.plate` with no `cc.headline.7` is a rejection.
 
 ### 4.3 Name the locked layers too
 
@@ -174,9 +180,13 @@ Untagged layers stay locked no matter what they are called, but the reports list
 
 If every red in the piece lives in one shape layer (several rectangles as groups inside one layer, one Fill), name that layer `cc.accent` and the user gets a colour picker that recolours all of it. If the red is spread across several layers and PNGs, skip this; a picker that recolours one block and not the others is worse than no picker. The red in the text is the text's own colour and stays as you set it.
 
-### 4.5 Optional: let the app draw the underline
+### 4.5 How the plates and underlines follow the copy
 
-The app can circle, underline, highlight or enlarge any one word of a tagged line, drawing on in the campaign's accent colour, and it follows the word wherever the edited text puts it. If you would rather the underline follow the user's words than stay pinned under yours, delete `underline-1` and `underline-2`; the staffer picks "Underline it" on the word. For a 1-to-1 proof, keep your underlines.
+The app measures the user's copy in your font, works out how much wider or narrower it is than yours, and moves every follower of that line by the difference, in the direction the text grows (to the right for left-aligned text, both ways for centred, to the left for right-aligned). Draw each plate to fit your own copy, exactly as you have. Parent each plate and underline to its text layer (pick-whip it), so their scales and positions read the same.
+
+Paragraph (box) text is fitted first: copy wider than the box is set smaller until it fits, never below half size and never smaller than your own copy needed. So a long headline stays one line and its plate follows the smaller line. If you would rather a line never shrank, make it point text; then only the plate grows.
+
+The app can also circle, underline, highlight or enlarge any one word of a tagged line on its own, drawing on in the campaign's accent colour. That is the staffer's choice per spot; your drawn underlines stay yours.
 
 ---
 
@@ -289,7 +299,7 @@ Before you zip, tick every line:
 - [ ] No effects, layer styles, blend modes, motion blur, 3D, cameras, adjustment layers, time remap or expressions remain
 - [ ] The navy background is a layer, not the comp background colour
 - [ ] Every tagged text layer is live text, paragraph text, one line, typed in capitals
-- [ ] The eleven tags from 4.1 are present, lower case, each once
+- [ ] The eleven tags from 4.1 are present, lower case, each once, and every plate and underline is tagged after its line and parented to it
 - [ ] The disclaimer is `cc.safe.disclaimer` and on screen the full 6 s
 - [ ] The Lombardo and Musk photos are image layers named `cc.image.1` and `cc.image.2`
 - [ ] Every locked layer has a readable name
@@ -307,6 +317,7 @@ Before you zip, tick every line:
 - Replace either photo (Photo 1 and Photo 2)
 - Change the disclaimer's words
 - Nudge, scale or rotate any tagged layer a little; your animation on it is kept underneath
+- Type longer or shorter copy and watch each plate and underline follow it; a long line in a box shrinks to fit rather than wrapping
 - Circle, underline, highlight or enlarge one word of any line
 - Apply a treatment across the spot (clean, grit, glow, opaque)
 - Export the square as built, or 16:9, 4:5 and 9:16 versions of it. Those versions letterbox your square until you author a variant at that size (Appendix C)

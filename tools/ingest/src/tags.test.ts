@@ -38,3 +38,13 @@ describe('COLOR_ROLES matches the role table', () => {
     expect(COLOR_ROLES).toEqual(fromRoles);
   });
 });
+
+/** M60: a plate or an underline that follows a text. */
+describe('parseTag: followers (M60)', () => {
+  it('reads the text it follows and what it is to it', () => {
+    expect(parseTag('cc.headline.1.plate')).toEqual({ tag: 'cc.headline.1.plate', role: 'headline', index: 1, follows: 'plate' });
+    expect(parseTag('cc.headline.underline')).toEqual({ tag: 'cc.headline.underline', role: 'headline', index: undefined, follows: 'underline' });
+    expect(parseTag('cc.stat.2.plate')).toEqual({ tag: 'cc.stat.2.plate', role: 'stat', index: 2, follows: 'plate' });
+    expect(parseTag('cc.headline.Plate')).toEqual({ tag: 'cc.headline.Plate', role: 'headline.Plate', index: undefined });
+  });
+});

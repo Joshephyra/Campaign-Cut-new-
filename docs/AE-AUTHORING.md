@@ -81,6 +81,19 @@ cc.headline.<n>    one line of a headline  cc.headline.1, cc.headline.2 (also su
 
 Every text and image tag except `cc.safe.*` also gets a **Placement** control: the user can nudge, scale and rotate that layer away from where you put it. Your animation on the layer is kept; the offset rides on top of it. If something must not move, leave it untagged; the disclaimer's `cc.safe.disclaimer` is the one editable-but-fixed role.
 
+### Plates and underlines that follow the copy (M60, M61)
+
+A plate behind a line, or an underline drawn under it, is craft: locked, and drawn to your copy. Name it after the text it belongs to and it moves with the user's copy instead:
+
+```
+cc.headline.1.plate        the plate behind cc.headline.1
+cc.headline.3.underline    the underline under cc.headline.3
+```
+
+The app measures the user's copy in the real font, works out how much wider or narrower it is than yours, and moves the follower by that much in the direction the text grows: to the right for left-aligned text, both ways for centred, to the left for right-aligned. A shape layer's rectangles, ellipses and paths are widened (an underline's right end moves; a rounded plate keeps its corners); an image layer is stretched horizontally, so a PNG plate's torn edges stretch a little with it. Parent the follower to its text layer, or leave both unparented; either way scales are honoured. A text may have several followers (two plates, a plate and an underline).
+
+Box text (paragraph text) is fitted first: copy wider than your box is set smaller until it fits, down to half size, and never smaller than your own copy needed, so a long line stays one line the way you would set it by hand. Point text has no box and is never shrunk; its plate simply grows.
+
 ### Rules that will bite you
 
 - **Tags are case-sensitive.** `cc.Headline` will not match. It will be treated as an unknown tag and the ingest will reject the template and tell you which layer.

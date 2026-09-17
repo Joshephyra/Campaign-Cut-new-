@@ -1,0 +1,76 @@
+[
+  {
+    "key": "headline",
+    "role": "headline",
+    "kind": "text",
+    "label": "Headline",
+    "default": "VOTE NOW",
+    "path": "/layers/0"
+  },
+  {
+    "key": "headline.transform",
+    "role": "headline",
+    "kind": "transform",
+    "label": "Headline placement",
+    "default": {
+      "x": 0,
+      "y": 0,
+      "scale": 1,
+      "rotation": 0
+    },
+    "path": "/layers/0",
+    "for": "headline"
+  },
+  {
+    "key": "headline.underline",
+    "role": "headline",
+    "kind": "follow",
+    "label": "Headline underline",
+    "default": null,
+    "path": "/layers/3",
+    "for": "headline",
+    "follows": "underline"
+  },
+  {
+    "key": "headline.plate",
+    "role": "headline",
+    "kind": "follow",
+    "label": "Headline plate",
+    "default": null,
+    "path": "/layers/4",
+    "for": "headline",
+    "follows": "plate"
+  },
+  {
+    "key": "subhead",
+    "role": "subhead",
+    "kind": "text",
+    "label": "Subhead",
+    "default": "A record of results",
+    "path": "/layers/1",
+    "maxChars": 44
+  },
+  {
+    "key": "subhead.transform",
+    "role": "subhead",
+    "kind": "transform",
+    "label": "Subhead placement",
+    "default": {
+      "x": 0,
+      "y": 0,
+      "scale": 1,
+      "rotation": 0
+    },
+    "path": "/layers/1",
+    "for": "subhead"
+  },
+  {
+    "key": "disclaimer",
+    "role": "safe.disclaimer",
+    "kind": "text",
+    "label": "Disclaimer",
+    "default": "PAID FOR BY RIVERA FOR SENATE",
+    "path": "/layers/2",
+    "locked": true
+  }
+]

@@ -49,6 +49,7 @@ Roles:
 | `cc.image.N` | image | Repeated. Any other replaceable photo or picture (M58). |
 | `cc.mediaFill` | media | Slot where user footage shows through |
 | `cc.safe.disclaimer` | text | Locked position and size. Text editable only. |
+| `<text tag>.plate`, `<text tag>.underline` | follow | A shape or image layer whose width follows that text's copy (M60). Not a control. |
 
 Tags are case-sensitive. A misspelled tag falls through as locked, so **the ingest tool must print every tag it found** so the author can see what was and was not picked up.
 

@@ -952,6 +952,30 @@ Josh (2026-09-17): every font arriving as a file the designer is licensed to han
 
 ---
 
+## M60 · Plates and underlines that follow the copy · DONE
+
+Josh (2026-09-17): a plate that does not grow with longer copy, and an underline pinned under the designer's word, were limits to lift.
+
+**Build**
+- A designer names a shape or image layer after the text it belongs to: `cc.headline.1.plate`, `cc.headline.3.underline`. The ingest binds it to that text as a `follow` param (`for`, `follows`; no control in the panel; a follower of an untagged text, a follower on a text layer, or a follower of a colour is named and rejected). The pre-flight reads the same tags and checks the same things.
+- The composition (`composition/src/fit.ts`) measures the authored copy and the user's copy in the real font, character by character with the tracking between (canvas, inside `TemplateFonts`, so the faces are loaded; both runners are Chrome), and moves every follower by the difference in the direction the text grows (left-aligned to the right, centred both ways, right-aligned to the left). Shape layers: rectangles and ellipses widen and re-centre, paths stretch on the far side of their middle; image layers stretch horizontally about the kept edge. Scales are honoured whether the follower is parented to its text or not; animated properties change in every keyframe. The authored copy leaves the Lottie untouched, identity included.
+- `ElementProps.fit` (from `fitSpecsFrom(schema)`) travels from the editor and the render worker alike; `ElementView` fits before mounting the Lottie.
+
+**Tests**
+- Pure: specs, widest line, untouched identity, left/centre/right, shorter copy, scales, animated rectangles. Tags, schema (order, keys, second plate, placements untouched; the three rejections), pre-flight. A real render: a longer headline widens its red plate by more than 1.6× and its right edge moves; untagged, it stays.
+
+---
+
+## M61 · Box text shrinks to its box · DONE
+
+**Build**
+- In the same pass, paragraph (box) text wider than its box is set smaller until it fits, never below half size (`MIN_SHRINK`) and never below what the designer's own copy needed, line height with it; followers then follow the shrunk width. Point text is never shrunk. The derived character limit doubles to match: twice the box's characters may be typed, since the text may halve.
+
+**Tests**
+- Pure: shrink and line height, the plate following the shrunk width, the authored copy's own width as the floor, the half-size floor, copy that fits, point text. A real render: box text too long for its box renders on one line where the untouched Lottie wrapped it.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

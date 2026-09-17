@@ -1,4 +1,4 @@
-import { DEFAULT_TRANSFORM, rgbaToHex, type LottieAnimationData, type ParamKind, type TemplateParam } from '@campaigncut/composition';
+import { DEFAULT_TRANSFORM, MIN_SHRINK, rgbaToHex, type LottieAnimationData, type ParamKind, type TemplateParam } from '@campaigncut/composition';
 import { keyFor, KNOWN_ROLES, labelFor, ROLES } from './roles';
 import { parseTag } from './tags';
 
@@ -44,6 +44,8 @@ export function generateSchema(lottie: LottieAnimationData): GeneratedSchema {
   const fontNames: string[] = [];
   const seenKeys = new Set<string>();
   const roleOrder = new Map<string, number>();
+  /** M60: followers wait until every text tag is known, so a plate can be listed above or below its text. */
+  const followers: Array<{ tag: string; role: string; index: number | undefined; follows: 'plate' | 'underline'; layer: AnyRecord; pointer: string }> = [];
 
   const fail = (layer: string, message: string) => {
     errors.push({ layer, message });
@@ -61,6 +63,12 @@ export function generateSchema(lottie: LottieAnimationData): GeneratedSchema {
     const spec = ROLES[role];
     if (!spec) {
       fail(tag, `Layer "${tag}": unknown role "${role}". Known roles: ${KNOWN_ROLES.join(', ')}. Tags are case-sensitive.`);
+      continue;
+    }
+    if (parsed.follows) {
+      if (spec.kind !== 'text') fail(tag, `Layer "${tag}": only a text can have a ${parsed.follows}; "${role}" is a ${spec.kind} role`);
+      else if (layer.ty !== LAYER_SHAPE && layer.ty !== LAYER_IMAGE) fail(tag, `Layer "${tag}": a ${parsed.follows} must be a shape layer or an image layer, so its width can follow the copy (this is ty ${String(layer.ty)})`);
+      else followers.push({ tag, role, index, follows: parsed.follows, layer, pointer });
       continue;
     }
     if (spec.repeated && index === undefined) {
@@ -120,6 +128,21 @@ export function generateSchema(lottie: LottieAnimationData): GeneratedSchema {
     }
   }
 
+  // M60: each follower hangs off the text it names; a follower of an untagged text is a mistake worth naming.
+  for (const f of followers) {
+    const textKey = keyFor(f.role, f.index);
+    if (!seenKeys.has(textKey)) {
+      fail(f.tag, `Layer "${f.tag}": follows cc.${f.role}${f.index === undefined ? '' : `.${f.index}`}, but no text layer carries that tag`);
+      continue;
+    }
+    let n = 1;
+    let key = `${textKey}.${f.follows}`;
+    while (seenKeys.has(key)) key = `${textKey}.${f.follows}.${++n}`;
+    seenKeys.add(key);
+    params.push({ key, role: f.role, kind: 'follow', label: `${labelFor(f.role, f.index)} ${f.follows}`, default: null, path: f.pointer, for: textKey, follows: f.follows, _order: roleOrder.get(f.role)!, _index: f.index ?? 0 });
+    report.push({ layer: f.tag, status: 'follow', path: f.pointer });
+  }
+
   params.sort((a, b) => a._order - b._order || a._index - b._index);
   const cleaned = params.map(({ _order, _index, ...p }) => p);
 
@@ -171,6 +194,8 @@ function resolveTarget(kind: ParamKind, layer: AnyRecord, pointer: string, lotti
       return { path: pointer, defaultValue: null };
     case 'transform':
       return { error: `Layer "${tag}": placement is derived from text and image tags, not tagged directly` };
+    case 'follow':
+      return { error: `Layer "${tag}": a follower is tagged after its text (cc.headline.1.plate), never as a role of its own` };
   }
 }
 
@@ -208,7 +233,8 @@ function deriveMaxChars(style: AnyRecord): number | undefined {
   const lineHeight = typeof style.lh === 'number' && style.lh > 0 ? style.lh : fontSize * 1.2;
   const perLine = Math.floor(w / (AVERAGE_GLYPH_WIDTH * fontSize));
   const lines = Math.max(1, Math.floor(h / lineHeight));
-  return Math.max(1, perLine * lines);
+  // M61: box text shrinks to fit, down to MIN_SHRINK of its size, so that many more characters fit on the same lines.
+  return Math.max(1, Math.round((perLine * lines) / MIN_SHRINK));
 }
 
 function resolveColor(layer: AnyRecord, pointer: string, tag: string): Resolved {

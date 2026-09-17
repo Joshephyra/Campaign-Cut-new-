@@ -33,3 +33,4 @@ export { metadataFor } from './Root';
 export { accentOf, ACCENT_CLASS, DEFAULT_ACCENT, isTreatment, TREATMENT_LABELS, TREATMENTS, treatmentCss, treatmentFor, treatmentLayerFilter, type Treatment, type TreatmentProps } from './treatments';
 export { proofPointsFor, structureOf, type Structure, type StructureGroup } from './structure';
 export { CALLOUT_LABELS, CALLOUT_STYLES, calloutKey, calloutsFrom, isCalloutValue, wordRanges, type Callout, type CalloutStyle, type CalloutValue } from './callouts';
+export { FOLLOW_KINDS, fitLottie, fitSpecsFrom, isFollowKind, textWidth, MIN_SHRINK, type FitSpec, type FollowKind, type Measure } from './fit';

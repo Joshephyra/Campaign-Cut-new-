@@ -14,6 +14,8 @@ export type ParsedTag = {
   role: string;
   /** 1-based index for repeated slots, otherwise undefined. */
   index: number | undefined;
+  /** M60: "cc.headline.1.plate" / "cc.headline.1.underline": a layer that follows that text, not a slot of its own. */
+  follows?: 'plate' | 'underline';
 };
 
 const PREFIX = 'cc.';
@@ -21,12 +23,19 @@ const PREFIX = 'cc.';
 export function parseTag(layerName: string): ParsedTag | null {
   const tag = layerName.trim();
   if (!tag.startsWith(PREFIX)) return null;
-  const rest = tag.slice(PREFIX.length);
+  let rest = tag.slice(PREFIX.length);
   if (rest.length === 0) return null;
 
-  const indexed = /^(.+)\.(\d+)$/.exec(rest);
-  if (indexed) {
-    return { tag, role: indexed[1]!, index: Number(indexed[2]) };
+  // M60: a follower names the text it belongs to, then what it is to it
+  let follows: 'plate' | 'underline' | undefined;
+  const follower = /^(.+)\.(plate|underline)$/.exec(rest);
+  if (follower) {
+    rest = follower[1]!;
+    follows = follower[2] as 'plate' | 'underline';
   }
-  return { tag, role: rest, index: undefined };
+
+  const indexed = /^(.+)\.(\d+)$/.exec(rest);
+  const parsed: ParsedTag = indexed ? { tag, role: indexed[1]!, index: Number(indexed[2]) } : { tag, role: rest, index: undefined };
+  if (follows) parsed.follows = follows;
+  return parsed;
 }

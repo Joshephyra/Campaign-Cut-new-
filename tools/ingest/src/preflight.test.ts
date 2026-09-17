@@ -177,6 +177,20 @@ describe('preflight report', () => {
     expect(r.text).toMatch(/cc.image.1\s+image/);
   });
 
+  it('M60: a plate or underline on a shape layer follows its text; one on a text layer or without a text is named', () => {
+    const r = api.buildReport(fakeComp('c', [
+      { name: 'cc.headline.1.plate', index: 1, kind: 'shape', fill: true },
+      { name: 'cc.headline.1', index: 2, kind: 'text', text: { font: 'A', fontSize: 1, text: 'x' } },
+      { name: 'cc.headline.1.underline', index: 3, kind: 'shape', fill: false, stroke: true },
+      { name: 'cc.headline.2.plate', index: 4, kind: 'text', text: { font: 'A', fontSize: 1, text: 'y' } },
+      { name: 'cc.headline.3.plate', index: 5, kind: 'shape', fill: true },
+    ]), env);
+    expect(r.text).toMatch(/cc.headline.1.plate\s+follow\s+follows cc.headline.1/);
+    expect(r.problems).toHaveLength(2);
+    expect(r.problems[0]).toMatch(/"cc.headline.2.plate".*must be a shape layer or an image layer/);
+    expect(r.problems[1]).toMatch(/"cc.headline.3.plate".*follows cc.headline.3, but no text layer carries that tag/);
+  });
+
   it('ends with a clear verdict line', () => {
     const clean = api.buildReport(fakeComp('c', [{ name: 'cc.headline', index: 1, kind: 'text', text: { font: 'A', fontSize: 1, text: 'x' } }]), env);
     expect(clean.text).toMatch(/READY TO EXPORT/);
