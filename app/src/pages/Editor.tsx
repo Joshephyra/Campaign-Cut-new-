@@ -1707,7 +1707,7 @@ function Monitor({
                 const box = ev.currentTarget.getBoundingClientRect();
                 onReorder(sceneId, e.id, ev.clientX < box.left + box.width / 2 ? 'before' : 'after');
               }}
-              className={`group relative basis-0 min-w-36 overflow-hidden flex items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors cursor-grab active:cursor-grabbing ${
+              className={`group relative basis-0 min-w-44 overflow-hidden flex items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors cursor-grab active:cursor-grabbing ${
                 onScreen ? 'bg-blue text-white' : 'bg-raised text-fg hover:bg-hover'
               } ${isSelected || dropEdge?.id === e.id && dropEdge.place === 'on' ? 'ring-2 ring-blue ring-offset-2 ring-offset-panel' : ''} ${e.enabled ? '' : 'opacity-60'} ${
                 dropEdge?.id === e.id && dropEdge.place !== 'on' ? (dropEdge.place === 'before' ? 'shadow-[inset_3px_0_0_0_var(--color-blue)]' : 'shadow-[inset_-3px_0_0_0_var(--color-blue)]') : ''
