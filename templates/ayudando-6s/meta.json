@@ -1,0 +1,55 @@
+{
+  "slug": "ayudando-6s",
+  "name": "Ayudando y Perjudicando",
+  "adType": "Contrast",
+  "durationInFrames": 180,
+  "fps": 30,
+  "width": 1080,
+  "height": 1080,
+  "fonts": [
+    "Universal Accreditation",
+    "Anton",
+    "Bebas Neue",
+    "Georgia"
+  ],
+  "fontFiles": [
+    {
+      "family": "Georgia",
+      "style": "Regular",
+      "file": "Georgia-Regular.ttf"
+    },
+    {
+      "family": "Bebas Neue",
+      "style": "Regular",
+      "file": "BebasNeue-Regular.ttf"
+    },
+    {
+      "family": "Anton",
+      "style": "Regular",
+      "file": "Anton-Regular.ttf"
+    },
+    {
+      "family": "Universal Accreditation",
+      "style": "Regular",
+      "file": "UniversalAccreditation-Regular.ttf"
+    }
+  ],
+  "elements": [
+    {
+      "slug": "ayudando-6s",
+      "name": "Ayudando y Perjudicando",
+      "type": "open",
+      "startFrame": 0,
+      "endFrame": 180,
+      "zIndex": 0,
+      "durationInFrames": 180,
+      "fonts": [
+        "Universal Accreditation",
+        "Anton",
+        "Bebas Neue",
+        "Georgia"
+      ]
+    }
+  ],
+  "reference": "reference.mp4"
+}

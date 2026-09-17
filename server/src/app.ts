@@ -12,7 +12,7 @@ import { paths } from './paths';
 import { renderComposition } from './render';
 import { RenderQueue, type RenderFn } from './renderQueue';
 import { pexelsClient, type StockOptions } from './stock';
-import { elementLottieUrl, hasVariant, loadElementSchema, projectFontFiles } from './templateFiles';
+import { elementLottieUrl, hasVariant, loadElementFiles, loadElementSchema, projectFontFiles } from './templateFiles';
 import { FONT_EXTENSIONS, listFontLibrary } from './fontNames';
 import { defaultUploadsDir, makeStagingDir, problemsFrom, runIngestCommand, stagedRelativePath, type RunIngest } from './ingestUpload';
 
@@ -111,13 +111,25 @@ export function buildApp(options: AppOptions = {}) {
     return groups;
   });
 
+  /** M65: a one-comp handover authored at 1080x1080 is a 1:1 element in a 1:1 spot, not an auto-fit of anything. */
+  const authoredAt = (templateSlug: string, elementSlug: string, aspect: string): boolean => {
+    if (!isAspect(aspect)) return false;
+    try {
+      const { lottie } = loadElementFiles(templatesDir, templateSlug, elementSlug);
+      const frame = frameFor(aspect);
+      return Number(lottie.w) === frame.width && Number(lottie.h) === frame.height;
+    } catch {
+      return false;
+    }
+  };
+
   /** An element as the app sees it: its DB row plus its own schema and Lottie URL (M17), for the spot's aspect (M36). */
   const withElementFiles = <E extends { slug: string }>(templateSlug: string, e: E, aspect = '16:9') => ({
     ...e,
     schema: loadElementSchema(templatesDir, templateSlug, e.slug, aspect),
     lottieUrl: elementLottieUrl(templatesDir, templateSlug, e.slug, aspect),
-    /** M36: true when a designer variant for this aspect is in use, or the spot is 16:9; false means auto-fitted. */
-    variant: aspect === '16:9' || hasVariant(templatesDir, templateSlug, e.slug, aspect),
+    /** M36: true when a designer variant for this aspect is in use, the spot is 16:9, or (M65) the element was authored at this version's own size; false means auto-fitted. */
+    variant: aspect === '16:9' || hasVariant(templatesDir, templateSlug, e.slug, aspect) || authoredAt(templateSlug, e.slug, aspect),
   });
 
   app.get<{ Params: { slug: string } }>('/templates/:slug', async (req, reply) => {

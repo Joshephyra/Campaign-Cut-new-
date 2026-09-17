@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { aspectOfFrame, frameFor } from '@campaigncut/composition';
 import path from 'node:path';
 import { openDb } from './db/index';
 import { FIDELITY_THRESHOLD, runFidelity } from './fidelity';
@@ -35,6 +36,10 @@ const db = openDb(paths.db);
 const stamp = Date.now();
 const workDir = path.join(paths.media, 'fidelity', `${slug}-${stamp}`);
 
+// M65: a template authored at a version's own size (a 1080x1080 handover) is rendered and compared at that size, not at 16:9.
+const templateRow = db.getTemplateBySlug(slug);
+const nativeFrame = frameFor((templateRow && aspectOfFrame(templateRow.width, templateRow.height)) || '16:9');
+
 const referencePath = argValue('--reference') ? path.resolve(baseDir, argValue('--reference')!) : path.join(paths.templates, slug, 'reference.mp4');
 if (!fs.existsSync(referencePath)) {
   console.error(`[fidelity] no reference render at ${referencePath}. Hand over reference.mp4 with the template, or pass --reference.`);
@@ -48,7 +53,7 @@ if (!renderPath) {
   const projectId = argValue('--project') ? Number(argValue('--project')) : undefined;
   const props = projectId
     ? buildProjectProps({ db, templatesDir: paths.templates, projectId, serverBase })
-    : buildTemplateDefaultProps({ db, templatesDir: paths.templates, slug, serverBase });
+    : { ...buildTemplateDefaultProps({ db, templatesDir: paths.templates, slug, serverBase }), frame: nativeFrame };
   console.log(`[fidelity] rendering ${projectId ? `project ${projectId}` : `template "${slug}" as authored`} -> ${renderPath}`);
   await renderComposition({ outputPath: renderPath, inputProps: props });
 }
@@ -59,7 +64,7 @@ const threshold = Number(argValue('--threshold') ?? FIDELITY_THRESHOLD);
 console.log(`[fidelity] reference ${referencePath}`);
 console.log(`[fidelity] ${samples} samples, threshold ${threshold}`);
 
-const report = await runFidelity({ template: slug, referencePath, renderPath, workDir, samples, threshold });
+const report = await runFidelity({ template: slug, referencePath, renderPath, workDir, samples, threshold, size: nativeFrame });
 console.log('');
 console.log(report.text);
 console.log('');

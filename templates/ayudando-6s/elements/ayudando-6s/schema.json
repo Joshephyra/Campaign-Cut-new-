@@ -1,0 +1,280 @@
+[
+  {
+    "key": "disclaimer",
+    "role": "safe.disclaimer",
+    "kind": "text",
+    "label": "Disclaimer",
+    "default": "PAID FOR BY A MORE AFFORDABLE NEVADA",
+    "path": "/assets/19/layers/0",
+    "maxChars": 44,
+    "locked": true
+  },
+  {
+    "key": "headline.1",
+    "role": "headline",
+    "kind": "text",
+    "label": "Headline 1",
+    "default": "AYUDA",
+    "path": "/assets/26/layers/5",
+    "maxChars": 10
+  },
+  {
+    "key": "headline.1.transform",
+    "role": "headline",
+    "kind": "transform",
+    "label": "Headline 1 placement",
+    "default": {
+      "x": 0,
+      "y": 0,
+      "scale": 1,
+      "rotation": 0
+    },
+    "path": "/assets/26/layers/5",
+    "for": "headline.1"
+  },
+  {
+    "key": "headline.2",
+    "role": "headline",
+    "kind": "text",
+    "label": "Headline 2",
+    "default": "A LOS",
+    "path": "/assets/26/layers/4",
+    "maxChars": 8
+  },
+  {
+    "key": "headline.2.transform",
+    "role": "headline",
+    "kind": "transform",
+    "label": "Headline 2 placement",
+    "default": {
+      "x": 0,
+      "y": 0,
+      "scale": 1,
+      "rotation": 0
+    },
+    "path": "/assets/26/layers/4",
+    "for": "headline.2"
+  },
+  {
+    "key": "headline.2.underline",
+    "role": "headline",
+    "kind": "follow",
+    "label": "Headline 2 underline",
+    "default": null,
+    "path": "/assets/26/layers/3",
+    "for": "headline.2",
+    "follows": "underline"
+  },
+  {
+    "key": "headline.3",
+    "role": "headline",
+    "kind": "text",
+    "label": "Headline 3",
+    "default": "MULTIMILLONARIOS.",
+    "path": "/assets/22/layers/0",
+    "maxChars": 32
+  },
+  {
+    "key": "headline.3.transform",
+    "role": "headline",
+    "kind": "transform",
+    "label": "Headline 3 placement",
+    "default": {
+      "x": 0,
+      "y": 0,
+      "scale": 1,
+      "rotation": 0
+    },
+    "path": "/assets/22/layers/0",
+    "for": "headline.3"
+  },
+  {
+    "key": "headline.3.plate",
+    "role": "headline",
+    "kind": "follow",
+    "label": "Headline 3 plate",
+    "default": null,
+    "path": "/assets/22/layers/1",
+    "for": "headline.3",
+    "follows": "plate"
+  },
+  {
+    "key": "headline.4",
+    "role": "headline",
+    "kind": "text",
+    "label": "Headline 4",
+    "default": "PERJUDICA",
+    "path": "/assets/25/layers/5",
+    "maxChars": 18
+  },
+  {
+    "key": "headline.4.transform",
+    "role": "headline",
+    "kind": "transform",
+    "label": "Headline 4 placement",
+    "default": {
+      "x": 0,
+      "y": 0,
+      "scale": 1,
+      "rotation": 0
+    },
+    "path": "/assets/25/layers/5",
+    "for": "headline.4"
+  },
+  {
+    "key": "headline.5",
+    "role": "headline",
+    "kind": "text",
+    "label": "Headline 5",
+    "default": "A LAS FAMILIAS",
+    "path": "/assets/25/layers/4",
+    "maxChars": 26
+  },
+  {
+    "key": "headline.5.transform",
+    "role": "headline",
+    "kind": "transform",
+    "label": "Headline 5 placement",
+    "default": {
+      "x": 0,
+      "y": 0,
+      "scale": 1,
+      "rotation": 0
+    },
+    "path": "/assets/25/layers/4",
+    "for": "headline.5"
+  },
+  {
+    "key": "headline.5.underline",
+    "role": "headline",
+    "kind": "follow",
+    "label": "Headline 5 underline",
+    "default": null,
+    "path": "/assets/25/layers/3",
+    "for": "headline.5",
+    "follows": "underline"
+  },
+  {
+    "key": "headline.6",
+    "role": "headline",
+    "kind": "text",
+    "label": "Headline 6",
+    "default": "DE NEVADA.",
+    "path": "/assets/24/layers/0",
+    "maxChars": 18
+  },
+  {
+    "key": "headline.6.transform",
+    "role": "headline",
+    "kind": "transform",
+    "label": "Headline 6 placement",
+    "default": {
+      "x": 0,
+      "y": 0,
+      "scale": 1,
+      "rotation": 0
+    },
+    "path": "/assets/24/layers/0",
+    "for": "headline.6"
+  },
+  {
+    "key": "headline.6.plate",
+    "role": "headline",
+    "kind": "follow",
+    "label": "Headline 6 plate",
+    "default": null,
+    "path": "/assets/24/layers/1",
+    "for": "headline.6",
+    "follows": "plate"
+  },
+  {
+    "key": "subhead.1",
+    "role": "subhead",
+    "kind": "text",
+    "label": "Subhead 1",
+    "default": "JOE LOMBARDO:",
+    "path": "/assets/27/layers/1",
+    "maxChars": 20
+  },
+  {
+    "key": "subhead.1.transform",
+    "role": "subhead",
+    "kind": "transform",
+    "label": "Subhead 1 placement",
+    "default": {
+      "x": 0,
+      "y": 0,
+      "scale": 1,
+      "rotation": 0
+    },
+    "path": "/assets/27/layers/1",
+    "for": "subhead.1"
+  },
+  {
+    "key": "subhead.2",
+    "role": "subhead",
+    "kind": "text",
+    "label": "Subhead 2",
+    "default": "JOE LOMBARDO:",
+    "path": "/assets/27/layers/0",
+    "maxChars": 20
+  },
+  {
+    "key": "subhead.2.transform",
+    "role": "subhead",
+    "kind": "transform",
+    "label": "Subhead 2 placement",
+    "default": {
+      "x": 0,
+      "y": 0,
+      "scale": 1,
+      "rotation": 0
+    },
+    "path": "/assets/27/layers/0",
+    "for": "subhead.2"
+  },
+  {
+    "key": "image.1",
+    "role": "image",
+    "kind": "image",
+    "label": "Photo 1",
+    "default": "images/lombardo-graded.png",
+    "path": "/assets/11"
+  },
+  {
+    "key": "image.1.transform",
+    "role": "image",
+    "kind": "transform",
+    "label": "Photo 1 placement",
+    "default": {
+      "x": 0,
+      "y": 0,
+      "scale": 1,
+      "rotation": 0
+    },
+    "path": "/assets/39/layers/0",
+    "for": "image.1"
+  },
+  {
+    "key": "image.2",
+    "role": "image",
+    "kind": "image",
+    "label": "Photo 2",
+    "default": "images/musk-clean-graded.png",
+    "path": "/assets/6"
+  },
+  {
+    "key": "image.2.transform",
+    "role": "image",
+    "kind": "transform",
+    "label": "Photo 2 placement",
+    "default": {
+      "x": 0,
+      "y": 0,
+      "scale": 1,
+      "rotation": 0
+    },
+    "path": "/assets/31/layers/0",
+    "for": "image.2"
+  }
+]

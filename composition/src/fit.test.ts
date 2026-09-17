@@ -98,20 +98,20 @@ describe('followers move with the copy (M60)', () => {
 
 describe('box text shrinks to its box (M61)', () => {
   it('copy wider than the box shrinks to fit it, line height with it, and the plate follows the shrunk width', () => {
-    const out = fitLottie(fixture({ text: 'VOTE NOW', sz: [50, 40] }), specs, measure); // 80 into 50: 0.625
-    expect(textStyle(out).s).toBe(10);
-    expect(textStyle(out).lh).toBe(12.5);
-    expect((rect(out).s as AnyRecord).k).toEqual([70, 40]); // 50 - 40 = 10 wider
+    const out = fitLottie(fixture({ text: 'VOTE NOW', sz: [50, 40] }), specs, measure); // 80 into 96% of 50: 0.6
+    expect(textStyle(out).s).toBe(9.6);
+    expect(textStyle(out).lh).toBe(12);
+    expect((rect(out).s as AnyRecord).k).toEqual([68, 40]); // 48 - 40 = 8 wider
   });
 
-  it('never shrinks below what the authored copy needed, never below half size, and never when the copy fits', () => {
-    const tightBox = fitLottie(fixture({ text: 'VOTE NOW', sz: [30, 40] }), specs, measure); // the authored VOTE was 40 wide in a 30 box: 40 is the room
-    expect(textStyle(tightBox).s).toBe(8);
+  it('fits inside the box with a margin, never below half size, and leaves copy that fits alone', () => {
     const tooLong = fitLottie(fixture({ text: 'VOTE NOW VOTE NOW VOTE NOW', sz: [50, 40] }), specs, measure);
     expect(textStyle(tooLong).s).toBe(16 * MIN_SHRINK);
-    const fits = fitLottie(fixture({ text: 'VOTES', sz: [50, 40] }), specs, measure);
+    const fits = fitLottie(fixture({ text: 'VOTE', sz: [50, 40] }), specs, measure); // 40 wide, well inside 48
     expect(textStyle(fits).s).toBe(16);
-    expect((rect(fits).s as AnyRecord).k).toEqual([70, 40]);
+    const fills = fitLottie(fixture({ text: 'VOTES', sz: [50, 40] }), specs, measure); // 50 wide: a hair over the 48 the margin allows
+    expect(textStyle(fills).s).toBe(15.36);
+    expect((rect(fills).s as AnyRecord).k).toEqual([68, 40]);
   });
 
   it('point text has no box and is never shrunk', () => {

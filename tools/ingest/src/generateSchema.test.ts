@@ -342,3 +342,11 @@ describe('generateSchema: plates and underlines that follow a text (M60)', () =>
     expect(colour.errors[0]!.message).toMatch(/only a text can have a plate/);
   });
 });
+
+describe('generateSchema: a tall one-line box (M65)', () => {
+  it('counts lines at no less than the type size, so a tight leading does not multiply the limit', () => {
+    // the designer's box: 477 wide, 297 tall, 180 px type at 44 leading: one line of 4 characters, twice that for the shrink
+    const out = generateSchema(lottie([textLayer('cc.headline', 'A LOS', { s: 180, lh: 44, sz: [477, 297] })]));
+    expect(out.params[0]!.maxChars).toBe(8);
+  });
+});

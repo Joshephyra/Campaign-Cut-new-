@@ -168,7 +168,7 @@ In the app these appear as Subhead 1, Headline 1 to Headline 6, Subhead 2, Photo
 - **Every tag once.** Two layers named `cc.headline.1` is a rejection. That is why the beat-2 lines continue the numbering at 4.
 - **Numbers start at 1**, no leading zeros.
 - **A text tag must be on a text layer.** `cc.headline.1` on a shape is a rejection.
-- **`cc.image.1` and `cc.logo` must be on an image layer** (footage), not a shape, solid or precomp. A photo inside a precomp is not reachable; put the photo layer in the main comp.
+- **`cc.image.1` and `cc.logo` must be on an image layer** (footage), not a shape or a solid. Tagged layers may sit inside pre-comps: the importer and the pre-flight both walk into them, so a collage can keep its pieces where they are.
 - **The disclaimer tag is `cc.safe.disclaimer`**, with `safe` in the middle, and no number.
 - **A plate or underline must be a shape layer or an image layer**, named after a text that is tagged in the same comp. `cc.headline.7.plate` with no `cc.headline.7` is a rejection.
 
@@ -194,7 +194,7 @@ The app can also circle, underline, highlight or enlarge any one word of a tagge
 
 1. Open the comp in the timeline (or select it in the Project panel).
 2. File > Scripts > Run Script File. Pick `preflight.jsx`.
-3. A box shows a count of tags and problems. A report named `preflight-<comp name>.txt` appears next to the project file, inside `ayudando-6s`. Open it.
+3. A box shows a count of tags and problems. A report named `preflight-<comp name>.txt` appears next to the project file, inside `ayudando-6s`. Open it. Run it on the master comp: it walks into every pre-comp inside it, so one report covers the whole piece.
 4. Under **PROBLEMS**, every line names a layer and says what is wrong: an effect that will not travel, a blend mode, a bad tag. Fix each one in After Effects.
 5. Under **NOTES**, untagged text layers are listed. Check that every one of them is meant to be locked. The "$" watermark is; a headline line you forgot to rename is not.
 6. Under **TAGS FOUND**, check that all eleven tags from 4.1 are there with the right role, and that the text ones say "box text". "Point text" means step 3.4 was skipped for that layer.

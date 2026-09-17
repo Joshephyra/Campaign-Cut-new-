@@ -109,11 +109,27 @@ var CC_PREFLIGHT = (function () {
     lines.push('Size: ' + comp.width + ' x ' + comp.height);
     lines.push('Frame rate: ' + comp.frameRate + ' fps');
     lines.push('Duration: ' + Number(comp.duration).toFixed(2) + ' s (' + Math.round(comp.duration * comp.frameRate) + ' frames)');
-    lines.push('Layers: ' + comp.numLayers);
+    /* M65: tagged layers may sit inside pre-comps (a collage keeps its pieces there); the ingest walks
+       into them, so the report does too. Each comp is visited once. */
+    var layers = [];
+    var seenComps = [comp];
+    function collect(c) {
+      for (var li = 1; li <= c.numLayers; li++) {
+        var l = c.layer(li);
+        layers.push(l);
+        var nested = env.nestedComp ? env.nestedComp(l) : null;
+        if (nested && !contains(seenComps, nested)) {
+          seenComps.push(nested);
+          collect(nested);
+        }
+      }
+    }
+    collect(comp);
+    lines.push('Layers: ' + comp.numLayers + (layers.length > comp.numLayers ? ' (' + layers.length + ' counting the pre-comps inside it)' : ''));
     lines.push('');
 
-    for (var i = 1; i <= comp.numLayers; i++) {
-      var layer = comp.layer(i);
+    for (var i = 0; i < layers.length; i++) {
+      var layer = layers[i];
       var name = String(layer.name);
       var isText = env.isTextLayer(layer);
       var isShape = env.isShapeLayer(layer);
@@ -327,6 +343,7 @@ if (typeof app !== 'undefined' && app && app.project) {
       isTextLayer: function (layer) { return layer instanceof TextLayer; },
       isShapeLayer: function (layer) { return layer instanceof ShapeLayer; },
       isCameraOrLight: function (layer) { return layer instanceof CameraLayer || layer instanceof LightLayer; },
+      nestedComp: function (layer) { return layer instanceof AVLayer && layer.source instanceof CompItem ? layer.source : null; },
       blendModeName: blendModeName,
       effectsOf: effectsOf,
       textDocumentOf: textDocumentOf,

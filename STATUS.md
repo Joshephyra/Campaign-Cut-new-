@@ -4,6 +4,19 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M65 The designer's handover: Ayudando y Perjudicando · DONE
+
+- Ingested first time (15 tags; Anton and Bebas Neue handed over, Georgia and Universal Accreditation found installed by name table); opens as a 1:1 spot (project 15 "Ayudando (designer handover)").
+- Fidelity at 1080x1080 against the designer's AE render: 7 of 12 within threshold; beat 1 at mean ~7.9 (a few-pixel shift of the title block, glyphs identical); beat 2 within. Germain judges. Strips: `media/fidelity/ayudando-6s-1789670056105`.
+- The designer's open issue (longer copy wraps) fixed: box text fits to 96% of its box; a tall one-line box counts as one line for the character limit; "A TODOS" renders on one line in both runners (parity frame 45 mean 2.78).
+- Also fixed on the way: the auto-fit note on a natively 1:1 element; the fidelity harness at the template's size; the pre-flight walking into pre-comps.
+
+**Next**
+
+Germain's fidelity verdict on the strips, then the acceptance session on this template.
+
+---
+
 ## 2026-09-17 · M63 The prototype's blue: a navy studio with a sky-blue accent · DONE
 
 - The whole app moved through the tokens, twice: first to a light world with campaign-blue bars (Josh's first answers), then, on his reaction, to the prototype's own palette: navy ground and panels, the two bars a step deeper, the deepest navy around the monitor, the sky-blue accent with navy ink on every fill and a faint sheen on the primary, gold for "to check", brick for danger. Pills and a gentle spring kept. Direction contract in the surface brief; DESIGN.md regenerated.

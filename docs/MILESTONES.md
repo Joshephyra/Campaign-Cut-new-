@@ -1009,6 +1009,22 @@ Josh (2026-09-17): "making this look a little less dark, maybe the design is mor
 
 ---
 
+## M65 · The designer's handover: Ayudando y Perjudicando · DONE
+
+Josh (2026-09-17): "now I have the completed work from the designer for the gif, make sure it's correct". The folder (`ayudando-6s`: data.json, images, fonts, reference.mp4, the .aep, dumps, per-comp pre-flight reports, a contact sheet and notes) is a conversion of the P13 After Effects project: one 1080x1080 comp, 30 fps, 180 frames; eleven fields (six headline lines, two kickers, two photos, the disclaimer) and four followers (two plates, two underlines), tagged inside pre-comps.
+
+**What the file proved, and what it found**
+- The ingest took it first time: 15 tags, two fonts handed over (Anton, Bebas Neue), two found installed by their name tables (Georgia; Universal Accreditation from `Uni.ttf`), the reference render copied in, a 1:1 spot on open (`templates/ayudando-6s`, project 15).
+- Fidelity against the designer's AE render, compared at 1080x1080: 7 of 12 samples within threshold; beat 1 (0.75 s to 2.75 s) sits at mean 7.8 to 8.1 against a threshold of 6, a few-pixel horizontal shift of the title block between Lottie and After Effects with the glyphs themselves identical; beat 2 within threshold. The designer's own AE-versus-browser numbers say the same. Germain's call (AT-2). Strips in `media/fidelity/ayudando-6s-*`.
+- Export parity on the spot with a longer line typed: frame 45 mean 2.78, within threshold.
+- Fixed because of it: box text is fitted to 96% of its box (`FIT_MARGIN`), since lottie-web wraps at the first space a hair over and a wrapped line in a box with a tight leading overprints itself (the designer's reproduced "A TODOS" case now renders on one line, smaller); a box's lines are counted at no less than the type size, so a tall one-line box with a 44 leading under 180 px type gives a limit of 8 characters, not 48; an element authored at a version's own size is not reported as auto-fitted; the fidelity harness renders and compares at the template's own size instead of 16:9; the pre-flight walks into pre-comps (the master report had said "no tags" while the ingest found fifteen).
+- The guide corrected: tagged layers may sit in pre-comps; run the pre-flight on the master comp.
+
+**Tests**
+- Fit margin (three expectations updated), the line count on a tall box, the pre-flight inside pre-comps.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

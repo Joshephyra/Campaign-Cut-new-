@@ -27,6 +27,8 @@ type FakeLayer = {
   text?: { font: string; fontSize: number; text: string; boxText?: boolean };
   fill?: boolean;
   stroke?: boolean;
+  /** M65: a pre-comp layer: the layers inside it. */
+  nested?: FakeLayer[];
 };
 
 /** Build the small subset of the After Effects object model the script touches. */
@@ -44,6 +46,7 @@ function fakeComp(name: string, layers: FakeLayer[], settings = { width: 1920, h
     __fill: l.fill ?? false,
     __stroke: l.stroke ?? false,
     __effects: l.effects ?? [],
+    __nested: l.nested ? fakeComp(`${name}/${l.name}`, l.nested, settings) : null,
   }));
   return { name, ...settings, numLayers: layerObjects.length, layer: (i: number) => layerObjects[i - 1] };
 }
@@ -57,6 +60,7 @@ const env = {
   effectsOf: (l: { __effects: { name: string; matchName: string }[] }) => l.__effects,
   textDocumentOf: (l: { __text?: { font: string; fontSize: number; text: string; boxText?: boolean } }) => l.__text ?? null,
   hasFillOrStroke: (l: { __fill: boolean; __stroke: boolean }) => l.__fill || l.__stroke,
+  nestedComp: (l: { __nested: unknown }) => l.__nested,
 };
 
 function loadScript() {
@@ -189,6 +193,19 @@ describe('preflight report', () => {
     expect(r.problems).toHaveLength(2);
     expect(r.problems[0]).toMatch(/"cc.headline.2.plate".*must be a shape layer or an image layer/);
     expect(r.problems[1]).toMatch(/"cc.headline.3.plate".*follows cc.headline.3, but no text layer carries that tag/);
+  });
+
+  it('M65: tags inside pre-comps are found, as the ingest finds them', () => {
+    const r = api.buildReport(fakeComp('master', [
+      { name: 'collage', index: 1, kind: 'av', nested: [
+        { name: 'cc.headline.1', index: 1, kind: 'text', text: { font: 'A', fontSize: 1, text: 'AYUDA' } },
+        { name: 'deeper', index: 2, kind: 'av', nested: [{ name: 'cc.image.1', index: 1, kind: 'av' }] },
+      ] },
+      { name: 'cc.safe.disclaimer', index: 2, kind: 'text', text: { font: 'A', fontSize: 1, text: 'Paid for' } },
+    ]), env);
+    expect(r.problems).toEqual([]);
+    expect(r.tags.map((t) => t.layer)).toEqual(['cc.headline.1', 'cc.image.1', 'cc.safe.disclaimer']);
+    expect(r.text).toMatch(/Layers: 2 \(5 counting the pre-comps inside it\)/);
   });
 
   it('ends with a clear verdict line', () => {

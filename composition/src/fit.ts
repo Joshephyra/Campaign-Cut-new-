@@ -12,9 +12,8 @@ import type { TemplateParam } from './schema';
  * is wider or narrower than what was authored, the composition measures
  * both in the real font and moves the follower's geometry by the
  * difference, in the direction the text grows (its justification). Box
- * text first shrinks to its box (M61), never below half size and never
- * below what the designer's own copy needed, so a long line stays on one
- * line the way a designer would set it by hand.
+ * text first shrinks to fit inside its box (M61), never below half size,
+ * so a long line stays on one line the way a designer would set it by hand.
  *
  * Both runners run this in Chrome with the same font files, after the
  * faces have loaded, so the preview and the export move the same pixels.
@@ -35,6 +34,13 @@ export type Measure = (text: string, font: FontSpec) => number;
 
 /** Box text is never shrunk below half its authored size. */
 export const MIN_SHRINK = 0.5;
+/**
+ * Box text is fitted to this much of its box, not all of it: lottie-web
+ * measures with its own canvas and wraps at the first space that lands a
+ * hair over the box, and a wrapped line in a box whose leading is smaller
+ * than its type overprints itself (found by the designer's handover, M65).
+ */
+export const FIT_MARGIN = 0.04;
 
 type AnyRecord = Record<string, unknown>;
 
@@ -173,10 +179,10 @@ export function fitLottie(source: LottieAnimationData, specs: FitSpec[], measure
     const authoredWidth = textWidth(spec.authored, font, measure);
     let width = textWidth(text, font, measure);
 
-    // M61: box text shrinks to its box first, never below half size, never below what the authored copy needed
+    // M61: box text shrinks to fit inside its box (with a margin, M65), never below half size
     const box = Array.isArray(style.sz) ? Number(style.sz[0]) : 0;
     if (box > 0 && width > 0) {
-      const room = Math.max(box, authoredWidth);
+      const room = box * (1 - FIT_MARGIN);
       if (width > room) {
         const scale = Math.max(MIN_SHRINK, room / width);
         const t = resolvePointer(target(), spec.textPath) as AnyRecord;

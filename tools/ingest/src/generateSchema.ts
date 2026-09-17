@@ -230,7 +230,9 @@ function deriveMaxChars(style: AnyRecord): number | undefined {
   const fontSize = typeof style.s === 'number' ? style.s : undefined;
   if (!Array.isArray(size) || size.length < 2 || !fontSize || fontSize <= 0) return undefined;
   const [w, h] = size as [number, number];
-  const lineHeight = typeof style.lh === 'number' && style.lh > 0 ? style.lh : fontSize * 1.2;
+  // M65: a box's lines are counted at its leading, never at less than the type's own size: a designer's one-line
+  // box drawn tall with a tight leading (the handover's 297-high boxes at 44 leading under 180 px type) is one line.
+  const lineHeight = Math.max(typeof style.lh === 'number' && style.lh > 0 ? style.lh : fontSize * 1.2, fontSize);
   const perLine = Math.floor(w / (AVERAGE_GLYPH_WIDTH * fontSize));
   const lines = Math.max(1, Math.floor(h / lineHeight));
   // M61: box text shrinks to fit, down to MIN_SHRINK of its size, so that many more characters fit on the same lines.
