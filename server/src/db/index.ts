@@ -121,6 +121,10 @@ export type MediaAssetRow = Omit<MediaAssetInput, 'kind'> & { id: number; kind: 
 /** M20: a project's music bed. */
 export type ProjectAudio = { assetId: number; volume: number; inS: number };
 
+/** M32: a saved theme: colours by role (#RRGGBB), kept in the library. */
+export type ThemeInput = { name: string; colors: Record<string, string> };
+export type ThemeRow = ThemeInput & { id: number; createdAt: string };
+
 export type Db = Database.Database & {
   insertRender(projectId: number): { id: number };
   updateRender(id: number, patch: RenderPatch): void;
@@ -132,6 +136,10 @@ export type Db = Database.Database & {
   getProjectAudio(projectId: number): ProjectAudio | null;
   /** null clears the music bed. */
   setProjectAudio(projectId: number, audio: ProjectAudio | null): void;
+  /** M32 */
+  insertTheme(t: ThemeInput): { id: number };
+  listThemes(): ThemeRow[];
+  deleteTheme(id: number): boolean;
   upsertTemplate(t: TemplateInput): { id: number };
   listTemplates(): TemplateRow[];
   getTemplateBySlug(slug: string): TemplateRow | undefined;
@@ -249,6 +257,13 @@ CREATE TABLE IF NOT EXISTS project_audio (
   in_s        REAL    NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS theme (
+  id           INTEGER PRIMARY KEY,
+  name         TEXT    NOT NULL,
+  colors_json  TEXT    NOT NULL,
+  created_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS media_asset (
   id             INTEGER PRIMARY KEY,
   kind           TEXT    NOT NULL DEFAULT 'video',
@@ -322,7 +337,26 @@ export function openDb(file: string): Db {
     listMediaAssets: () => listMediaAssets(db),
     getProjectAudio: (projectId: number) => getProjectAudio(db, projectId),
     setProjectAudio: (projectId: number, audio: ProjectAudio | null) => setProjectAudio(db, projectId, audio),
+    insertTheme: (t: ThemeInput) => insertTheme(db, t),
+    listThemes: () => listThemes(db),
+    deleteTheme: (id: number) => deleteTheme(db, id),
   });
+}
+
+// ---- themes (M32) ------------------------------------------------------
+
+function insertTheme(db: Database.Database, t: ThemeInput): { id: number } {
+  const id = Number(db.prepare(`INSERT INTO theme (name, colors_json) VALUES (?, ?)`).run(t.name, JSON.stringify(t.colors)).lastInsertRowid);
+  return { id };
+}
+
+function listThemes(db: Database.Database): ThemeRow[] {
+  const rows = db.prepare(`SELECT id, name, colors_json AS colorsJson, created_at AS createdAt FROM theme ORDER BY id DESC`).all() as { id: number; name: string; colorsJson: string; createdAt: string }[];
+  return rows.map(({ colorsJson, ...r }) => ({ ...r, colors: JSON.parse(colorsJson) as Record<string, string> }));
+}
+
+function deleteTheme(db: Database.Database, id: number): boolean {
+  return db.prepare(`DELETE FROM theme WHERE id = ?`).run(id).changes > 0;
 }
 
 // ---- music bed (M20) ---------------------------------------------------

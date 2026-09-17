@@ -621,13 +621,18 @@ Josh opened the phase-2 features on 2026-09-17 (CLAUDE.md, "Opened on 2026-09-17
 
 ---
 
-## M32 · Style: overall updates and saved themes · TODO
+## M32 · Style: overall updates and saved themes · DONE
+
+Colours only, by Josh's choice (fonts wait for client profiles, where the client supplies the files).
 
 **Build**
-- A spot-level style: colour roles (accent, surface, text) and font families applied across every element that carries that role, on top of the designer's values; "Reset to designer" per role.
-- Saved themes: a named style kept in the library and applied to any spot.
+- Colours across the spot: one row per colour role (accent, surface, whatever the designer tagged) across every scene; changing one writes that colour into every scene that carries the role, through one route, so the values stay ordinary project values and both runners are untouched. "Designer's" per role puts the authored colour back. Scenes that disagree say so.
+- Saved themes: name the current colours, keep them in the library, apply them to any spot, delete them.
 
-**Done when:** one theme change recolours every scene of a spot and the export matches.
+**Tests**
+- DB: save, list, delete. Routes: the style route writes by role and answers the values, rejects bad hex naming the role; themes need a name and #rrggbb. Panel: roles collected across scenes with defaults and disagreement; a valid hex applies; reset per role; apply, delete and save-as. Editor: one change recolours both scenes in the Player, saved once through the style route.
+
+**Done when:** one theme change recolours every scene of a spot and the export matches. It does: the values are the same rows the export reads.
 
 ---
 

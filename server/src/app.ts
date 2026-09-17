@@ -239,6 +239,58 @@ export function buildApp(options: AppOptions = {}) {
     };
   });
 
+  // ---- style and themes (M32) -----------------------------------------
+
+  const HEX = /^#[0-9a-fA-F]{6}$/;
+  /** Colours by role, each #RRGGBB upper-cased, or the name of the first bad one. */
+  const readColors = (raw: unknown): { colors: Record<string, string> } | { bad: string } => {
+    if (!raw || typeof raw !== 'object') return { bad: 'colors' };
+    const colors: Record<string, string> = {};
+    for (const [role, value] of Object.entries(raw as Record<string, unknown>)) {
+      if (typeof value !== 'string' || !HEX.test(value)) return { bad: role };
+      colors[role] = value.toUpperCase();
+    }
+    return { colors };
+  };
+
+  /**
+   * One change recolours every scene: write a colour into every element of
+   * the project that carries a colour param with that role. The values are
+   * ordinary project values afterwards; both runners are untouched.
+   */
+  app.post<{ Params: { id: string }; Body: { colors?: Record<string, string> } }>('/projects/:id/style', async (req, reply) => {
+    const id = Number(req.params.id);
+    if (!db.getProject(id)) return reply.code(404).send({ error: `No project ${id}` });
+    const read = readColors(req.body?.colors);
+    if ('bad' in read) return reply.code(400).send({ error: `Colour for "${read.bad}" must be #rrggbb` });
+    const values: { elementId: number; key: string; value: string }[] = [];
+    for (const e of db.getProjectElements(id)) {
+      for (const p of loadElementSchema(templatesDir, e.templateSlug, e.slug)) {
+        if (p.kind !== 'color') continue;
+        const colour = read.colors[p.role];
+        if (colour) values.push({ elementId: e.id, key: p.key, value: colour });
+      }
+    }
+    if (values.length > 0) db.setProjectValues(id, values);
+    return { values };
+  });
+
+  app.get('/themes', async () => db.listThemes());
+
+  app.post<{ Body: { name?: string; colors?: Record<string, string> } }>('/themes', async (req, reply) => {
+    const name = req.body?.name?.trim() ?? '';
+    if (!name) return reply.code(400).send({ error: 'A theme needs a name' });
+    const read = readColors(req.body?.colors);
+    if ('bad' in read) return reply.code(400).send({ error: `Colour for "${read.bad}" must be #rrggbb` });
+    const { id } = db.insertTheme({ name, colors: read.colors });
+    return reply.code(201).send(db.listThemes().find((t) => t.id === id));
+  });
+
+  app.delete<{ Params: { id: string } }>('/themes/:id', async (req, reply) => {
+    if (!db.deleteTheme(Number(req.params.id))) return reply.code(404).send({ error: `No theme ${req.params.id}` });
+    return { ok: true };
+  });
+
   // ---- the element library (M31) ---------------------------------------
 
   /** Every element of every template, typed, with its template and thumbnail. */

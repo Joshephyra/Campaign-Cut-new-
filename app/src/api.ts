@@ -53,6 +53,9 @@ export type ProjectElement = {
   lottieUrl: string;
 };
 
+/** M32: a saved theme: colours by role. */
+export type Theme = { id: number; name: string; colors: Record<string, string>; createdAt: string };
+
 /** M31: one element of the library: any template's element, with its template. */
 export type LibraryElement = {
   id: number;
@@ -127,6 +130,23 @@ export const api = {
 
   /** M31: every element of every template. */
   libraryElements: () => fetch(`${API}/elements`).then((r) => json<LibraryElement[]>(r)),
+
+  /** M32: write colours by role into every scene of a project. Answers the values written. */
+  applyStyle: (projectId: number, colors: Record<string, string>) =>
+    fetch(`${API}/projects/${projectId}/style`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ colors }),
+    }).then((r) => json<{ values: ProjectValue[] }>(r)),
+
+  /** M32: saved themes, newest first. */
+  themes: () => fetch(`${API}/themes`).then((r) => json<Theme[]>(r)),
+  saveTheme: (name: string, colors: Record<string, string>) =>
+    fetch(`${API}/themes`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name, colors }) }).then((r) => json<Theme>(r)),
+  deleteTheme: async (id: number) => {
+    const res = await fetch(`${API}/themes/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  },
 
   /** M31: add a library element to a project at a frame. Answers the new project element with its files. */
   addElement: (projectId: number, elementId: number, startFrame: number) =>

@@ -4,6 +4,29 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M32 Style: colours across the spot and saved themes · DONE
+
+**Why**
+
+The second phase-2 feature. Josh chose colours only for now; fonts come with client profiles (M33), where the client supplies the font files, because swapping fonts inside a designer's template is where designs break.
+
+**What exists now**
+
+- "Colours across the spot" in the left column: one row per colour role the designer tagged (accent, surface, and whatever else), showing the first scene's colour and the designer's; a valid hex or a swatch pick writes that colour into every scene that carries the role. "Designer's" puts the authored colour back per role. When scenes disagree the row says so.
+- `POST /projects/:id/style { colors }` does the writing on the server from each element's own schema, so the result is ordinary project values: undo, reload, preview and export all see the same rows and nothing in either runner changed. The editor merges the answer in and marks it saved.
+- Saved themes: `theme` table, `GET/POST/DELETE /themes`; "Save as theme" names the current colours; a theme row applies to the open spot with one press, or is deleted.
+- Tests: 1 database, 3 route, 4 panel, 1 editor. 412 tests green.
+
+**Verified**
+
+- Real browser on Contrast :30: setting the accent to #1D4ED8 across the spot wrote it into every scene that carries the role (three of the four), recoloured the fills on the video, and showed in the scene's own Accent field; "Save as theme" stored "Union blue" and it appeared with an Apply button; the designer's orange was put back the same way.
+
+**Next**
+
+M33: client profiles.
+
+---
+
 ## 2026-09-17 · M31 The element library · DONE
 
 **Why**

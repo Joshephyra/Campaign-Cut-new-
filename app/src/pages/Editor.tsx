@@ -41,7 +41,8 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import { API, api, type LibraryElement, type MediaAsset, type ProjectAudio, type ProjectDetail, type ProjectElement, type ProjectTransition } from '../api';
+import { API, api, type LibraryElement, type MediaAsset, type ProjectAudio, type ProjectDetail, type ProjectElement, type ProjectTransition, type Theme } from '../api';
+import { StylePanel } from '../components/StylePanel';
 import { ExportHistory } from '../components/ExportHistory';
 import { ExportPanel } from '../components/ExportPanel';
 import { Inspector } from '../components/Inspector';
@@ -469,6 +470,52 @@ export function Editor({ projectId, onBack }: Props) {
       setLibraryError((e as Error).message);
     }
   };
+  // M32: the spot's colours by role and the saved themes. The style route
+  // writes the values on the server; here they are merged in and marked
+  // saved so the debounced value save has nothing left to do.
+  const [themes, setThemes] = useState<Theme[]>([]);
+  const [styleError, setStyleError] = useState<string | null>(null);
+  useEffect(() => {
+    api
+      .themes()
+      .then(setThemes)
+      .catch(() => setThemes([]));
+  }, []);
+  const applyStyle = async (colors: Record<string, string>) => {
+    setStyleError(null);
+    setSaveState('saving');
+    try {
+      const { values: written } = await api.applyStyle(projectId, colors);
+      changeKey.current = 'style';
+      setValues((prev) => {
+        const next: ValuesByElement = { ...prev };
+        for (const v of written) next[v.elementId] = { ...next[v.elementId], [v.key]: v.value };
+        if (saveState === 'idle' || saveState === 'saved' || saveState === 'saving') lastSaved.current = next;
+        return next;
+      });
+      setSaveState('saved');
+    } catch (e) {
+      setStyleError((e as Error).message);
+      setSaveState('error');
+    }
+  };
+  const saveTheme = async (name: string, colors: Record<string, string>) => {
+    try {
+      const theme = await api.saveTheme(name, colors);
+      setThemes((prev) => [theme, ...prev]);
+    } catch (e) {
+      setStyleError((e as Error).message);
+    }
+  };
+  const deleteTheme = async (id: number) => {
+    try {
+      await api.deleteTheme(id);
+      setThemes((prev) => prev.filter((t) => t.id !== id));
+    } catch (e) {
+      setStyleError((e as Error).message);
+    }
+  };
+
   const removeFromSpot = async (elementId: number) => {
     try {
       await api.removeElement(projectId, elementId);
@@ -523,7 +570,11 @@ export function Editor({ projectId, onBack }: Props) {
             {picking ? (
               <LibraryPicker library={library} error={libraryError} inSpot={new Set(elements.map((e) => e.id))} onAdd={(item) => void addFromLibrary(item)} onClose={() => setPicking(false)} />
             ) : (
-              <MediaPanel onSelect={selectFootage} selectedId={selectedAssetId} onChange={setAssets} audio={audio} onAudioChange={onAudioChange} />
+              <>
+                <MediaPanel onSelect={selectFootage} selectedId={selectedAssetId} onChange={setAssets} audio={audio} onAudioChange={onAudioChange} />
+                {styleError && <p className="px-4 pt-3 text-xs text-red">{styleError}</p>}
+                <StylePanel elements={elements} values={values} themes={themes} onApply={(c) => void applyStyle(c)} onSaveTheme={(n, c) => void saveTheme(n, c)} onDeleteTheme={(id) => void deleteTheme(id)} />
+              </>
             )}
           </aside>
 
