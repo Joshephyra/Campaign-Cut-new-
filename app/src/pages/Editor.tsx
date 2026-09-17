@@ -50,7 +50,8 @@ import {
   type TransitionProps,
 } from '@campaigncut/composition';
 import { Player, type PlayerRef } from '@remotion/player';
-import { ArrowLeftToLine, ArrowRightToLine, ChevronLeft, Copy, EyeOff, Maximize2, Pause, Pencil, Play, Plus, Redo2, Trash2, Undo2, Volume2, VolumeX, X } from 'lucide-react';
+import { ArrowLeftToLine, ArrowRightToLine, ChevronDown, ChevronLeft, Copy, Eye, EyeOff, Maximize2, MoreHorizontal, Pause, Pencil, Play, Plus, Redo2, Trash2, Undo2, Volume2, VolumeX } from 'lucide-react';
+import { StockPanel } from '../components/StockPanel';
 import { Fragment,
   useCallback,
   useEffect,
@@ -542,21 +543,47 @@ export function Editor({ projectId, onBack }: Props) {
   // adds it at the playhead, selects it and shows it. Added elements can be
   // removed again; the spot's own can only be hidden.
   const [library, setLibrary] = useState<LibraryElement[] | null>(null);
-  const [picking, setPicking] = useState(false);
   const [libraryError, setLibraryError] = useState<string | null>(null);
   const frameRef = useRef(0);
   const seekRef = useRef<(frame: number) => void>(() => {});
-  const [pickerGroup, setPickerGroup] = useState<string | null>(null);
-  const openLibrary = (group: string | null = null) => {
-    setPickerGroup(typeof group === 'string' ? group : null);
-    setPicking(true);
-    if (library === null) {
-      api
-        .libraryElements()
-        .then(setLibrary)
-        .catch((e: Error) => setLibraryError(e.message));
+  // M66 (Josh, 2026-09-17: the picker was "overwhelming"): the left column is the prototype's: tabs, and under
+  // Templates the shelves as fold-out rows with counts and picture previews, browsed in place. No pop-over.
+  const [leftTab, setLeftTab] = useState<LeftTab>(rememberedLeftTab);
+  const chooseLeftTab = (tab: LeftTab) => {
+    setLeftTab(tab);
+    try {
+      window.localStorage.setItem('cc.left.tab', tab);
+    } catch {
+      /* no storage: the choice lasts the session */
     }
   };
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set());
+  const [scrollToGroup, setScrollToGroup] = useState<string | null>(null);
+  const loadLibrary = useCallback(() => {
+    if (library !== null) return;
+    api
+      .libraryElements()
+      .then(setLibrary)
+      .catch((e: Error) => setLibraryError(e.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once; the guard is the state itself
+  }, [library === null]);
+  useEffect(() => {
+    if (leftTab === 'templates') loadLibrary();
+  }, [leftTab, loadLibrary]);
+  /** Bring the Templates tab forward with one shelf (or every shelf) open, so the strip's Add card and the panel still lead somewhere. */
+  const openLibrary = (group: string | null = null) => {
+    chooseLeftTab('templates');
+    setOpenGroups((prev) => (typeof group === 'string' ? new Set([...prev, group]) : new Set(PICKER_ORDER as readonly string[])));
+    setScrollToGroup(typeof group === 'string' ? group : null);
+    loadLibrary();
+  };
+  const toggleGroup = (type: string) =>
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
   /** M42: the copy typed in the composer lands with the element: its first text role gets it, as the preview showed. */
   const addFromLibrary = async (item: LibraryElement, copy = '') => {
     setLibraryError(null);
@@ -577,7 +604,6 @@ export function Editor({ projectId, onBack }: Props) {
       });
       setElements((prev) => (prev.some((e) => e.id === element.id) ? prev.map((e) => (e.id === element.id ? { ...e, ...element } : e)) : [...prev, element]));
       setSelectedId(element.id);
-      setPicking(false);
       seekRef.current(frameAfterLanding(item.type, element, holdFrame(element)));
     } catch (e) {
       setLibraryError((e as Error).message);
@@ -772,23 +798,43 @@ export function Editor({ projectId, onBack }: Props) {
       {!loaded && !error && <p className="text-xs text-fg-3 p-8">Loading…</p>}
       {loaded && (
         <div className="flex flex-1 min-h-0">
-          <aside className="w-[280px] shrink-0 border-r border-line bg-panel overflow-y-auto">
-            {picking ? (
-              <LibraryPicker library={library} error={libraryError} inSpot={usesByElement(elements)} onAdd={(item, copy) => void addFromLibrary(item, copy)} onClose={() => setPicking(false)} openOn={pickerGroup} />
-            ) : (
+          <aside className="w-[280px] shrink-0 border-r border-line bg-panel overflow-y-auto flex flex-col">
+            {/* M66: the prototype's left column: one tab row, then the chosen library browsed in place. */}
+            <div className="px-3 pt-3 pb-2 border-b border-line shrink-0">
+              <Segmented
+                label="Library"
+                size="sm"
+                value={leftTab}
+                options={[
+                  { value: 'templates', label: 'Templates' },
+                  { value: 'footage', label: 'Footage' },
+                  { value: 'stock', label: 'Stock' },
+                  { value: 'brand', label: 'Brand' },
+                ]}
+                onChange={chooseLeftTab}
+                className="w-full [&>button]:flex-1 [&>button]:justify-center [&>button]:px-1"
+              />
+            </div>
+            {leftTab === 'templates' && (
+              <LibraryBrowser
+                library={library}
+                error={libraryError}
+                inSpot={usesByElement(elements)}
+                onAdd={(item, copy) => void addFromLibrary(item, copy)}
+                openGroups={openGroups}
+                onToggleGroup={toggleGroup}
+                scrollTo={scrollToGroup}
+                onScrolled={() => setScrollToGroup(null)}
+              />
+            )}
+            {leftTab === 'footage' && <MediaPanel onSelect={selectFootage} selectedId={selectedAssetId} onChange={setAssets} audio={audio} onAudioChange={onAudioChange} withStock={false} />}
+            {leftTab === 'stock' && (
+              <div className="px-4 py-4">
+                <StockPanel onImported={() => void refreshAssets()} />
+              </div>
+            )}
+            {leftTab === 'brand' && (
               <>
-                {/* M51: the library's shelves, one press from the spot. Transitions live between the chips and in the panel. */}
-                {/* M62 (finish review): folded by default, so the column opens on the clips; the strip's Add card and the panel open the same picker. */}
-                <Section id="shelves" title="Add to the spot" defaultCollapsed className="!px-4 !py-3">
-                  <div className="flex flex-wrap gap-1.5">
-                    {PICKER_ORDER.map((type) => (
-                      <Chip key={type} aria-label={`Add ${ELEMENT_TYPE_LABELS[type].toLowerCase()}`} onClick={() => openLibrary(type)}>
-                        {ELEMENT_TYPE_LABELS[type]}
-                      </Chip>
-                    ))}
-                  </div>
-                </Section>
-                <MediaPanel onSelect={selectFootage} selectedId={selectedAssetId} onChange={setAssets} audio={audio} onAudioChange={onAudioChange} />
                 {styleError && <p className="px-4 pt-3 text-xs text-red-ink">{styleError}</p>}
                 <StylePanel
                   elements={elements}
@@ -824,6 +870,10 @@ export function Editor({ projectId, onBack }: Props) {
             onDrag={onDrag}
             onAdd={() => openLibrary()}
             onReorder={onReorder}
+            neighbours={neighbours}
+            onDuplicate={(id) => void duplicateScene(id)}
+            onToggleShow={(id, enabled) => onElementChange(id, { enabled })}
+            onRemove={(id) => void removeFromSpot(id)}
             onFrame={(f) => {
               frameRef.current = f;
             }}
@@ -1053,22 +1103,41 @@ function usesByElement(elements: { elementId?: number; id: number }[]): Map<numb
 /** M42: the library's Lotties, fetched once per page for every opening of the picker (a template's files do not change under a session). */
 const pickerLotties = new Map<string, LottieAnimationData>();
 
-function LibraryPicker({
+type LeftTab = 'templates' | 'footage' | 'stock' | 'brand';
+function rememberedLeftTab(): LeftTab {
+  try {
+    const saved = window.localStorage.getItem('cc.left.tab');
+    return saved === 'footage' || saved === 'stock' || saved === 'brand' ? saved : 'templates';
+  } catch {
+    return 'templates';
+  }
+}
+
+/**
+ * M66: the Templates tab. Your copy at the top, then every shelf as a
+ * fold-out row with its count; open one and its elements show as pictures,
+ * drawn with your words, to press and add. Replaces the pop-over picker.
+ */
+function LibraryBrowser({
   library,
   error,
   inSpot,
   onAdd,
-  onClose,
-  openOn = null,
+  openGroups,
+  onToggleGroup,
+  scrollTo,
+  onScrolled,
 }: {
   library: LibraryElement[] | null;
   error: string | null;
-  /** M51: the group to scroll to when the picker opens (a type), from the left column's shortcuts. */
-  openOn?: string | null;
   /** M45: how many times each library element is already in the spot, by template element id. */
   inSpot: Map<number, number>;
   onAdd: (item: LibraryElement, copy: string) => void;
-  onClose: () => void;
+  openGroups: Set<string>;
+  onToggleGroup: (type: string) => void;
+  /** A shelf to bring into view once, from the strip's Add card or the panel. */
+  scrollTo: string | null;
+  onScrolled: () => void;
 }) {
   const groups: { type: string; label: string; items: LibraryElement[] }[] = PICKER_ORDER.map((type) => ({ type, label: ELEMENT_TYPE_LABELS[type], items: (library ?? []).filter((e) => e.type === type) })).filter((g) => g.items.length > 0);
   const untyped = (library ?? []).filter((e) => !(ELEMENT_TYPES as readonly string[]).includes(e.type));
@@ -1131,69 +1200,103 @@ function LibraryPicker({
   const holdFor = (item: LibraryElement, l: LottieAnimationData) => Number(l.ip) + Math.min(compositionConfig.fps, Math.floor(item.durationInFrames / 2));
 
   return (
-    <div role="dialog" aria-label="Add to the spot" className="flex flex-col">
+    <div data-testid="library-browser" className="flex flex-col">
       {fontCss && <style>{fontCss}</style>}
-      <div className="px-4 py-3 border-b border-line flex items-center justify-between">
-        <h2 className="text-[13px] font-semibold">Add to the spot</h2>
-        <IconButton label="Close the library" icon={X} onClick={onClose} className="!w-7 !h-7" />
-      </div>
-      <div className="px-4 pt-3">
+      <div className="px-4 pt-3 pb-2">
+        <label htmlFor="composer" className="block text-xs font-medium text-fg-2 mb-1.5">
+          Your text
+        </label>
         <input
+          id="composer"
           aria-label="Preview every text element with your copy"
-          autoFocus
           value={copy}
           placeholder="Type your copy to see it in every element"
           onChange={(e) => setCopy(e.target.value)}
           className="field !py-1.5"
         />
-        <p className="mt-2 text-[11px] text-fg-3">Every element of every template, drawn with your words. A scene lands at the playhead and moves it on; an overlay lands on the scene under the playhead.</p>
+        <p className="mt-1.5 text-[11px] text-fg-3">Every element previews with your words. Open a shelf and press one to add it.</p>
       </div>
       {error && <p className="px-4 pt-2 text-xs text-red-ink">{error}</p>}
       {library === null && !error && <p className="px-4 py-3 text-xs text-fg-3">Loading…</p>}
       {library !== null && library.length === 0 && <p className="px-4 py-3 text-xs text-fg-2">Nothing in the library yet. Add a template first.</p>}
-      {groups.map((g) => (
-        <section key={g.type} className="px-4 py-3" id={`picker-${g.type}`} ref={(node) => { if (node && openOn === g.type && library) node.scrollIntoView?.({ block: 'start' }); }}>
-          <h3 className="text-xs font-semibold text-fg-2 mb-2">{g.label}</h3>
-          <ul className="flex flex-col gap-1.5">
-            {g.items.map((item) => {
-              const uses = inSpot.get(item.id) ?? 0;
-              return (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    aria-label={`Add ${item.name} from ${item.templateName}`}
-                    onClick={() => onAdd(item, copy)}
-                    className="w-full flex items-center gap-3 rounded-lg bg-raised border border-line p-2 text-left transition-colors hover:bg-hover hover:border-line-strong disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue"
-                  >
-                    <div className="w-24 aspect-video rounded-md bg-stage overflow-hidden shrink-0">
-                      {fontsReady && previews[item.id] ? (
-                        <ElementPreview
-                          testId={`element-preview-${item.id}`}
-                          lottie={previews[item.id]!}
-                          schema={item.schema}
-                          values={previewValues(item.schema, copy)}
-                          frame={holdFor(item, previews[item.id]!)}
-                          assetBase={`${API}${item.lottieUrl.replace(/\/template\.json$/, '')}`}
-                          className="w-full h-full"
-                        />
-                      ) : (
-                        item.thumbUrl && <img src={api.fileUrl(item.thumbUrl)} alt="" className="w-full h-full object-cover block" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-xs font-medium truncate">{item.name}</div>
-                      <div className="text-[11px] text-fg-3 truncate tabular-nums">
-                        {item.templateName} · {seconds(item.durationInFrames).toFixed(1)} s{uses > 0 ? (uses === 1 ? ' · in the spot' : ` · in the spot ×${uses}`) : ''}
-                      </div>
-                    </div>
-                    <Plus size={14} strokeWidth={1.75} aria-hidden="true" className="text-blue shrink-0" />
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ))}
+      {groups.map((g) => {
+        const open = openGroups.has(g.type);
+        return (
+          <section
+            key={g.type}
+            id={`picker-${g.type}`}
+            data-testid={`shelf-${g.type}`}
+            className="border-t border-line"
+            ref={(node) => {
+              if (node && scrollTo === g.type && library) {
+                node.scrollIntoView?.({ block: 'start' });
+                onScrolled();
+              }
+            }}
+          >
+            <div className="flex items-center gap-2 pr-4">
+              <h3 className="min-w-0 flex-1">
+                <button
+                  type="button"
+                  aria-expanded={open}
+                  onClick={() => onToggleGroup(g.type)}
+                  className="w-full h-10 pl-4 pr-2 inline-flex items-center gap-2 text-[13px] font-semibold text-fg text-left rounded-sm hover:bg-hover/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue"
+                >
+                  <ChevronDown size={14} strokeWidth={1.75} aria-hidden="true" className={`shrink-0 text-fg-3 transition-transform duration-150 ${open ? '' : '-rotate-90'}`} />
+                  <span className="truncate">{g.label}</span>
+                </button>
+              </h3>
+              <span className="text-[11px] text-fg-3 tabular-nums" aria-label={`${g.items.length} in ${g.label}`}>
+                {g.items.length}
+              </span>
+            </div>
+            {open && (
+              <ul className="grid grid-cols-2 gap-2 px-4 pb-3">
+                {g.items.map((item) => {
+                  const uses = inSpot.get(item.id) ?? 0;
+                  return (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        aria-label={`Add ${item.name} from ${item.templateName}`}
+                        title={`${item.templateName} · ${seconds(item.durationInFrames).toFixed(1)} s`}
+                        onClick={() => onAdd(item, copy)}
+                        className="cc-press group/card w-full text-left rounded-lg overflow-hidden bg-raised border border-line hover:border-line-strong hover:bg-hover disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue"
+                      >
+                        <div className="relative aspect-video bg-stage">
+                          {fontsReady && previews[item.id] ? (
+                            <ElementPreview
+                              testId={`element-preview-${item.id}`}
+                              lottie={previews[item.id]!}
+                              schema={item.schema}
+                              values={previewValues(item.schema, copy)}
+                              frame={holdFor(item, previews[item.id]!)}
+                              assetBase={`${API}${item.lottieUrl.replace(/\/template\.json$/, '')}`}
+                              className="w-full h-full"
+                            />
+                          ) : (
+                            item.thumbUrl && <img src={api.fileUrl(item.thumbUrl)} alt="" className="w-full h-full object-cover block" />
+                          )}
+                          <span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-blue text-on-blue inline-flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-opacity" aria-hidden="true">
+                            <Plus size={12} strokeWidth={2} />
+                          </span>
+                          {uses > 0 && <span className="absolute bottom-1 left-1 px-1.5 py-px rounded-xs bg-blue text-[11px] font-semibold text-on-blue">{uses === 1 ? 'in the spot' : `in the spot ×${uses}`}</span>}
+                        </div>
+                        <div className="px-2 py-1.5">
+                          <div className="text-xs font-medium truncate">{item.name}</div>
+                          <div className="text-[11px] text-fg-3 truncate tabular-nums">
+                            {item.templateName} · {seconds(item.durationInFrames).toFixed(1)} s{uses > 0 ? (uses === 1 ? ' · in the spot' : ` · in the spot ×${uses}`) : ''}
+                          </div>
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+        );
+      })}
     </div>
   );
 }
@@ -1245,6 +1348,10 @@ function Monitor({
   onDrag,
   onAdd,
   onReorder,
+  neighbours,
+  onDuplicate,
+  onToggleShow,
+  onRemove,
   onFrame,
   seekRef,
   onTextEdit,
@@ -1278,6 +1385,11 @@ function Monitor({
   onAdd: () => void;
   /** M43: a scene chip dropped before or after another scene. */
   onReorder: (movedId: number, targetId: number, place: DropPlace) => void;
+  /** M66: the chip's own menu: the scenes either side of one, and the four commands. */
+  neighbours: (sceneId: number) => { before: number | null; after: number | null };
+  onDuplicate: (id: number) => void;
+  onToggleShow: (id: number, enabled: boolean) => void;
+  onRemove: (id: number) => void;
   /** M31: the playhead, for adding at the current frame. */
   onFrame: (frame: number) => void;
   /** M31: the editor seeks through this after adding. */
@@ -1304,6 +1416,22 @@ function Monitor({
   const [dropEdge, setDropEdge] = useState<{ id: number; place: DropPlace } | null>(null);
   // M55: which scene's "how it ends" marker is open in the strip.
   const [transitionMenu, setTransitionMenu] = useState<number | null>(null);
+  // M66: which chip's menu is open; a press anywhere else, or Escape, closes it.
+  // The strip scrolls sideways, which would clip a menu inside it, so the menu is fixed to the viewport at the dots' spot.
+  const [chipMenu, setChipMenu] = useState<{ id: number; left: number; bottom: number } | null>(null);
+  useEffect(() => {
+    if (chipMenu === null) return;
+    const close = () => setChipMenu(null);
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') close();
+    };
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', close);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [chipMenu]);
   const relative = (box: Box, monitor: DOMRect, dx = 0, dy = 0): Outline => ({ left: box.left - monitor.left + dx, top: box.top - monitor.top + dy, width: box.width, height: box.height });
   const layerAt = (monitor: HTMLElement, x: number, y: number) => pickLayer(findLayerBoxes(monitor, schemaFor), x, y);
 
@@ -1592,9 +1720,13 @@ function Monitor({
   const chip = (e: ProjectElement, kind: 'scene' | 'overlay') => {
           const isSelected = e.id === selectedId;
           const onScreen = e.enabled && frame >= e.startFrame && frame < e.endFrame;
+    const menuOpen = chipMenu?.id === e.id;
+    const scene = isSceneType(e.type);
+    const near = scene ? neighbours(e.id) : { before: null, after: null };
+    const menuItem = 'w-full h-8 px-2.5 inline-flex items-center gap-2 rounded-md text-xs text-left text-fg hover:bg-hover disabled:opacity-40 disabled:pointer-events-none focus:outline-none focus-visible:bg-hover';
     return (
+          <div key={e.id} data-testid={`chip-${e.id}`} className={`relative group/chip ${kind === 'scene' ? 'flex [&>button:first-child]:flex-1' : 'inline-flex'}`}>
             <button
-              key={e.id}
               type="button"
               aria-label={`Select ${e.name}`}
               data-testid={`scene-${e.id}`}
@@ -1639,7 +1771,7 @@ function Monitor({
                 const box = ev.currentTarget.getBoundingClientRect();
                 onReorder(sceneId, e.id, ev.clientX < box.left + box.width / 2 ? 'before' : 'after');
               }}
-              className={`group relative overflow-hidden flex items-center text-left transition-colors ${kind === 'scene' ? 'min-w-44 gap-3 rounded-lg px-2 py-2' : 'gap-1.5 rounded-full h-7 px-3 text-xs'} ${e.enabled ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'} ${
+              className={`group relative overflow-hidden flex items-center text-left transition-colors ${kind === 'scene' ? 'min-w-44 gap-3 rounded-lg pl-2 pr-8 py-2' : 'gap-1.5 rounded-full h-7 pl-3 pr-7 text-xs'} ${e.enabled ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'} ${
                 onScreen ? 'bg-blue text-on-blue' : dropEdge?.id === e.id && dropEdge.place === 'on' ? 'bg-blue-tint text-fg' : 'bg-raised text-fg hover:bg-hover'
               } ${isSelected || dropEdge?.id === e.id && dropEdge.place === 'on' ? 'ring-2 ring-blue ring-offset-2 ring-offset-panel' : ''} ${e.enabled ? '' : 'opacity-60'} ${
                 dropEdge?.id === e.id && dropEdge.place !== 'on' ? (dropEdge.place === 'before' ? 'shadow-[inset_3px_0_0_0_var(--color-blue)]' : 'shadow-[inset_-3px_0_0_0_var(--color-blue)]') : ''
@@ -1674,6 +1806,55 @@ function Monitor({
               )}
               </span>
             </button>
+            {/* M66: the chip's own menu (Josh: delete one opening without hunting for it in the panel). */}
+            <button
+              type="button"
+              aria-label={`Actions for ${e.name}`}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              onPointerDown={(ev) => ev.stopPropagation()}
+              onClick={(ev) => {
+                ev.stopPropagation();
+                const rect = ev.currentTarget.getBoundingClientRect();
+                setChipMenu((open) => (open?.id === e.id ? null : { id: e.id, left: rect.left, bottom: window.innerHeight - rect.top + 6 }));
+              }}
+              className={`absolute inline-flex items-center justify-center rounded-full transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-blue ${
+                kind === 'scene' ? 'top-1.5 right-1.5 w-6 h-6' : 'top-1 right-1 w-5 h-5'
+              } ${menuOpen || isSelected ? 'opacity-100' : 'opacity-0 group-hover/chip:opacity-100 focus-visible:opacity-100'} ${onScreen ? 'text-on-blue/80 hover:bg-on-blue/15' : 'text-fg-3 hover:text-fg hover:bg-hover'}`}
+            >
+              <MoreHorizontal size={14} strokeWidth={1.75} aria-hidden="true" />
+            </button>
+            {menuOpen && (
+              <div role="menu" aria-label={`Actions for ${e.name}`} onPointerDown={(ev) => ev.stopPropagation()} style={{ position: 'fixed', left: chipMenu!.left, bottom: chipMenu!.bottom }} className="z-30 w-48 rounded-lg bg-panel border border-line shadow-float p-1 cc-appear">
+                <button type="button" role="menuitem" className={menuItem} onClick={() => { setChipMenu(null); onDuplicate(e.id); }}>
+                  <Copy size={14} strokeWidth={1.75} aria-hidden="true" className="text-fg-3" />
+                  {scene ? 'Duplicate scene' : 'Duplicate'}
+                </button>
+                {scene && (
+                  <>
+                    <button type="button" role="menuitem" className={menuItem} disabled={!near.before} onClick={() => { setChipMenu(null); if (near.before) onReorder(e.id, near.before, 'before'); }}>
+                      <ArrowLeftToLine size={14} strokeWidth={1.75} aria-hidden="true" className="text-fg-3" />
+                      Move earlier
+                    </button>
+                    <button type="button" role="menuitem" className={menuItem} disabled={!near.after} onClick={() => { setChipMenu(null); if (near.after) onReorder(e.id, near.after, 'after'); }}>
+                      <ArrowRightToLine size={14} strokeWidth={1.75} aria-hidden="true" className="text-fg-3" />
+                      Move later
+                    </button>
+                  </>
+                )}
+                <button type="button" role="menuitem" className={menuItem} onClick={() => { setChipMenu(null); onToggleShow(e.id, !e.enabled); }}>
+                  {e.enabled ? <EyeOff size={14} strokeWidth={1.75} aria-hidden="true" className="text-fg-3" /> : <Eye size={14} strokeWidth={1.75} aria-hidden="true" className="text-fg-3" />}
+                  {e.enabled ? 'Hide' : 'Show'}
+                </button>
+                {e.added && (
+                  <button type="button" role="menuitem" className={`${menuItem} !text-red-ink hover:!bg-red-tint`} onClick={() => { setChipMenu(null); onRemove(e.id); }}>
+                    <Trash2 size={14} strokeWidth={1.75} aria-hidden="true" />
+                    Remove from spot
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
     );
   };
   const structure = structureOf(elements);

@@ -72,3 +72,12 @@ Open the library and press "Plate demo" under Demo. A headline sits on a red pla
 4. Export. The MP4 shows the same plate and the same size as the preview: both runners measure the same font.
 
 In After Effects this is one rename per plate: `cc.headline.plate`, `cc.headline.underline`, parented to the text. Nothing appears in the panel for them.
+
+## 14. Browse in place (M66)
+
+Open any spot. The left column has four tabs.
+
+1. **Templates.** Type in "Your text" and open a shelf: every element previews with your words. Press one to add it. The strip's Add card opens every shelf at once.
+2. **Footage**, **Stock** and **Brand** hold what used to sit stacked below.
+3. Hover any chip in the strip and press its three dots: Duplicate, Move earlier / later, Hide, and Remove from spot for anything you added.
+4. In the panel, Size and Tilt sit folded under "Headline placement". Open it only when you want them.

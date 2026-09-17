@@ -18,13 +18,15 @@ type Props = {
   /** M30: the music bed lives in this panel's Music section when the editor passes it. */
   audio?: ProjectAudio | null;
   onAudioChange?: (audio: ProjectAudio | null) => void;
+  /** M66: stock footage has a tab of its own in the editor; the library page still shows it here. */
+  withStock?: boolean;
 };
 
 /**
  * The library (M30): everything the user has uploaded, as thumbnails to
  * press or drag onto the video, and the music bed below.
  */
-export function MediaPanel({ onSelect, selectedId, onChange, audio, onAudioChange }: Props) {
+export function MediaPanel({ onSelect, selectedId, onChange, audio, onAudioChange, withStock = true }: Props) {
   const [assets, setAssets] = useState<MediaAsset[] | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -139,9 +141,11 @@ export function MediaPanel({ onSelect, selectedId, onChange, audio, onAudioChang
             })}
           </ul>
         )}
-        <Section id="stock" level={3} title="Find stock footage" className="mt-4 pt-4 border-t border-line">
-          <StockPanel onImported={() => void refresh()} bare />
-        </Section>
+        {withStock && (
+          <Section id="stock" level={3} title="Find stock footage" className="mt-4 pt-4 border-t border-line">
+            <StockPanel onImported={() => void refresh()} bare />
+          </Section>
+        )}
       </Section>
 
       <Section id="music" icon={Music} title="Music" className="!px-4">

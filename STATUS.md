@@ -4,6 +4,17 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M66 Browse in place · DONE
+
+- The left column is the prototype's: tabs Templates · Footage · Stock · Brand; under Templates the composer and every shelf folded with its count, opening to picture cards to press. No pop-over picker. Every strip chip has a three-dot menu (Duplicate, Move earlier / later, Hide / Show, Remove from spot); placement folds under its field. Josh parked the top menu.
+- Verified: capture `.impeccable/review/m66-editor-9.png`; live in the pane, the Openings shelf open with six cards, the chip menu listing its five commands and sitting fully in view above the strip. App suite 146 green.
+
+**Next**
+
+Josh's eyes on the new column, then Germain's verdict and the acceptance session.
+
+---
+
 ## 2026-09-17 · M65 The designer's handover: Ayudando y Perjudicando · DONE
 
 - Ingested first time (15 tags; Anton and Bebas Neue handed over, Georgia and Universal Accreditation found installed by name table); opens as a 1:1 spot (project 15 "Ayudando (designer handover)").

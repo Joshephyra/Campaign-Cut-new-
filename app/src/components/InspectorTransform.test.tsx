@@ -20,6 +20,10 @@ const schema: TemplateParam[] = [
 describe('Inspector placement control', () => {
   it('renders Size and Tilt sliders and a drag hint under the parent control, nothing for a colour, no number fields', () => {
     render(<Inspector schema={schema} values={{ headline: 'Hi' }} onChange={() => {}} />);
+    {
+      const fold = screen.getByRole('button', { name: /^Headline placement/ });
+      if (fold.getAttribute('aria-expanded') === 'false') fireEvent.click(fold); // M66: folded until asked for
+    }
     const block = screen.getByTestId('param-headline');
     const size = screen.getByLabelText('Headline size') as HTMLInputElement;
     const tilt = screen.getByLabelText('Headline tilt') as HTMLInputElement;
@@ -40,6 +44,10 @@ describe('Inspector placement control', () => {
 
   it('shows a saved transform as percent and degrees', () => {
     render(<Inspector schema={schema} values={{ headline: 'Hi', 'headline.transform': { x: 0.125, y: -0.05, scale: 1.5, rotation: -7 } }} onChange={() => {}} />);
+    {
+      const fold = screen.getByRole('button', { name: /^Headline placement/ });
+      if (fold.getAttribute('aria-expanded') === 'false') fireEvent.click(fold); // M66: folded until asked for
+    }
     expect((screen.getByLabelText('Headline size') as HTMLInputElement).value).toBe('150');
     expect((screen.getByLabelText('Headline tilt') as HTMLInputElement).value).toBe('-7');
   });
@@ -47,6 +55,10 @@ describe('Inspector placement control', () => {
   it('the sliders report scale and rotation, keeping the position', () => {
     const onChange = vi.fn();
     render(<Inspector schema={schema} values={{ headline: 'Hi', 'headline.transform': { x: 0.1, y: 0, scale: 1.5, rotation: 0 } }} onChange={onChange} />);
+    {
+      const fold = screen.getByRole('button', { name: /^Headline placement/ });
+      if (fold.getAttribute('aria-expanded') === 'false') fireEvent.click(fold); // M66: folded until asked for
+    }
     fireEvent.change(screen.getByLabelText('Headline size'), { target: { value: '80' } });
     expect(onChange).toHaveBeenLastCalledWith({ headline: 'Hi', 'headline.transform': { x: 0.1, y: 0, scale: 0.8, rotation: 0 } });
     fireEvent.change(screen.getByLabelText('Headline tilt'), { target: { value: '-7' } });
@@ -56,14 +68,26 @@ describe('Inspector placement control', () => {
   it('Reset restores the identity and is disabled at the identity', () => {
     const onChange = vi.fn();
     const { rerender } = render(<Inspector schema={schema} values={{ headline: 'Hi', 'headline.transform': { x: 0.2, y: 0.1, scale: 2, rotation: 45 } }} onChange={onChange} />);
+    {
+      const fold = screen.getByRole('button', { name: /^Headline placement/ });
+      if (fold.getAttribute('aria-expanded') === 'false') fireEvent.click(fold); // M66: folded until asked for
+    }
     fireEvent.click(screen.getByLabelText('Reset Headline placement'));
     expect(onChange).toHaveBeenCalledWith({ headline: 'Hi', 'headline.transform': DEFAULT_TRANSFORM });
     rerender(<Inspector schema={schema} values={{ headline: 'Hi' }} onChange={onChange} />);
+    {
+      const fold = screen.getByRole('button', { name: /^Headline placement/ });
+      if (fold.getAttribute('aria-expanded') === 'false') fireEvent.click(fold); // M66: folded until asked for
+    }
     expect((screen.getByLabelText('Reset Headline placement') as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('marks the control whose placement is active on the monitor', () => {
     render(<Inspector schema={schema} values={{ headline: 'Hi' }} onChange={() => {}} activeKey="headline.transform" />);
+    {
+      const fold = screen.getByRole('button', { name: /^Headline placement/ });
+      if (fold.getAttribute('aria-expanded') === 'false') fireEvent.click(fold); // M66: folded until asked for
+    }
     expect(screen.getByTestId('param-headline').getAttribute('data-active')).toBe('true');
     expect(screen.getByTestId('param-accent').getAttribute('data-active')).toBe('false');
   });

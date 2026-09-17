@@ -1025,6 +1025,20 @@ Josh (2026-09-17): "now I have the completed work from the designer for the gif,
 
 ---
 
+## M66 · Browse in place: the prototype's left column, a menu on every chip, placement folded · DONE
+
+Josh (2026-09-17), after the handover: "Add to the spot" opened an overwhelming menu; the strip needs a way to delete one opening without hunting for it in the panel (a three-dot menu with a few commands); size and tilt should fold away; and the prototype's distribution (buttons, click-throughs, image previews) is the model. Answered: the prototype's tabs and accordions; the chip menu carries Remove, Duplicate, Hide/Show and Move earlier/later; the top menu is parked for now.
+
+**Build**
+- The left column is tabbed: Templates · Footage · Stock · Brand (a pill Segmented, remembered per browser under `cc.left.tab`). Under Templates: "Your text" at the top (the composer, previewing every element with the copy), then every shelf as a fold-out row with its count; an open shelf shows its elements as picture cards in two columns, hover to see the add mark, press to add. The pop-over picker is gone; the strip's Add card and the panel's "Add the first scene" bring the Templates tab forward with every shelf open, a shelf chip request opens that shelf and scrolls to it. Footage holds the clips and the music bed; Stock the outlets and the search; Brand the colours, treatment, saved themes and the client's brand.
+- Every chip in the strip has a three-dot menu, shown on hover and always on the selected chip: Duplicate scene, Move earlier, Move later (scenes), Hide / Show, and Remove from spot when the element was added from the library (the spot's own can only be hidden, as before). The menu is fixed to the viewport so the sideways-scrolling strip cannot clip it; a press anywhere else or Escape closes it.
+- In the panel, a text or photo's placement (the drag hint, Size and Tilt) folds under a "<field> placement" row and opens itself only when the placement has been changed.
+
+**Tests**
+- The library tests drive the shelves instead of a dialog (folded until asked for, the Add card opens every shelf, the strip test opens one shelf by its row); the footage, music, brand and style tests set their tab; the placement test unfolds first. App suite green.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

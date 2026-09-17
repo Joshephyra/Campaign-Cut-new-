@@ -135,10 +135,12 @@ describe('Editor strip structure (M51)', () => {
     const opening = screen.getByTestId('group-3');
     expect(opening.contains(screen.getByTestId('scene-4'))).toBe(true); // the lower third sits on the open
     expect(screen.getByTestId('group-5').contains(screen.getByTestId('scene-4'))).toBe(false);
-    // the left column offers every shelf, and the shelf opens the picker on its group
-    fireEvent.click((fireEvent.click(screen.getByRole('button', { name: 'Add to the spot' })), screen.getByRole('button', { name: 'Add lower thirds' })));
-    await screen.findByRole('dialog', { name: 'Add to the spot' });
+    // M66: the left column's Templates tab lists every shelf folded; opening one shows its elements as pictures
+    await screen.findByLabelText('Preview every text element with your copy');
+    expect(screen.queryByLabelText('Add Lower third from Three')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Lower thirds' }));
     expect(document.getElementById('picker-lower-third')).toBeTruthy();
+    await screen.findByLabelText('Add Lower third from Three');
   });
 });
 

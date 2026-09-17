@@ -1,6 +1,11 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi, beforeEach } from 'vitest';
 import { Editor } from './Editor';
+
+/** M66: the left column is tabbed; these tests live on the footage tab. */
+beforeEach(() => {
+  window.localStorage.setItem('cc.left.tab', 'footage');
+});
 
 afterEach(() => {
   cleanup();

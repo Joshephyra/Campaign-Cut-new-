@@ -57,7 +57,7 @@ describe('Editor: a spot from nothing (M41)', () => {
     expect(screen.queryAllByTestId(/^scene-\d+$/)).toHaveLength(0);
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Add the first scene' })[0]!);
-    await waitFor(() => expect(screen.getByRole('dialog', { name: 'Add to the spot' })).toBeTruthy());
+    await screen.findByLabelText('Preview every text element with your copy');
     fireEvent.click(screen.getByRole('button', { name: 'Add background from Starter pack' }));
     await waitFor(() => expect(adds).toHaveLength(1));
     expect(adds[0]).toEqual({ elementId: 20, startFrame: 0 });
@@ -66,14 +66,14 @@ describe('Editor: a spot from nothing (M41)', () => {
     await waitFor(() => expect(screen.getByTestId('player').getAttribute('data-seek')).toBe('150'));
 
     fireEvent.click(screen.getByRole('button', { name: 'Add a scene' }));
-    await waitFor(() => expect(screen.getByRole('dialog', { name: 'Add to the spot' })).toBeTruthy());
+    await screen.findByLabelText('Preview every text element with your copy');
     fireEvent.click(screen.getByRole('button', { name: 'Add stat from Starter pack' }));
     await waitFor(() => expect(adds).toHaveLength(2));
     expect(adds[1]).toEqual({ elementId: 21, startFrame: 150 });
     await waitFor(() => expect(screen.getByTestId('player').getAttribute('data-seek')).toBe('270'));
 
     fireEvent.click(screen.getByRole('button', { name: 'Add a scene' }));
-    await waitFor(() => expect(screen.getByRole('dialog', { name: 'Add to the spot' })).toBeTruthy());
+    await screen.findByLabelText('Preview every text element with your copy');
     fireEvent.click(screen.getByRole('button', { name: 'Add lower-third from Starter pack' }));
     await waitFor(() => expect(adds).toHaveLength(3));
     // past the end, an overlay lands on the start of the last scene, and the playhead stays on it

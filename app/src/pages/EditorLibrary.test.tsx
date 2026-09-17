@@ -69,7 +69,7 @@ describe('Editor element library (M31)', () => {
     render(<Editor projectId={7} onBack={() => {}} />);
     await waitFor(() => expect(screen.getByLabelText('Headline')).toBeTruthy());
     fireEvent.click(screen.getByLabelText('Add a scene'));
-    await screen.findByRole('dialog', { name: 'Add to the spot' });
+    await screen.findByLabelText('Preview every text element with your copy');
     const composer = screen.getByLabelText('Preview every text element with your copy') as HTMLInputElement;
     await waitFor(() => expect(screen.getByTestId('element-preview-9')).toBeTruthy());
     drawn.length = 0;
@@ -84,7 +84,7 @@ describe('Editor element library (M31)', () => {
     render(<Editor projectId={7} onBack={() => {}} />);
     await waitFor(() => expect(screen.getByLabelText('Headline')).toBeTruthy());
     fireEvent.click(screen.getByLabelText('Add a scene'));
-    await screen.findByRole('dialog', { name: 'Add to the spot' });
+    await screen.findByLabelText('Preview every text element with your copy');
     fireEvent.change(screen.getByLabelText('Preview every text element with your copy'), { target: { value: 'A NEW DIRECTION' } });
     fireEvent.click(screen.getByLabelText('Add Lower third from Contrast :30'));
     await waitFor(() => expect(screen.getByLabelText('Subhead')).toBeTruthy());
@@ -99,11 +99,12 @@ describe('Editor element library (M31)', () => {
     const calls = mockApi();
     render(<Editor projectId={7} onBack={() => {}} />);
     await waitFor(() => expect(screen.getByLabelText('Headline')).toBeTruthy());
-    expect(screen.queryByRole('dialog', { name: 'Add to the spot' })).toBeNull();
+    expect(screen.queryByLabelText('Add Lower third from Contrast :30')).toBeNull(); // M66: the shelves are folded until asked for
 
     fireEvent.change(screen.getByLabelText('Scrub'), { target: { value: '30' } });
     fireEvent.click(screen.getByLabelText('Add a scene'));
-    const picker = await screen.findByRole('dialog', { name: 'Add to the spot' });
+    await screen.findByLabelText('Add Lower third from Contrast :30'); // M66: the Add card opens every shelf
+    const picker = screen.getByTestId('library-browser');
     expect(picker.textContent).toContain('Lower third');
     expect(picker.textContent).toContain('End card');
     expect(picker.textContent).toContain('Contrast :30');
@@ -117,7 +118,6 @@ describe('Editor element library (M31)', () => {
     await waitFor(() => expect(screen.getByLabelText('Subhead')).toBeTruthy());
     expect((screen.getByLabelText('Subhead') as HTMLInputElement).value).toBe('LOWER');
     await waitFor(() => expect(playerElementIds()).toEqual(['3', '9']));
-    expect(screen.queryByRole('dialog', { name: 'Add to the spot' })).toBeNull();
   });
 
   it('an added element offers Remove from spot; the spot\'s own does not', async () => {
@@ -160,7 +160,7 @@ describe('Editor: the same element twice (M45)', () => {
     await waitFor(() => expect(screen.getByLabelText('Headline')).toBeTruthy());
     for (const n of [1, 2]) {
       fireEvent.click(screen.getByLabelText('Add a scene'));
-      await screen.findByRole('dialog', { name: 'Add to the spot' });
+      await screen.findByLabelText('Preview every text element with your copy');
       const button = screen.getByLabelText('Add Lower third from Contrast :30');
       expect((button as HTMLButtonElement).disabled).toBe(false);
       if (n === 2) expect(button.textContent).toContain('in the spot');
@@ -170,7 +170,7 @@ describe('Editor: the same element twice (M45)', () => {
     expect(screen.getByTestId('scene-9')).toBeTruthy();
     expect(screen.getByTestId('scene-10000002')).toBeTruthy();
     fireEvent.click(screen.getByLabelText('Add a scene'));
-    await screen.findByRole('dialog', { name: 'Add to the spot' });
+    await screen.findByLabelText('Preview every text element with your copy');
     expect(screen.getByLabelText('Add Lower third from Contrast :30').textContent).toContain('in the spot ×2');
   });
 });

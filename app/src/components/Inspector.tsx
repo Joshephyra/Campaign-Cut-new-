@@ -18,7 +18,7 @@ import {
   wordRanges,
   type CalloutValue,
 } from '@campaigncut/composition';
-import { ImageUp, Lock, RotateCcw } from 'lucide-react';
+import { ChevronDown, ImageUp, Lock, RotateCcw } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { api, type MediaAsset } from '../api';
 import { FieldLabel, ICON, Segmented, Slider, Switch, Chip } from './ui';
@@ -116,10 +116,20 @@ export function Inspector({ schema, values, onChange, assets = [], templateSlug 
 function PlacementControl({ param, parentLabel, value, onChange }: { param: TemplateParam; parentLabel: string; value: TransformValue; onChange: (v: TransformValue) => void }) {
   const isIdentity = value.x === 0 && value.y === 0 && value.scale === 1 && value.rotation === 0;
   const moved = value.x !== 0 || value.y !== 0;
+  // M66 (Josh): size and tilt stay folded until someone wants them; a placement already changed opens unfolded.
+  const [open, setOpen] = useState(!isIdentity);
   return (
-    <div className="mt-2.5 flex flex-col gap-1" data-testid={`placement-${param.for ?? param.key}`}>
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] text-fg-3">{moved ? 'Moved. Drag it on the video to move it again.' : 'Drag it on the video to move it.'}</span>
+    <div className="mt-2 flex flex-col gap-1" data-testid={`placement-${param.for ?? param.key}`}>
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+          className="inline-flex items-center gap-1 text-[11px] text-fg-3 hover:text-fg rounded-sm -ml-0.5 pl-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue"
+        >
+          <ChevronDown size={12} strokeWidth={1.75} aria-hidden="true" className={`transition-transform duration-150 ${open ? '' : '-rotate-90'}`} />
+          {parentLabel} placement{isIdentity ? '' : ' · changed'}
+        </button>
         <button
           type="button"
           aria-label={`Reset ${param.label}`}
@@ -130,8 +140,13 @@ function PlacementControl({ param, parentLabel, value, onChange }: { param: Temp
           Reset
         </button>
       </div>
-      <Slider label={`${parentLabel} size`} name="Size" min={25} max={300} value={Math.round(value.scale * 100)} format={(v) => `${v}%`} onChange={(n) => onChange({ ...value, scale: n / 100 })} />
-      <Slider label={`${parentLabel} tilt`} name="Tilt" min={-45} max={45} value={Math.round(value.rotation)} format={(v) => `${v}°`} onChange={(n) => onChange({ ...value, rotation: n })} />
+      {open && (
+        <>
+          <span className="text-[11px] text-fg-3">{moved ? 'Moved. Drag it on the video to move it again.' : 'Drag it on the video to move it.'}</span>
+          <Slider label={`${parentLabel} size`} name="Size" min={25} max={300} value={Math.round(value.scale * 100)} format={(v) => `${v}%`} onChange={(n) => onChange({ ...value, scale: n / 100 })} />
+          <Slider label={`${parentLabel} tilt`} name="Tilt" min={-45} max={45} value={Math.round(value.rotation)} format={(v) => `${v}°`} onChange={(n) => onChange({ ...value, rotation: n })} />
+        </>
+      )}
     </div>
   );
 }
