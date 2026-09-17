@@ -2,7 +2,7 @@ import type { LottieAnimationData } from './config';
 import { hexToRgba } from './hexToRgba';
 import { resolvePointer } from './jsonPointer';
 import type { ParamValues, TemplateParam } from './schema';
-import { applyTransform, isTransformValue } from './transform';
+import { applyTransform, isTransformValue, LAYER_CLASS, layerClassFor } from './transform';
 
 type AnyRecord = Record<string, unknown>;
 
@@ -37,6 +37,15 @@ export function applyLottieValues(
     const node = resolvePointer(result, param.path);
     if (node === null || typeof node !== 'object') continue;
     applyOne(param, node as AnyRecord, value, result);
+  }
+
+  // M28: tag every placement layer so the editor can find it in the rendered
+  // SVG. Done whether or not a value is set: a layer is draggable before it
+  // has ever been moved. Changes no pixel.
+  for (const param of schema) {
+    if (param.kind !== 'transform') continue;
+    const layer = resolvePointer(result, param.path);
+    if (layer && typeof layer === 'object') (layer as AnyRecord).cl = `${LAYER_CLASS} ${layerClassFor(param.key)}`;
   }
 
   memo.set(values, { source, schema, result });

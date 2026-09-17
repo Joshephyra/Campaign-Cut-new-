@@ -36,3 +36,14 @@ describe('LottieLayer wrapper (positioning-bug guard)', () => {
     expect(wrapper.contains(screen.getByTestId('lottie-stub'))).toBe(true);
   });
 });
+
+/** M28: the wrapper names its element so the editor can map a layer on screen back to its element. */
+describe('LottieLayer element id (M28)', () => {
+  it('carries data-cc-element when given an element id, and nothing otherwise', () => {
+    render(<LottieLayer animationData={tinyLottie} elementId="e7" />);
+    expect(screen.getByTestId('lottie-wrapper').getAttribute('data-cc-element')).toBe('e7');
+    cleanup();
+    render(<LottieLayer animationData={tinyLottie} />);
+    expect(screen.getByTestId('lottie-wrapper').getAttribute('data-cc-element')).toBeNull();
+  });
+});

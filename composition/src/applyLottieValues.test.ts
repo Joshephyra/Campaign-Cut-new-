@@ -19,6 +19,12 @@ const textOf = (lottie: LottieAnimationData, layerIndex: number) =>
 const pathOf = (key: string) => schema.find((p) => p.key === key)!.path;
 const colourOf = (lottie: LottieAnimationData, pointer: string) =>
   ((resolvePointer(lottie, pointer) as AnyRecord).c as AnyRecord).k as number[];
+/** M28 tags placement layers with a class (`cl`) for the editor; it is not a value and is dropped before byte comparisons. */
+const untagged = (lottie: LottieAnimationData): LottieAnimationData => {
+  const copy = structuredClone(lottie);
+  for (const layer of copy.layers as AnyRecord[]) delete layer.cl;
+  return copy;
+};
 
 describe('applyLottieValues', () => {
   // T1
@@ -30,7 +36,7 @@ describe('applyLottieValues', () => {
 
     // Put the original string back into a copy of the result; it must then
     // equal the source exactly.
-    const restored = structuredClone(result) as LottieAnimationData;
+    const restored = untagged(result);
     textOf(restored, 1).t = 'STAND-IN HEADLINE';
     expect(JSON.stringify(restored)).toBe(JSON.stringify(source));
   });
@@ -47,7 +53,7 @@ describe('applyLottieValues', () => {
   it('ignores a key that is not in the schema', () => {
     const source = loadStandin();
     const result = applyLottieValues(source, { nonsense: 'whatever' }, schema);
-    expect(JSON.stringify(result)).toBe(JSON.stringify(source));
+    expect(JSON.stringify(untagged(result))).toBe(JSON.stringify(source));
   });
 
   it('ignores an invalid colour string and keeps the authored colour', () => {

@@ -96,3 +96,11 @@ describe('Main footage trim and audio (M20)', () => {
     expect(screen.queryByTestId('audio')).toBeNull();
   });
 });
+
+/** M28: each element's Lottie wrapper names its element so the editor can map a layer on screen back to it. */
+describe('Main names each element wrapper (M28)', () => {
+  it('sets data-cc-element to the element id', () => {
+    render(<Main background="#000" elements={[element('e', null)]} />);
+    expect(screen.getByTestId('lottie-wrapper').getAttribute('data-cc-element')).toBe('e');
+  });
+});

@@ -77,7 +77,7 @@ function ElementView({ element }: { element: ElementProps }) {
   return (
     <>
       {element.media && <MediaSlot media={element.media} />}
-      <LottieLayer animationData={element.lottie} />
+      <LottieLayer animationData={element.lottie} elementId={element.id} />
     </>
   );
 }

@@ -543,6 +543,47 @@ The sample project (M26) went through the whole pipeline unattended and the fide
 
 ---
 
+## M28 · Direct manipulation · DONE
+
+Josh's verdict on the first real template (2026-09-17): placement must be click-and-drag on the monitor, not X and Y fields. The "Drag on monitor" toggle and the four number inputs go.
+
+**Build**
+- The mutation layer tags every layer that has a placement param with a class (`cc-layer` plus one naming the key) so lottie-web's SVG renderer emits it; each element's Lottie wrapper carries its element id. Same JSON in both runners; the class changes no pixel.
+- Monitor: pressing on an editable layer selects its element, makes that placement the active one, pauses playback and drags the layer with the pointer (Shift constrains to one axis). Hovering an editable layer shows a hairline cobalt outline and a move cursor; nothing is drawn at rest. This is the documented exception to "nothing overlays the monitor": one hairline while hovering or dragging, never a panel.
+- Hit testing reads the rendered SVG's own bounding boxes, so an animated layer is picked up where it is on the current frame; hidden layers are skipped; the topmost hit wins.
+- Arrow keys nudge the active placement (half a percent, 2% with Shift), outside text fields.
+- Inspector: the Placement row becomes a hint ("Drag it on the monitor to move it"), a Size slider and a Tilt slider, and Reset. No number inputs.
+
+**Tests**
+- Composition: placement layers get the class, other layers do not, the source is untouched; the wrapper carries the element id.
+- Hit test: topmost containing rect wins, zero-size rects are skipped, a miss returns nothing.
+- Editor: press-drag-release on the monitor moves the layer in the Player's props and saves the transform; a press without movement only selects; the outline exists only while hovering or dragging; arrow keys nudge the active placement after a press; Shift constrains.
+- Inspector: Size and Tilt sliders report scale and rotation; Reset restores the identity; no X, Y or toggle controls remain.
+
+**Done when:** a headline can be dragged on the monitor with nothing else clicked first, the change survives a reload, and the export matches the preview.
+
+---
+
+## M29 · Fewer dropdowns, fewer numbers, a cleaner surface · TODO
+
+The rest of Josh's verdict: less rigid numbers, fewer selects, a more polished look.
+
+**Build**
+- Timeline: ruler labels spaced by the track's real width so they never collide; bars carry the element name, timecodes appear on hover; the selected bar is outlined in cobalt; the transition on each boundary is a segmented Cut / Fade / Wipe / Slide row with a length slider shown in seconds.
+- Footage in the inspector: no select. The chosen clip is a card; clips are picked from thumbnails; trim is a two-handle bar over the clip with the in and out timecodes as facts; screen colour is two swatches.
+- Audio: tracks are rows, not a select; the start point is a slider over the track.
+- The editor and library get a consistent rhythm: one header, section titles, spacing, and type sizes from a small scale; no change to The Console's rules.
+
+**Tests**
+- Ruler: label interval grows with duration and shrinks with width; bars show names.
+- Transition row: segmented buttons report the preset with the default length; the slider reports frames.
+- Footage: thumbnail buttons report the asset; trim handles report seconds by keyboard and by pointer; swatches report the colour.
+- Audio: track rows report the asset; the start slider reports seconds.
+
+**Done when:** no `<select>` remains in the editor and Josh calls it cleaner.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

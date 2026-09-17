@@ -19,11 +19,12 @@ import {
   type MainMedia,
   type MainProps,
   type ParamValues,
+  type TemplateParam,
   type TransitionPreset,
   type TransitionProps,
 } from '@campaigncut/composition';
 import { Player, type PlayerRef } from '@remotion/player';
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { API, api, type MediaAsset, type ProjectAudio, type ProjectDetail, type ProjectElement, type ProjectTransition } from '../api';
 import { AudioPanel } from '../components/AudioPanel';
 import { ExportHistory } from '../components/ExportHistory';
@@ -32,6 +33,7 @@ import { Inspector } from '../components/Inspector';
 import { MediaPanel } from '../components/MediaPanel';
 import { Timeline, type ElementPatch } from '../components/Timeline';
 import { canRedo, canUndo, createHistory, isTextEntry, pushHistory, redoHistory, undoHistory, undoRedoFor, type History } from '../history';
+import { findLayerBoxes, pickLayer, type Box } from '../monitorHit';
 import { measurePlayback, type PlaybackSummary } from '../perf';
 
 const BACKGROUND = '#000000';
@@ -299,20 +301,25 @@ export function Editor({ projectId, onBack }: Props) {
     setValues({ ...values, [selected.id]: next });
   };
 
-  // M18: which placement param is being dragged on the monitor. Dragging
-  // adds the fraction of the monitor travelled to the layer's offset.
-  const [dragKey, setDragKey] = useState<string | null>(null);
-  useEffect(() => setDragKey(null), [selectedId]);
-  const onDrag = (dx: number, dy: number) => {
-    if (!selected || !dragKey) return;
-    changeKey.current = `${selected.id}:${dragKey}`;
+  // M28: the placement last pressed on the monitor. Dragging adds the
+  // fraction of the monitor travelled to that layer's offset; arrow keys
+  // nudge it. Choosing another element in the inspector lets it go.
+  const [active, setActive] = useState<{ elementId: number; key: string } | null>(null);
+  useEffect(() => setActive((a) => (a && a.elementId !== selectedId ? null : a)), [selectedId]);
+  const onPress = (elementId: number, key: string) => {
+    setSelectedId(elementId);
+    setActive({ elementId, key });
+  };
+  const onDrag = (elementId: number, key: string, dx: number, dy: number) => {
+    changeKey.current = `${elementId}:${key}`;
     setValues((prev) => {
-      const current = prev[selected.id]?.[dragKey];
+      const current = prev[elementId]?.[key];
       const base = isTransformValue(current) ? current : DEFAULT_TRANSFORM;
-      return { ...prev, [selected.id]: { ...prev[selected.id], [dragKey]: { ...base, x: base.x + dx, y: base.y + dy } } };
+      return { ...prev, [elementId]: { ...prev[elementId], [key]: { ...base, x: base.x + dx, y: base.y + dy } } };
     });
   };
-  nudgeRef.current = dragKey ? onDrag : null;
+  nudgeRef.current = active ? (dx, dy) => onDrag(active.elementId, active.key, dx, dy) : null;
+  const schemaFor = useCallback((elementId: number) => elements.find((e) => e.id === elementId)?.schema, [elements]);
 
   /**
    * The Footage panel's "use this clip" goes to the SELECTED element when it
@@ -387,7 +394,8 @@ export function Editor({ projectId, onBack }: Props) {
             onSelect={setSelectedId}
             onElementChange={onElementChange}
             onTransitionChange={onTransitionChange}
-            dragLabel={dragKey ? (selected?.schema.find((p) => p.key === dragKey)?.label ?? dragKey) : null}
+            schemaFor={schemaFor}
+            onPress={onPress}
             onDrag={onDrag}
           />
           <aside className="w-80 border-l border-hairline shrink-0 overflow-y-auto">
@@ -419,8 +427,7 @@ export function Editor({ projectId, onBack }: Props) {
                   assets={assets}
                   templateSlug={loaded.detail.template.slug}
                   elementBaseUrl={selected.lottieUrl.replace(/\/template\.json$/, '')}
-                  dragKey={dragKey}
-                  onDragKey={setDragKey}
+                  activeKey={active && active.elementId === selected.id ? active.key : null}
                 />
               )}
             </div>
@@ -527,7 +534,8 @@ function Monitor({
   onSelect,
   onElementChange,
   onTransitionChange,
-  dragLabel,
+  schemaFor,
+  onPress,
   onDrag,
 }: {
   loaded: Loaded;
@@ -541,35 +549,82 @@ function Monitor({
   onSelect: (id: number) => void;
   onElementChange: (id: number, patch: ElementPatch) => void;
   onTransitionChange: (afterElementId: number, t: { preset: TransitionPreset; durationInFrames: number }) => void;
-  /** M18: the placement being dragged on the monitor (its label), or null when dragging is off. */
-  dragLabel: string | null;
-  /** Fractions of the monitor the pointer moved since the last call. */
-  onDrag: (dx: number, dy: number) => void;
+  /** M28: an element's schema, to know which layers on screen are placements. */
+  schemaFor: (elementId: number) => TemplateParam[] | undefined;
+  /** M28: a press on an editable layer: select its element and make that placement the active one. */
+  onPress: (elementId: number, key: string) => void;
+  /** Fractions of the monitor the pointer moved since the last call, for one placement. */
+  onDrag: (elementId: number, key: string, dx: number, dy: number) => void;
 }) {
   const { detail, lotties } = loaded;
+  const slug = detail.template.slug;
 
-  // M18 drag surface. It draws NOTHING: the preview underneath is the feedback.
-  const lastPointer = useRef<{ x: number; y: number } | null>(null);
-  const onSurfaceDown = (e: ReactPointerEvent<HTMLDivElement>) => {
-    lastPointer.current = { x: e.clientX, y: e.clientY };
+  // M28 direct manipulation. A press on an editable layer (found by its box
+  // in the rendered SVG) starts a drag; the preview itself is the feedback.
+  // The only thing drawn is a hairline around the layer under the pointer,
+  // while it is under the pointer: nothing at rest.
+  const drag = useRef<{ elementId: number; key: string; originX: number; originY: number; applied: { x: number; y: number }; box: Box } | null>(null);
+  const swallowClick = useRef(false);
+  const [outline, setOutline] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const relative = (box: Box, monitor: DOMRect, dx = 0, dy = 0) => ({ left: box.left - monitor.left + dx, top: box.top - monitor.top + dy, width: box.width, height: box.height });
+  const layerAt = (monitor: HTMLElement, x: number, y: number) => pickLayer(findLayerBoxes(monitor, schemaFor), x, y);
+
+  const onMonitorDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 && !(e.buttons & 1)) return;
+    const monitor = e.currentTarget;
+    const hit = layerAt(monitor, e.clientX, e.clientY);
+    if (!hit) return;
+    e.stopPropagation();
+    e.preventDefault();
+    playerRef.current?.pause?.();
     try {
-      e.currentTarget.setPointerCapture?.(e.pointerId);
+      monitor.setPointerCapture?.(e.pointerId);
     } catch {
       /* jsdom or a synthetic pointer id */
     }
+    drag.current = { elementId: hit.elementId, key: hit.key, originX: e.clientX, originY: e.clientY, applied: { x: 0, y: 0 }, box: hit.rect };
+    setOutline(relative(hit.rect, monitor.getBoundingClientRect()));
+    onPress(hit.elementId, hit.key);
+  };
+  const onMonitorMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const monitor = e.currentTarget;
+    const rect = monitor.getBoundingClientRect();
+    const d = drag.current;
+    if (d && e.buttons & 1) {
+      if (rect.width <= 0 || rect.height <= 0) return;
+      // Fractions of the monitor travelled since the press; Shift keeps the larger axis only.
+      let x = (e.clientX - d.originX) / rect.width;
+      let y = (e.clientY - d.originY) / rect.height;
+      if (e.shiftKey) {
+        if (Math.abs(x) >= Math.abs(y)) y = 0;
+        else x = 0;
+      }
+      if (x !== d.applied.x || y !== d.applied.y) {
+        onDrag(d.elementId, d.key, x - d.applied.x, y - d.applied.y);
+        d.applied = { x, y };
+        swallowClick.current = true;
+      }
+      setOutline(relative(d.box, rect, x * rect.width, y * rect.height));
+      return;
+    }
+    if (d) return;
+    const hit = layerAt(monitor, e.clientX, e.clientY);
+    setOutline(hit ? relative(hit.rect, rect) : null);
+  };
+  const onMonitorUp = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!drag.current) return;
+    e.stopPropagation();
+    drag.current = null;
+    swallowClick.current = true;
+    setOutline(null);
+  };
+  /** The Player toggles playback on click; a press that picked a layer must not. */
+  const onMonitorClick = (e: ReactMouseEvent<HTMLDivElement>) => {
+    if (!swallowClick.current) return;
+    swallowClick.current = false;
+    e.stopPropagation();
     e.preventDefault();
   };
-  const onSurfaceMove = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (!lastPointer.current || !(e.buttons & 1)) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return;
-    onDrag((e.clientX - lastPointer.current.x) / rect.width, (e.clientY - lastPointer.current.y) / rect.height);
-    lastPointer.current = { x: e.clientX, y: e.clientY };
-  };
-  const onSurfaceUp = () => {
-    lastPointer.current = null;
-  };
-  const slug = detail.template.slug;
 
   const renderedValues = useDebounced(values, RENDER_DEBOUNCE_MS);
 
@@ -660,11 +715,23 @@ function Monitor({
   }, [loaded]);
 
   return (
-    // Program monitor. Nothing ever overlays this visually. The M18 drag
-    // surface is the one exception: an invisible pointer catcher, present only
-    // while "Drag on monitor" is on, so the preview itself is the feedback.
+    // Program monitor. Nothing ever overlays this visually, with one documented
+    // exception (M28): a hairline around the editable layer under the pointer,
+    // only while it is under the pointer or being dragged. Never a panel.
     <section className="flex-1 p-8 min-w-0 overflow-y-auto">
-      <div className="relative">
+      <div
+        data-testid="monitor"
+        className="relative select-none"
+        style={{ cursor: outline ? 'move' : undefined, touchAction: 'none' }}
+        onPointerDownCapture={onMonitorDown}
+        onPointerMoveCapture={onMonitorMove}
+        onPointerUpCapture={onMonitorUp}
+        onPointerCancelCapture={onMonitorUp}
+        onPointerLeave={() => {
+          if (!drag.current) setOutline(null);
+        }}
+        onClickCapture={onMonitorClick}
+      >
         <Player
           ref={playerRef}
           component={Main}
@@ -677,16 +744,12 @@ function Monitor({
           loop
           style={{ width: '100%' }}
         />
-        {dragLabel && (
+        {outline && (
           <div
-            data-testid="drag-surface"
-            role="presentation"
-            aria-label={`Drag to move ${dragLabel}`}
-            className="absolute inset-0 cursor-move select-none touch-none"
-            onPointerDown={onSurfaceDown}
-            onPointerMove={onSurfaceMove}
-            onPointerUp={onSurfaceUp}
-            onPointerCancel={onSurfaceUp}
+            data-testid="layer-outline"
+            aria-hidden="true"
+            className="absolute border border-cobalt"
+            style={{ pointerEvents: 'none', left: outline.left, top: outline.top, width: outline.width, height: outline.height }}
           />
         )}
       </div>

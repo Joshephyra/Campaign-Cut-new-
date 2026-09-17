@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { applyLottieValues } from './applyLottieValues';
 import type { LottieAnimationData } from './config';
 import type { TemplateParam } from './schema';
-import { DEFAULT_TRANSFORM, isTransformValue } from './transform';
+import { DEFAULT_TRANSFORM, isTransformValue, layerClassFor } from './transform';
 
 /**
  * M18: a `transform` param moves, scales and rotates a tagged layer by an
@@ -104,7 +104,10 @@ describe('applyLottieValues: transform', () => {
     const source = lottie([animatedLayer]);
     const before = JSON.stringify(source);
     const out = applyLottieValues(source, { 'headline.transform': { ...DEFAULT_TRANSFORM } }, schema);
-    expect(JSON.stringify(out)).toBe(before);
+    // The M28 class tag is the one thing added; nothing the renderer draws changes.
+    const untagged = structuredClone(out);
+    for (const layer of untagged.layers as AnyRecord[]) delete layer.cl;
+    expect(JSON.stringify(untagged)).toBe(before);
     applyLottieValues(source, { 'headline.transform': { x: 0.3, y: 0.3, scale: 3, rotation: 90 } }, schema);
     expect(JSON.stringify(source)).toBe(before);
   });
@@ -112,5 +115,36 @@ describe('applyLottieValues: transform', () => {
   it('ignores a value that is not a transform', () => {
     const out = applyLottieValues(lottie([staticLayer]), { 'headline.transform': 'left' }, schema);
     expect((ks(out).p as AnyRecord).k).toEqual([160, 500, 0]);
+  });
+});
+
+/**
+ * M28: every layer that has a placement param is tagged with a class so the
+ * SVG renderer emits it and the editor can find the layer's box on screen.
+ * The class changes no pixel; both runners get the same JSON.
+ */
+describe('placement layers are tagged for the monitor (M28)', () => {
+  const schema: TemplateParam[] = [
+    { key: 'headline', role: 'headline', kind: 'text', label: 'Headline', default: 'HI', path: '/layers/0' },
+    { key: 'headline.transform', role: 'headline', kind: 'transform', label: 'Headline placement', default: DEFAULT_TRANSFORM, path: '/layers/0', for: 'headline' },
+    { key: 'stat.1', role: 'stat.1', kind: 'text', label: 'Stat 1', default: '1', path: '/layers/1' },
+    { key: 'stat.1.transform', role: 'stat.1', kind: 'transform', label: 'Stat 1 placement', default: DEFAULT_TRANSFORM, path: '/layers/1', for: 'stat.1' },
+    { key: 'disclaimer', role: 'safe.disclaimer', kind: 'text', label: 'Disclaimer', default: 'x', path: '/layers/2', locked: true },
+  ];
+  const source = lottie([structuredClone(staticLayer), { ...structuredClone(staticLayer), nm: 'cc.stat.1' }, { ...structuredClone(staticLayer), nm: 'cc.safe.disclaimer' }]);
+
+  it('tags placement layers with cc-layer and a class for the key, whether or not a value is set', () => {
+    const out = applyLottieValues(source, {}, schema);
+    expect((out.layers[0] as AnyRecord).cl).toBe(`cc-layer ${layerClassFor('headline.transform')}`);
+    expect((out.layers[1] as AnyRecord).cl).toBe(`cc-layer ${layerClassFor('stat.1.transform')}`);
+    expect(layerClassFor('stat.1.transform')).toMatch(/^cc-key-[A-Za-z0-9_-]+$/);
+    expect(layerClassFor('stat.1.transform')).not.toBe(layerClassFor('stat-1.transform'));
+  });
+
+  it('leaves layers without a placement alone and never touches the source', () => {
+    const before = JSON.stringify(source);
+    const out = applyLottieValues(source, { headline: 'YES' }, schema);
+    expect((out.layers[2] as AnyRecord).cl).toBeUndefined();
+    expect(JSON.stringify(source)).toBe(before);
   });
 });

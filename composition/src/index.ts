@@ -20,6 +20,6 @@ export { fontFaceCss, fontsFor, TemplateFonts } from './fonts';
 export type { TemplateFont, TemplateFontFile } from './fonts';
 export { chromaFilter, DEFAULT_CHROMA_KEY, isChromaKey } from './chroma';
 export type { ChromaFilter, ChromaKey } from './chroma';
-export { applyTransform, DEFAULT_TRANSFORM, isTransformValue, type TransformValue } from './transform';
+export { applyTransform, DEFAULT_TRANSFORM, isTransformValue, LAYER_CLASS, layerClassFor, type TransformValue } from './transform';
 export { mediaTiming } from './media';
 export type { MainAudio } from './config';

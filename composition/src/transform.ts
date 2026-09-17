@@ -61,3 +61,17 @@ function mapProperty(prop: AnyRecord | undefined, fn: (v: unknown) => unknown): 
   }
   prop.k = fn(prop.k);
 }
+
+/**
+ * M28: the class the editor looks for on a placement layer in the rendered
+ * SVG. lottie-web copies a layer's `cl` onto its <g>, so tagging the JSON
+ * is enough to find the layer's box on screen. Keys can hold dots and other
+ * characters that are not valid in a class name; each is hex-escaped so
+ * distinct keys never collide.
+ */
+export function layerClassFor(key: string): string {
+  return `cc-key-${key.replace(/[^A-Za-z0-9-]/g, (c) => `_${c.charCodeAt(0).toString(16)}`)}`;
+}
+
+/** The class every placement layer carries; `layerClassFor` adds the key. */
+export const LAYER_CLASS = 'cc-layer';

@@ -3,6 +3,30 @@
 Running log of where the build is. Newest entry first.
 
 ---
+
+## 2026-09-17 · M28 Direct manipulation · DONE
+
+**Why**
+
+Josh's verdict on the first real template in the editor: placement must be click-and-drag on the monitor, not X and Y fields; the whole surface needs to be cleaner, with fewer dropdowns and fewer rigid numbers (that half is M29). He also listed what the product will need after the proof of concept; see `docs/ROADMAP.md`, which notes which of those sit on the CLAUDE.md non-goals list.
+
+**What exists now**
+
+- Press an editable layer on the monitor and drag it. Nothing has to be switched on. The mutation layer tags every placement layer with a class (`cc-layer` plus one for its key) and each element's Lottie wrapper carries its element id; lottie-web copies the class onto the layer's `<g>`, so its box on screen, wherever the animation has it on the current frame, is one `getBoundingClientRect` away. Hidden layers have no box. The topmost hit wins.
+- A press selects the element and makes that placement the active one (arrow keys nudge it: half a percent, 2% with Shift); playback pauses; Shift while dragging keeps to one axis; a press that started a drag never toggles playback.
+- The one thing drawn over the monitor: a hairline cobalt outline around the editable layer under the pointer, while it is under the pointer or being dragged, with a move cursor. Nothing at rest. This replaces M18's invisible capture surface as the documented exception to "nothing overlays the monitor".
+- Inspector: the Placement row is a hint ("Drag it on the monitor to move it"), a Size slider (25 to 300%), a Tilt slider (-45 to 45 degrees) and Reset. The X, Y, Scale and Rotation number fields and the "Drag on monitor" toggle are gone. The control whose placement is active carries a cobalt edge.
+- Tests: 3 composition (class tag, wrapper id through Main), 3 hit test, 6 editor (drag moves and saves, press selects, miss does nothing, Shift constrains, outline only on hover, arrow keys after a press), 5 inspector. 195 app and composition tests green.
+
+**Verified**
+
+- In the real renderer (Chrome, project 5 on the sample template): the headline's `<g>` carries `cc-layer cc-key-headline_2etransform` inside the wrapper for element 5; hovering shows the outline and the move cursor; a 91 by 51 pixel drag moved the layer by exactly 91 by 51 pixels and saved `x: 0.199, y: 0.199`; the outline was gone after release; the inspector marked the headline active. The pane would not paint a screenshot (known limit), so this was checked through the DOM and the API.
+
+**Next**
+
+M29: fewer dropdowns, fewer numbers, a cleaner surface.
+
+---
 ## 2026-09-17 · M27 The first real template: font faces and the comp background · DONE
 
 **Why**

@@ -25,9 +25,8 @@ type Props = {
   templateSlug?: string;
   /** Server-relative base of the element's files, e.g. /templates/two/elements/open (M17). */
   elementBaseUrl?: string;
-  /** M18: which placement param is being dragged on the monitor, if any. */
-  dragKey?: string | null;
-  onDragKey?: (key: string | null) => void;
+  /** M28: the placement param last pressed on the monitor (arrow keys nudge it), if it belongs to this element. */
+  activeKey?: string | null;
 };
 
 /**
@@ -35,7 +34,7 @@ type Props = {
  * code anywhere: a template with three text roles and one accent colour
  * produces three text fields and a colour picker, automatically.
  */
-export function Inspector({ schema, values, onChange, assets = [], templateSlug = '', elementBaseUrl, dragKey = null, onDragKey }: Props) {
+export function Inspector({ schema, values, onChange, assets = [], templateSlug = '', elementBaseUrl, activeKey = null }: Props) {
   const set = (key: string, value: unknown) => onChange({ ...values, [key]: value });
   const imageBase = elementBaseUrl ?? `/templates/${templateSlug}`;
   // Placement params ride under the text or image control they belong to.
@@ -47,8 +46,9 @@ export function Inspector({ schema, values, onChange, assets = [], templateSlug 
         .filter((param) => param.kind !== 'transform')
         .map((param) => {
           const placement = placementFor(param.key);
+          const active = placement !== undefined && placement.key === activeKey;
           return (
-            <div key={param.key} data-testid={`param-${param.key}`}>
+            <div key={param.key} data-testid={`param-${param.key}`} data-active={active ? 'true' : 'false'} className={active ? 'border-l-2 border-cobalt -ml-3 pl-[10px]' : ''}>
               {param.kind === 'text' && <TextControl param={param} value={valueOf(param, values)} onChange={(v) => set(param.key, v)} />}
               {param.kind === 'color' && <ColorControl param={param} value={valueOf(param, values)} onChange={(v) => set(param.key, v)} />}
               {param.kind === 'image' && (
@@ -73,8 +73,6 @@ export function Inspector({ schema, values, onChange, assets = [], templateSlug 
                   parentLabel={param.label}
                   value={isTransformValue(values[placement.key]) ? (values[placement.key] as TransformValue) : DEFAULT_TRANSFORM}
                   onChange={(v) => set(placement.key, v)}
-                  dragging={dragKey === placement.key}
-                  onDrag={onDragKey ? () => onDragKey(dragKey === placement.key ? null : placement.key) : undefined}
                 />
               )}
             </div>
@@ -84,88 +82,48 @@ export function Inspector({ schema, values, onChange, assets = [], templateSlug 
   );
 }
 
-// ---- placement (M18) ---------------------------------------------------
-
-/** Round for display so 0.1 * 100 does not show as 10.000000000000002. */
-const pct = (fraction: number) => String(Math.round(fraction * 1000) / 10);
-const deg = (n: number) => String(Math.round(n * 10) / 10);
+// ---- placement (M18, M28) ----------------------------------------------
 
 /**
- * X and Y are offsets from the authored position as a percentage of the
- * frame (stored as fractions); scale is a percentage of the authored size;
- * rotation is added degrees. Reset returns to exactly what the designer built.
+ * Where a layer sits is set by dragging it on the monitor (M28); the
+ * inspector only says so, and offers Size and Tilt as sliders. Scale is a
+ * percentage of the authored size; tilt is added degrees. Reset returns to
+ * exactly what the designer built.
  */
-function PlacementControl({
-  param,
-  parentLabel,
-  value,
-  onChange,
-  dragging,
-  onDrag,
-}: {
-  param: TemplateParam;
-  parentLabel: string;
-  value: TransformValue;
-  onChange: (v: TransformValue) => void;
-  dragging: boolean;
-  onDrag?: () => void;
-}) {
-  const field = (label: string, shown: string, apply: (n: number) => TransformValue, unit: string, step: number) => {
-    const id = `${param.key}-${label}`;
-    return (
-      <label htmlFor={id} className="flex items-center gap-1 text-[11px] text-muted">
-        <span className="w-6">{label.replace(/^\w/, (c) => c.toUpperCase())}</span>
-        <input
-          id={id}
-          type="number"
-          step={step}
-          aria-label={`${parentLabel} ${label.length === 1 ? label.toUpperCase() : label}`}
-          value={shown}
-          onChange={(e) => {
-            const n = Number(e.target.value);
-            if (Number.isFinite(n)) onChange(apply(n));
-          }}
-          className="w-16 bg-panel border border-hairline px-1 py-0.5 font-mono text-fg focus:outline-none focus:border-cobalt"
-        />
-        <span>{unit}</span>
-      </label>
-    );
-  };
+function PlacementControl({ param, parentLabel, value, onChange }: { param: TemplateParam; parentLabel: string; value: TransformValue; onChange: (v: TransformValue) => void }) {
   const isIdentity = value.x === 0 && value.y === 0 && value.scale === 1 && value.rotation === 0;
+  const moved = value.x !== 0 || value.y !== 0;
   return (
-    <div className="mt-2 flex flex-col gap-1" data-testid={`placement-${param.for ?? param.key}`}>
+    <div className="mt-2 flex flex-col gap-1.5" data-testid={`placement-${param.for ?? param.key}`}>
       <div className="flex items-center justify-between">
-        <span className="text-[11px] uppercase tracking-widest text-muted">Placement</span>
-        <div className="flex items-center gap-2">
-          {onDrag && (
-            <button
-              type="button"
-              aria-label={`Drag ${parentLabel} on monitor`}
-              aria-pressed={dragging}
-              onClick={onDrag}
-              className={`text-[11px] px-1.5 py-0.5 border ${dragging ? 'border-cobalt text-cobalt' : 'border-hairline text-muted hover:text-fg'}`}
-            >
-              {dragging ? 'Dragging… (click to stop)' : 'Drag on monitor'}
-            </button>
-          )}
-          <button
-            type="button"
-            aria-label={`Reset ${param.label}`}
-            disabled={isIdentity}
-            onClick={() => onChange({ ...DEFAULT_TRANSFORM })}
-            className="text-[11px] text-muted hover:text-fg disabled:opacity-40"
-          >
-            Reset
-          </button>
-        </div>
+        <span className="text-[11px] text-muted">{moved ? 'Moved. Drag it on the monitor to move it again.' : 'Drag it on the monitor to move it.'}</span>
+        <button
+          type="button"
+          aria-label={`Reset ${param.label}`}
+          disabled={isIdentity}
+          onClick={() => onChange({ ...DEFAULT_TRANSFORM })}
+          className="text-[11px] text-muted hover:text-fg disabled:opacity-40 shrink-0"
+        >
+          Reset
+        </button>
       </div>
-      <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-        {field('x', pct(value.x), (n) => ({ ...value, x: n / 100 }), '%', 0.5)}
-        {field('y', pct(value.y), (n) => ({ ...value, y: n / 100 }), '%', 0.5)}
-        {field('scale', pct(value.scale), (n) => ({ ...value, scale: n / 100 }), '%', 1)}
-        {field('rotation', deg(value.rotation), (n) => ({ ...value, rotation: n }), '°', 1)}
-      </div>
+      <Slider label={`${parentLabel} size`} name="Size" min={25} max={300} value={Math.round(value.scale * 100)} unit="%" onChange={(n) => onChange({ ...value, scale: n / 100 })} />
+      <Slider label={`${parentLabel} tilt`} name="Tilt" min={-45} max={45} value={Math.round(value.rotation)} unit="°" onChange={(n) => onChange({ ...value, rotation: n })} />
     </div>
+  );
+}
+
+/** A labelled range with its value shown beside it as a fact, in mono. */
+function Slider({ label, name, min, max, step = 1, value, unit, onChange }: { label: string; name: string; min: number; max: number; step?: number; value: number; unit: string; onChange: (n: number) => void }) {
+  return (
+    <label className="flex items-center gap-2 text-[11px] text-muted">
+      <span className="w-8 shrink-0">{name}</span>
+      <input type="range" aria-label={label} min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} className="flex-1 accent-cobalt min-w-0" />
+      <span className="font-mono w-11 text-right text-fg tabular-nums">
+        {value}
+        {unit}
+      </span>
+    </label>
   );
 }
 
