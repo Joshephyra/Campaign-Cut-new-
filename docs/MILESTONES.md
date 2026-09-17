@@ -713,6 +713,24 @@ The prototype's best idea: the user types their copy once and sees it in every e
 
 ---
 
+## M38 · The starter element pack · DONE
+
+The library had three plain templates. A first user test needs range: lower thirds, captions, callouts, stats, backgrounds, end cards, disclaimers. Germain's real designs come later; until then a pack built by script inside After Effects, through the same handover the guide describes, so it proves the pipeline as well as filling the picker.
+
+**Build**
+- `tools/ae-preflight/starter-pack.jsx`: sixteen tagged comps at 1920x1080, 30 fps (headline; bar and stacked lower thirds; boxed and pop-on captions; callout and pull quote; big stat and two stats; top bar; split and footage backgrounds; vote and learn-more end cards; disclaimer bar and card), each with fade, slide, scale or pop animation and a fade-out where an overlay needs one. Handover folder on the Desktop with numbered sub-folders, fonts/ (Arial Regular, Arial Bold, Arial Narrow Bold from Windows), `elements.json` (typed, library only, background), `export-config.jsx`, the saved project, a master comp end to end for the reference.
+- `tools/ae-preflight/run-unattended.mjs`: launches After Effects fresh (or attaches with `--attach`), sends a script with `$.__ccQuiet` and `$.__ccConfig`, watches the script's log for its done line, never kills the app. `bodymovin-export.jsx` and `preflight-all.jsx` take their project and comps from the config.
+- `elements.json` may say `"libraryOnly": true`: the template feeds "Add to the spot" and is left out of the "start a spot" grid (`template.library_only`, `GET /templates` filters, `GET /elements` does not).
+- Ingest rule: a width word After Effects folds into a font's style ("Narrow Bold") moves into the family ("Arial Narrow", Bold), so the face is its own and the file is found by it.
+- Composition fix found by the pack: elements mount only once the template fonts are ready. lottie-web measures characters when it builds a text layer and keeps the widths; an element at frame 0 measured in the fallback font and drew the right glyphs at the wrong spacing.
+
+**Tests**
+- The plan against the ingest rules (types, roles, unique slugs and folders, disclaimers at four seconds, fonts, boxes inside the frame, manifest and export config); libraryOnly through ingest, database and routes; the width rule; Main holds elements until faces load.
+
+**Done when:** the pack builds, exports, renders and ingests with nobody at the keyboard; all sixteen elements draw in the picker with the composer's copy; the fidelity harness judges the pack against its After Effects reference.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

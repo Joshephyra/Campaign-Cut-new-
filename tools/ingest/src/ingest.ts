@@ -96,6 +96,8 @@ export type TemplateMeta = {
   reference?: string;
   /** M27: the comp background colour (#rrggbb) from elements.json, shown wherever no element covers the frame. */
   background?: string;
+  /** M38: the template feeds the element library only; the "start a spot" grid leaves it out. */
+  libraryOnly?: boolean;
 };
 
 export type ElementIngestResult = ElementMeta & {
@@ -163,7 +165,7 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
   const problems: string[] = [];
 
   // 1. Find the elements in the handover.
-  const { handoverDir, elements: found, background, manifestProblems } = discoverElements(options.input, slug, name);
+  const { handoverDir, elements: found, background, libraryOnly, manifestProblems } = discoverElements(options.input, slug, name);
   problems.push(...manifestProblems);
   log(`Reading ${handoverDir}: ${found.length} element(s)`);
 
@@ -185,6 +187,7 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
     }
     seenSlugs.add(el.slug);
     const lottie = JSON.parse(fs.readFileSync(el.jsonPath, 'utf8')) as LottieAnimationData;
+    foldWidthIntoFamily(lottie);
     const generated = generateSchema(lottie);
     for (const e of generated.errors) problems.push(`Element "${el.slug}": ${e.message}`);
     const durationInFrames = Number(lottie.op) - Number(lottie.ip);
@@ -192,6 +195,7 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
     const variants: PreparedVariant[] = [];
     for (const v of el.variants) {
       const vl = JSON.parse(fs.readFileSync(v.jsonPath, 'utf8')) as LottieAnimationData;
+      foldWidthIntoFamily(vl);
       const vg = generateSchema(vl);
       for (const e of vg.errors) problems.push(`Element "${el.slug}", ${v.aspect} variant: ${e.message}`);
       const want = frameFor(v.aspect);
@@ -254,7 +258,7 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
   const fonts: string[] = [];
   for (const el of prepared) for (const f of [...el.fonts, ...el.preparedVariants.flatMap((v) => v.fonts)]) if (!fonts.includes(f)) fonts.push(f);
 
-  const meta: TemplateMeta = { slug, name, adType, durationInFrames, fps, width, height, fonts, fontFiles: [], elements: elementMetas, ...(background ? { background } : {}) };
+  const meta: TemplateMeta = { slug, name, adType, durationInFrames, fps, width, height, fonts, fontFiles: [], elements: elementMetas, ...(background ? { background } : {}), ...(libraryOnly ? { libraryOnly: true } : {}) };
   for (const field of ['durationInFrames', 'fps', 'width', 'height'] as const) {
     const v = meta[field];
     if (!Number.isFinite(v) || v <= 0) problems.push(`Template ${field} is ${String(v)}; it must be a positive number`);
@@ -382,6 +386,7 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
     width,
     height,
     thumbPath: path.relative(path.dirname(templatesDir), thumbPath).split(path.sep).join('/'),
+    libraryOnly: Boolean(libraryOnly),
   });
   for (const e of elementMetas) {
     db.upsertTemplateElement({ templateId, slug: e.slug, name: e.name, type: e.type, zIndex: e.zIndex, startFrame: e.startFrame, endFrame: e.endFrame });
@@ -451,7 +456,7 @@ function exportJsonIn(folder: string): string | undefined {
  * element named after the template. A folder of export folders is one
  * element each, ordered by elements.json when present, else by name.
  */
-type Discovered = { handoverDir: string; elements: DiscoveredElement[]; background?: string; manifestProblems: string[] };
+type Discovered = { handoverDir: string; elements: DiscoveredElement[]; background?: string; libraryOnly: boolean; manifestProblems: string[] };
 
 function discoverElements(input: string, templateSlug: string, templateName: string): Discovered {
   const resolved = path.resolve(input);
@@ -460,21 +465,22 @@ function discoverElements(input: string, templateSlug: string, templateName: str
   const single = (jsonPath: string, folder: string): DiscoveredElement => ({ slug: templateSlug, name: templateName, type: inferElementType(templateSlug), folder, jsonPath, variants: [] });
 
   if (fs.statSync(resolved).isFile()) {
-    return { handoverDir: path.dirname(resolved), elements: [single(resolved, path.dirname(resolved))], manifestProblems: [] };
+    return { handoverDir: path.dirname(resolved), elements: [single(resolved, path.dirname(resolved))], libraryOnly: false, manifestProblems: [] };
   }
 
   const ownJson = exportJsonIn(resolved);
-  if (ownJson) return { handoverDir: resolved, elements: [single(ownJson, resolved)], manifestProblems: [] };
+  if (ownJson) return { handoverDir: resolved, elements: [single(ownJson, resolved)], libraryOnly: false, manifestProblems: [] };
 
   const manifestFile = path.join(resolved, 'elements.json');
   const problems: string[] = [];
   const manifestProblems: string[] = [];
   const elements: DiscoveredElement[] = [];
   let background: string | undefined;
+  let libraryOnly = false;
 
   if (fs.existsSync(manifestFile)) {
-    // Either a bare list of elements, or { background?, elements } (M27).
-    const parsed = JSON.parse(fs.readFileSync(manifestFile, 'utf8')) as ElementManifestEntry[] | { background?: unknown; elements?: ElementManifestEntry[] };
+    // Either a bare list of elements, or { background?, libraryOnly?, elements } (M27, M38).
+    const parsed = JSON.parse(fs.readFileSync(manifestFile, 'utf8')) as ElementManifestEntry[] | { background?: unknown; libraryOnly?: unknown; elements?: ElementManifestEntry[] };
     const manifest = Array.isArray(parsed) ? parsed : parsed.elements;
     if (!Array.isArray(manifest) || manifest.length === 0) {
       throw new IngestFailure([`${manifestFile} must be a non-empty list of { folder, slug?, name?, startFrame?, zIndex? }, or { background, elements: [...] }`], []);
@@ -482,6 +488,10 @@ function discoverElements(input: string, templateSlug: string, templateName: str
     if (!Array.isArray(parsed) && parsed.background !== undefined) {
       if (typeof parsed.background === 'string' && /^#[0-9a-fA-F]{6}$/.test(parsed.background)) background = parsed.background.toUpperCase();
       else manifestProblems.push(`elements.json "background" must be a #rrggbb colour, got ${JSON.stringify(parsed.background)}`);
+    }
+    if (!Array.isArray(parsed) && parsed.libraryOnly !== undefined) {
+      if (typeof parsed.libraryOnly === 'boolean') libraryOnly = parsed.libraryOnly;
+      else manifestProblems.push(`elements.json "libraryOnly" must be true or false, got ${JSON.stringify(parsed.libraryOnly)}`);
     }
     for (const entry of manifest) {
       const folder = path.join(resolved, String(entry.folder ?? ''));
@@ -553,7 +563,7 @@ function discoverElements(input: string, templateSlug: string, templateName: str
   if (elements.length === 0) {
     throw new IngestFailure([`No Bodymovin JSON found in ${resolved}: expected data.json, or one sub-folder per element each holding an export`], []);
   }
-  return { handoverDir: resolved, elements, background, manifestProblems };
+  return { handoverDir: resolved, elements, background, libraryOnly, manifestProblems };
 }
 
 /**
@@ -561,6 +571,30 @@ function discoverElements(input: string, templateSlug: string, templateName: str
  * export's fonts list, with the elements that use it. A family with no
  * list entry (older exports) counts as Regular.
  */
+/** The width words After Effects folds into a font's style ("Narrow Bold") that name a family of their own on disk. */
+const WIDTH_WORDS = ['Narrow', 'Condensed', 'Compressed', 'Extended', 'Expanded', 'Wide'];
+
+/**
+ * M38: Bodymovin reports Arial Narrow Bold as family "Arial", style
+ * "Narrow Bold". The browser has no notion of "Narrow" in a style, so that
+ * face would collide with Arial Bold and render in the wrong font. The
+ * width belongs to the family: "Arial Narrow", style "Bold", which is also
+ * how the file is named. Rewrites the Lottie's font list in place, so the
+ * schema, the shipped faces and the rendered text all agree.
+ */
+export function foldWidthIntoFamily(lottie: LottieAnimationData): void {
+  const list = ((lottie.fonts as { list?: { fFamily?: string; fStyle?: string }[] } | undefined)?.list) ?? [];
+  for (const f of list) {
+    if (typeof f.fFamily !== 'string' || typeof f.fStyle !== 'string') continue;
+    const words = f.fStyle.split(/\s+/).filter(Boolean);
+    const widths = words.filter((w) => WIDTH_WORDS.some((x) => x.toLowerCase() === w.toLowerCase()));
+    if (widths.length === 0) continue;
+    const rest = words.filter((w) => !widths.includes(w));
+    f.fFamily = `${f.fFamily} ${widths.join(' ')}`;
+    f.fStyle = rest.join(' ') || 'Regular';
+  }
+}
+
 export function fontFaces(elements: { slug: string; lottie: LottieAnimationData; fonts: string[] }[]): { family: string; style: string; elements: string[] }[] {
   const faces: { family: string; style: string; elements: string[] }[] = [];
   const add = (family: string, style: string, slug: string) => {

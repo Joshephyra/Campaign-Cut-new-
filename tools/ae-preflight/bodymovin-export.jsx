@@ -17,10 +17,17 @@
   files kept with their original names in an images/ folder.
 */
 
-var PROJECT = 'C:/Users/josho/Desktop/contrast-30/contrast-30.aep';
-var LOG_DIR = 'C:/Users/josho/Desktop/contrast-30';
+/*
+  M38: $.__ccConfig may name a config file (a .jsx declaring
+  var CC_CONFIG = { project, logDir, exports: [{ comp, destination }] }),
+  as the starter pack builder writes; without it the sample's paths apply.
+*/
+var CC_CONFIG = null;
+if (typeof $.__ccConfig === 'string' && $.__ccConfig) $.evalFile(new File($.__ccConfig));
+var PROJECT = CC_CONFIG ? CC_CONFIG.project : 'C:/Users/josho/Desktop/contrast-30/contrast-30.aep';
+var LOG_DIR = CC_CONFIG ? CC_CONFIG.logDir : 'C:/Users/josho/Desktop/contrast-30';
 var BODYMOVIN_DIR = 'C:/Program Files (x86)/Common Files/Adobe/CEP/extensions/bodymovin';
-var EXPORTS = [
+var EXPORTS = CC_CONFIG ? CC_CONFIG.exports : [
   { comp: 'Open', destination: 'C:/Users/josho/Desktop/contrast-30/01-open/data.json' },
   { comp: 'Lower third', destination: 'C:/Users/josho/Desktop/contrast-30/02-lower-third/data.json' },
   { comp: 'Stat callout', destination: 'C:/Users/josho/Desktop/contrast-30/03-stat/data.json' },

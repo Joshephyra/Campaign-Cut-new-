@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 // The composition runs in a browser (Player) and in headless Chrome
 // (renderMedia); the server and ingest programs merely import its types.
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { cancelRender, continueRender, delayRender } from 'remotion';
 
 /**
@@ -98,8 +98,8 @@ export function fontsFor(files: TemplateFontFile[] | undefined, slug: string, ba
   return files.map((f) => ({ family: f.family, style: f.style, url: `${baseUrl}/templates/${f.templateSlug ?? slug}/fonts/${f.file}` }));
 }
 
-/** The `document.fonts.load` spec for a face: "bold italic 1em Family". */
-function loadSpec(f: TemplateFont): string {
+/** The `document.fonts.load` spec for a face: "italic 700 1em Family". Exported for the app's stills (M38). */
+export function fontLoadSpec(f: TemplateFont): string {
   const face = faceFor(f.style);
   return `${face.fontStyle} ${face.weight} 1em ${quote(f.family)}`;
 }
@@ -110,10 +110,18 @@ function loadSpec(f: TemplateFont): string {
  * Both runners honour delayRender, so preview and export wait the same way.
  * Without this, text would draw in a fallback font and reflow later, which
  * is exactly the subtle breakage SPEC 8 warns about.
+ *
+ * M38: the children (the elements) mount only once the faces are ready.
+ * lottie-web measures every character when it builds a text layer and
+ * keeps those widths; an element mounted before its face loaded keeps the
+ * fallback font's widths for good and draws the right glyphs at the wrong
+ * spacing (found by the starter pack: Arial Narrow at frame 0 came out
+ * spaced like Arial). Holding the frame was not enough; holding the mount is.
  */
-export function TemplateFonts({ fonts }: { fonts: TemplateFont[] }) {
+export function TemplateFonts({ fonts, children }: { fonts: TemplateFont[]; children?: ReactNode }) {
   const css = fontFaceCss(fonts);
   const [handle] = useState(() => (fonts.length > 0 ? delayRender(`Loading ${fonts.length} template font(s)`) : null));
+  const [ready, setReady] = useState(fonts.length === 0);
 
   useEffect(() => {
     if (handle === null) return;
@@ -124,15 +132,22 @@ export function TemplateFonts({ fonts }: { fonts: TemplateFont[] }) {
         continueRender(handle);
       }
     };
-    Promise.all(fonts.map((f) => document.fonts.load(loadSpec(f))))
+    Promise.all(fonts.map((f) => document.fonts.load(fontLoadSpec(f))))
       .then(() => document.fonts.ready)
-      .then(finish)
+      .then(() => {
+        setReady(true);
+        finish();
+      })
       .catch((err: unknown) => cancelRender(err instanceof Error ? err : new Error(`Font load failed: ${String(err)}`)));
     return finish;
     // The component is keyed on its URL list by Main, so fonts never change under a mounted instance.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handle]);
 
-  if (fonts.length === 0) return null;
-  return <style data-template-fonts="">{css}</style>;
+  return (
+    <>
+      {fonts.length > 0 && <style data-template-fonts="">{css}</style>}
+      {ready ? children : null}
+    </>
+  );
 }

@@ -4,6 +4,33 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M38 The starter element pack · DONE
+
+**Why**
+
+The picker offered three plain templates' worth of elements. A first user test needs range, and Germain's designs are not here yet. A pack built by script in After Effects, exported and ingested unattended, fills the library and proves the handover end to end a second time.
+
+**What exists now**
+
+- `tools/ae-preflight/starter-pack.jsx` builds sixteen elements covering every library type but "open": Headline, Bar lower third, Stacked lower third, Boxed caption, Pop-on caption, Callout, Big stat, Two stats, Pull quote, Top bar, Split background, Footage background, Vote end card, Learn more end card, Disclaimer bar, Disclaimer card. Arial Narrow Bold for headlines and stats, Arial for the rest; campaign blue accent and navy surface as the recolourable roles. Disclaimers hold four seconds. `tools/ingest/src/starterPack.test.ts` checks the plan (14 tests).
+- `tools/ae-preflight/run-unattended.mjs` runs one script in After Effects unattended: launch fresh or `--attach`, hand off with `-s`, watch the log, never kill. The three scripts (build, pre-flight, export) ran through it; `aerender` made the 72 s reference; `npm run ingest` took the folder. A quit called inside a command-line script is ignored by After Effects, so it may stay open on an empty project between runs (`--attach` uses it); a person closes it with File > Exit at the end.
+- `elements.json` `"libraryOnly": true` keeps a pack out of the "start a spot" grid while every element stays in "Add to the spot" (`template.library_only`, migrated).
+- Ingest rule, found by the pack: After Effects reports Arial Narrow Bold as family "Arial", style "Narrow Bold"; the ingest moves the width into the family so the face does not collide with Arial Bold. `docs/AE-AUTHORING.md` says so and names the file the designer must hand over.
+- Composition fix, found by the fidelity harness: the elements now mount only once the template fonts are ready (`TemplateFonts` wraps them). Before, an element at frame 0 measured its text in the fallback font and kept those widths: the first headline drew Arial Narrow glyphs at Arial spacing and wrapped differently from After Effects. Both runners take the same path.
+- Tests: 14 plan, 2 ingest (libraryOnly, width rule), 1 server route, 2 Main. 475 tests green.
+
+**Verified**
+
+- After Effects, unattended: built (16 comps + master), pre-flight 17 comps with zero problems, Bodymovin exported 16 comps, aerender 72 s reference, ingest 16 elements with Arial Narrow and Arial faces shipped.
+- Real browser on the Contrast :30 spot: "Add to the spot" lists 24 elements, the 16 pack elements draw as stills in Arial Narrow and Arial; "LOWER COSTS NOW" typed in the composer appeared in every text element; Headline added to the spot draws in the monitor with narrow widths (first line 1378 units, as After Effects wrapped it).
+- Fidelity against the reference: before the composition fix 11 of 12 samples within threshold, the first headline at mean 8.84 (narrow glyphs at Arial spacing, wrapped on a different word); after it 12 of 12, worst mean 3.09 on that same headline (edge antialiasing on 116 px type). Strips in media/fidelity/starter-pack-1789637478919.
+
+**Next**
+
+M39, style treatments (Grit, Glow, Bubbly, Opaque), or Germain's real pack through the same handover. Human: close After Effects (File > Exit) when convenient.
+
+---
+
 ## 2026-09-17 · M37 The composer · DONE
 
 **Why**

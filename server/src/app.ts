@@ -89,6 +89,7 @@ export function buildApp(options: AppOptions = {}) {
   app.get('/templates', async () => {
     const groups: { adType: string; sort: number; templates: ReturnType<typeof templateJson>[] }[] = [];
     for (const t of db.listTemplates()) {
+      if (t.libraryOnly) continue; // M38: a pack feeds the picker, not the grid
       let group = groups.find((g) => g.adType === t.adType);
       if (!group) {
         group = { adType: t.adType, sort: t.adTypeSort, templates: [] };

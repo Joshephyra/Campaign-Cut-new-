@@ -11,8 +11,11 @@
   nothing in the project.
 */
 
-var PROJECT = 'C:/Users/josho/Desktop/contrast-30/contrast-30.aep';
-var LOG_DIR = 'C:/Users/josho/Desktop/contrast-30';
+/* M38: $.__ccConfig may name a config .jsx declaring CC_CONFIG = { project, logDir }; without it the sample's paths apply. */
+var CC_CONFIG = null;
+if (typeof $.__ccConfig === 'string' && $.__ccConfig) $.evalFile(new File($.__ccConfig));
+var PROJECT = CC_CONFIG ? CC_CONFIG.project : 'C:/Users/josho/Desktop/contrast-30/contrast-30.aep';
+var LOG_DIR = CC_CONFIG ? CC_CONFIG.logDir : 'C:/Users/josho/Desktop/contrast-30';
 var QUIT_WHEN_DONE = true;
 
 (function () {

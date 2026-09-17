@@ -6,6 +6,7 @@ import {
   compositionConfig,
   disclaimerCheck,
   fontFaceCss,
+  fontLoadSpec,
   frameFor,
   isAspect,
   type Aspect,
@@ -918,11 +919,32 @@ function LibraryPicker({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch once per item; the cache guards repeats
   }, [library]);
-  const fontCss = useMemo(() => {
+  const libraryFonts = useMemo(() => {
     const seen = new Map<string, TemplateFontFile>();
     for (const item of library ?? []) for (const f of item.fontFiles ?? []) seen.set(`${f.templateSlug}/${f.file}`, f);
-    return fontFaceCss(fontsFor([...seen.values()], '', API));
+    return fontsFor([...seen.values()], '', API);
   }, [library]);
+  const fontCss = useMemo(() => fontFaceCss(libraryFonts), [libraryFonts]);
+  // M38: lottie-web keeps the character widths it measures on mount, so a
+  // still drawn before its face loaded stays spaced like the fallback font.
+  // The previews wait for the faces (nothing to wait for where the browser
+  // has no font loading API, as in tests).
+  const [fontsReady, setFontsReady] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    const fontSet = typeof document !== 'undefined' ? (document as { fonts?: { load: (spec: string) => Promise<unknown> } }).fonts : undefined;
+    if (!fontSet || libraryFonts.length === 0) {
+      setFontsReady(true);
+      return;
+    }
+    setFontsReady(false);
+    Promise.all(libraryFonts.map((f) => fontSet.load(fontLoadSpec(f)).catch(() => undefined))).then(() => {
+      if (!cancelled) setFontsReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [libraryFonts]);
   const holdFor = (item: LibraryElement, l: LottieAnimationData) => Number(l.ip) + Math.min(compositionConfig.fps, Math.floor(item.durationInFrames / 2));
 
   return (
@@ -961,7 +983,7 @@ function LibraryPicker({
                     className="w-full flex items-center gap-3 rounded-lg bg-raised border border-line p-2 text-left transition-colors hover:bg-hover hover:border-line-strong disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue"
                   >
                     <div className="w-24 aspect-video rounded-md bg-stage overflow-hidden shrink-0">
-                      {previews[item.id] ? (
+                      {fontsReady && previews[item.id] ? (
                         <ElementPreview
                           testId={`element-preview-${item.id}`}
                           lottie={previews[item.id]!}

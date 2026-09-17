@@ -43,7 +43,7 @@ Josh's first prototype, read feature by feature against the build. "Built" means
 
 | Prototype feature | Status |
 |---|---|
-| Text templates: lower thirds, text on screen (stat, pull quote, kinetic line), headlines, captions (pop-on, karaoke, word pop, boxed), end cards (vote, donate, learn more), disclaimers (bottom bar, full card) | Partly: the library and its types exist (M31); the elements themselves come from After Effects templates, and today there are three plain templates. Needs a designed element pack (Germain, or a starter pack built unattended). |
+| Text templates: lower thirds, text on screen (stat, pull quote, kinetic line), headlines, captions (pop-on, karaoke, word pop, boxed), end cards (vote, donate, learn more), disclaimers (bottom bar, full card) | Partly: the library and its types exist (M31); the elements themselves come from After Effects templates, and today there are three plain templates. The starter pack (M38) fills every type with sixteen elements built unattended in After Effects; Germain's designed pack replaces it through the same handover. |
 | Composer: user's copy previews in every template | Not yet. |
 | Style treatments: Clean, Grit, Glow, Bubbly, Opaque | Not yet. Josh's "overall style updates". Grit/Glow/Opaque are post-effects over an element; Bubbly is a font and radius swap. |
 | Favorites (elements and themes) | Not yet. |

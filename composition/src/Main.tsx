@@ -119,9 +119,10 @@ export function Main({ background, audio = null, elements, transitions = [], fon
 
   return (
     <AbsoluteFill style={{ backgroundColor: background }}>
-      <TemplateFonts key={fonts.map((f) => f.url).join('|')} fonts={fonts} />
       {audio && <Audio src={audio.src} volume={audio.volume} startFrom={audio.startFrom} />}
 
+      {/* M38: the elements mount once the faces are ready, so lottie-web measures text in the right font. */}
+      <TemplateFonts key={fonts.map((f) => f.url).join('|')} fonts={fonts}>
       {chains.map((chain) => {
         const members = chain.elementIds.map((id) => byId.get(id)).filter((e): e is ElementProps => !!e);
         const first = members[0]!;
@@ -169,6 +170,7 @@ export function Main({ background, audio = null, elements, transitions = [], fon
           </Sequence>
         );
       })}
+      </TemplateFonts>
     </AbsoluteFill>
   );
 }

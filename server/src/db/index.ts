@@ -15,9 +15,11 @@ export type TemplateInput = {
   width: number;
   height: number;
   thumbPath: string;
+  /** M38: feeds the element library only; left out of the "start a spot" grid. */
+  libraryOnly?: boolean;
 };
 
-export type TemplateRow = TemplateInput & { id: number; adTypeSort: number };
+export type TemplateRow = TemplateInput & { id: number; adTypeSort: number; libraryOnly: boolean };
 
 export type TemplateElementInput = {
   templateId: number;
@@ -318,6 +320,8 @@ export function openDb(file: string): Db {
   db.exec(MIGRATIONS);
 
   // M17: elements gained a display name. Add the column to databases created before it.
+  const templateColumns = (db.prepare(`PRAGMA table_info(template)`).all() as { name: string }[]).map((c) => c.name);
+  if (!templateColumns.includes('library_only')) db.exec(`ALTER TABLE template ADD COLUMN library_only INTEGER NOT NULL DEFAULT 0`);
   const elementColumns = (db.prepare(`PRAGMA table_info(template_element)`).all() as { name: string }[]).map((c) => c.name);
   if (!elementColumns.includes('name')) db.exec(`ALTER TABLE template_element ADD COLUMN name TEXT NOT NULL DEFAULT ''`);
   // M31: elements gained a type. Elements ingested before then are typed from their slug, the way the ingest would.
@@ -664,10 +668,11 @@ function upsertTemplate(db: Database.Database, t: TemplateInput): { id: number }
   const adTypeId = ensureAdType(db, t.adType);
   return db
     .prepare(
-      `INSERT INTO template (slug, name, ad_type_id, duration_frames, fps, width, height, thumb_path)
-       VALUES (@slug, @name, @adTypeId, @durationFrames, @fps, @width, @height, @thumbPath)
+      `INSERT INTO template (slug, name, ad_type_id, duration_frames, fps, width, height, thumb_path, library_only)
+       VALUES (@slug, @name, @adTypeId, @durationFrames, @fps, @width, @height, @thumbPath, @libraryOnly)
        ON CONFLICT(slug) DO UPDATE SET
          name = excluded.name,
+         library_only = excluded.library_only,
          ad_type_id = excluded.ad_type_id,
          duration_frames = excluded.duration_frames,
          fps = excluded.fps,
@@ -677,20 +682,24 @@ function upsertTemplate(db: Database.Database, t: TemplateInput): { id: number }
          updated_at = datetime('now')
        RETURNING id`,
     )
-    .get({ ...t, adTypeId }) as { id: number };
+    .get({ ...t, adTypeId, libraryOnly: t.libraryOnly ? 1 : 0 }) as { id: number };
 }
 
 const TEMPLATE_SELECT = `
   SELECT t.id, t.slug, t.name, a.name AS adType, a.sort AS adTypeSort,
-         t.duration_frames AS durationFrames, t.fps, t.width, t.height, t.thumb_path AS thumbPath
+         t.duration_frames AS durationFrames, t.fps, t.width, t.height, t.thumb_path AS thumbPath,
+         t.library_only AS libraryOnly
   FROM template t JOIN ad_type a ON a.id = t.ad_type_id`;
 
+const templateRow = (r: unknown): TemplateRow => ({ ...(r as TemplateRow), libraryOnly: Boolean((r as { libraryOnly: number }).libraryOnly) });
+
 function listTemplates(db: Database.Database): TemplateRow[] {
-  return db.prepare(`${TEMPLATE_SELECT} ORDER BY a.sort, t.name`).all() as TemplateRow[];
+  return (db.prepare(`${TEMPLATE_SELECT} ORDER BY a.sort, t.name`).all() as unknown[]).map(templateRow);
 }
 
 function getTemplateBySlug(db: Database.Database, slug: string): TemplateRow | undefined {
-  return db.prepare(`${TEMPLATE_SELECT} WHERE t.slug = ?`).get(slug) as TemplateRow | undefined;
+  const r = db.prepare(`${TEMPLATE_SELECT} WHERE t.slug = ?`).get(slug);
+  return r ? templateRow(r) : undefined;
 }
 
 // ---- elements ----------------------------------------------------------

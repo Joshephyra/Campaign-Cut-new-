@@ -22,6 +22,9 @@ Thumbs.db
 
 # The sample template built from After Effects on this machine carries Arial font files, which cannot be redistributed.
 templates/contrast-30/
+# The starter pack (M38) likewise: built by tools/ae-preflight/starter-pack.jsx on this machine, Arial and Arial Narrow inside.
+templates/starter-pack/
+app/public/fonts/ArialNarrow-Bold.ttf
 
 # Impeccable build evidence (screenshots); the surface briefs and config stay tracked
 .impeccable/review/

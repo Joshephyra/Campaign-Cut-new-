@@ -157,3 +157,32 @@ describe('Main in another aspect ratio (M36)', () => {
     expect(screen.queryByTestId('autofit')).toBeNull();
   });
 });
+
+// M38: an element mounted before its font face is ready measures its text
+// in the fallback font and keeps those widths. The elements therefore mount
+// only once the faces have loaded. Found by the starter pack's Arial Narrow.
+describe('Main holds the elements until the template fonts are ready (M38)', () => {
+  const fonts = [{ family: 'Arial Narrow', style: 'Bold', url: 'http://x/templates/pack/fonts/ArialNarrow-Bold.ttf' }];
+
+  it('mounts no element while a face is loading, and all of them once every face has loaded', async () => {
+    let resolveLoad: (v: unknown) => void = () => {};
+    const load = vi.fn(() => new Promise((r) => (resolveLoad = r)));
+    Object.defineProperty(document, 'fonts', { configurable: true, value: { load, ready: Promise.resolve() } });
+    try {
+      render(<Main background="#000" fonts={fonts} elements={[element('a', null), element('b', null)]} />);
+      expect(load).toHaveBeenCalledWith('normal 700 1em "Arial Narrow"');
+      expect(screen.queryAllByTestId('lottie-stub')).toHaveLength(0);
+      expect(document.querySelector('style[data-template-fonts]')?.textContent).toContain('Arial Narrow');
+      resolveLoad(undefined);
+      await screen.findAllByTestId('lottie-stub');
+      expect(screen.getAllByTestId('lottie-stub')).toHaveLength(2);
+    } finally {
+      delete (document as { fonts?: unknown }).fonts;
+    }
+  });
+
+  it('mounts the elements at once when the template has no fonts', () => {
+    render(<Main background="#000" elements={[element('a', null)]} />);
+    expect(screen.getAllByTestId('lottie-stub')).toHaveLength(1);
+  });
+});

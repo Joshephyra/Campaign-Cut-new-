@@ -191,8 +191,12 @@ The manifest can also carry the comp's background colour, which After Effects pa
 
 Without it the app uses black. The sample project script writes this form.
 
+The same wrapper may say `"libraryOnly": true`. The template then feeds the element library only (every element still offered in "Add to the spot") and is left out of the "start a new spot" grid. That is how the starter pack ships: sixteen elements nobody would play end to end.
+
 ### Fonts: one file per style
 
 A family used in two weights is two faces. Hand over one file per face: `Arial-Regular.ttf` and `Arial-Bold.ttf`, or the Windows names `arial.ttf` and `arialbd.ttf`. The ingest looks for a file whose name says the style; a regular file is never accepted for a bold face, because the browser would fake the weight and the text would drift away from what After Effects rendered. The pre-flight report lists every font as After Effects names it (`Arial-BoldMT`); the family and style are what the file name must carry.
+
+After Effects folds a width into the style: Arial Narrow Bold is reported as family "Arial", style "Narrow Bold". The ingest moves the width back into the family, so the face is "Arial Narrow" Bold and the file must be named for that: `ArialNarrow-Bold.ttf`. Without that, a narrow face would share a name with the plain bold one and the browser would draw the wrong font.
 
 The user edits one element at a time in the app. Each element's tags are its own, so two comps can both have a `cc.headline`.

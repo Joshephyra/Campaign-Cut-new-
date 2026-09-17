@@ -294,6 +294,26 @@ describe('ingestTemplate: font faces and the comp background (M27, found by the 
     expect(fs.existsSync(path.join(templatesDir, 'faces'))).toBe(false);
   });
 
+  it('M38: a width word in the style ("Narrow Bold") becomes part of the family, so the face is its own and the file is found by it', async () => {
+    fs.writeFileSync(path.join(fontsDir, 'IBMPlexSans-Bold.ttf'), 'plex-bold');
+    fs.writeFileSync(path.join(fontsDir, 'IBMPlexSansNarrow-Bold.ttf'), 'plex-narrow-bold');
+    const narrow = (dir: string) =>
+      editLottie(dir, '01-open', (l) => {
+        (l.fonts as { list: AnyRecord[] }).list = [
+          { fName: 'IBMPlexSans-Bold', fFamily: 'IBM Plex Sans', fStyle: 'Bold', ascent: 74.5 },
+          { fName: 'IBMPlexSansNarrow-Bold', fFamily: 'IBM Plex Sans', fStyle: 'Narrow Bold', ascent: 74.5 },
+        ];
+        ((l.layers as AnyRecord[])[0]!.t as { d: { k: { s: { f: string } }[] } }).d.k[0]!.s.f = 'IBMPlexSansNarrow-Bold';
+      });
+    await run(copyFixture(tmp, narrow));
+    const meta = JSON.parse(fs.readFileSync(path.join(templatesDir, 'faces', 'meta.json'), 'utf8')) as { fonts: string[]; fontFiles: AnyRecord[] };
+    expect(meta.fontFiles).toContainEqual({ family: 'IBM Plex Sans Narrow', style: 'Bold', file: 'IBMPlexSansNarrow-Bold.ttf' });
+    expect(meta.fontFiles).toContainEqual({ family: 'IBM Plex Sans', style: 'Bold', file: 'IBMPlexSans-Bold.ttf' });
+    expect(meta.fonts).toContain('IBM Plex Sans Narrow');
+    const shipped = JSON.parse(fs.readFileSync(path.join(templatesDir, 'faces', 'elements', 'open', 'template.json'), 'utf8')) as { fonts: { list: { fName: string; fFamily: string; fStyle: string }[] } };
+    expect(shipped.fonts.list.find((f) => f.fName === 'IBMPlexSansNarrow-Bold')).toMatchObject({ fFamily: 'IBM Plex Sans Narrow', fStyle: 'Bold' });
+  });
+
   it('reads the comp background from the object form of elements.json and rejects a bad colour', async () => {
     const withBackground = (dir: string, value: unknown) => {
       const list = JSON.parse(fs.readFileSync(path.join(dir, 'elements.json'), 'utf8')) as unknown[];
@@ -305,6 +325,26 @@ describe('ingestTemplate: font faces and the comp background (M27, found by the 
     expect(meta.elements).toHaveLength(3);
 
     await expect(run(copyFixture(path.join(tmp, 'b'), (dir) => withBackground(dir, 'navy')))).rejects.toThrow(/background.*#rrggbb/);
+  });
+
+  it('M38: reads "libraryOnly" from the object form, records it on the template, and rejects a non-boolean', async () => {
+    const withFlag = (dir: string, value: unknown) => {
+      const list = JSON.parse(fs.readFileSync(path.join(dir, 'elements.json'), 'utf8')) as unknown[];
+      fs.writeFileSync(path.join(dir, 'elements.json'), JSON.stringify({ libraryOnly: value, elements: list }));
+    };
+    await run(copyFixture(tmp, (dir) => withFlag(dir, true)));
+    const meta = JSON.parse(fs.readFileSync(path.join(templatesDir, 'faces', 'meta.json'), 'utf8')) as { libraryOnly?: boolean };
+    expect(meta.libraryOnly).toBe(true);
+    expect(db.getTemplateBySlug('faces')?.libraryOnly).toBe(true);
+
+    await expect(run(copyFixture(path.join(tmp, 'b'), (dir) => withFlag(dir, 'yes')))).rejects.toThrow(/libraryOnly.*true or false/);
+  });
+
+  it('leaves libraryOnly false when the manifest does not say', async () => {
+    await run(copyFixture(tmp));
+    const meta = JSON.parse(fs.readFileSync(path.join(templatesDir, 'faces', 'meta.json'), 'utf8')) as { libraryOnly?: boolean };
+    expect(meta.libraryOnly).toBeUndefined();
+    expect(db.getTemplateBySlug('faces')?.libraryOnly).toBe(false);
   });
 
   it('leaves the background out when the manifest is the plain list', async () => {

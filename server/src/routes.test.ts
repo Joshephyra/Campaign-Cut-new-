@@ -59,6 +59,18 @@ describe('templates and projects API', () => {
     expect(groups[1]!.templates[0]).toMatchObject({ slug: 'gotv-1', durationFrames: 150, thumbUrl: '/templates/gotv-1/thumb.png' });
   });
 
+  it('M38: a library-only template is left out of GET /templates but its elements are in GET /elements', async () => {
+    const { id } = db.upsertTemplate({ slug: 'starter-pack', name: 'Starter pack', adType: 'Library', durationFrames: 300, fps: 30, width: 1920, height: 1080, thumbPath: '', libraryOnly: true });
+    db.upsertTemplateElement({ templateId: id, slug: 'caption-boxed', name: 'Caption', type: 'caption', zIndex: 0, startFrame: 0, endFrame: 120 });
+    const groups = (await app.inject({ method: 'GET', url: '/templates' })).json() as { adType: string; templates: { slug: string }[] }[];
+    expect(groups.flatMap((g) => g.templates.map((t) => t.slug))).not.toContain('starter-pack');
+    expect(groups.map((g) => g.adType)).not.toContain('Library');
+    const elements = (await app.inject({ method: 'GET', url: '/elements' })).json() as { slug: string; templateSlug: string }[];
+    expect(elements).toContainEqual(expect.objectContaining({ slug: 'caption-boxed', templateSlug: 'starter-pack' }));
+    // GET /templates/:slug still answers, so a spot can be opened on it directly
+    expect((await app.inject({ method: 'GET', url: '/templates/starter-pack' })).statusCode).toBe(200);
+  });
+
   it('GET /templates/:slug returns meta and elements, each with its schema and Lottie URL', async () => {
     const res = await app.inject({ method: 'GET', url: '/templates/contrast-a' });
     expect(res.statusCode).toBe(200);
