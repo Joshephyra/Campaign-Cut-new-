@@ -1,3 +1,4 @@
+import { inferElementType } from '@campaigncut/composition';
 import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -21,14 +22,29 @@ export type TemplateRow = TemplateInput & { id: number; adTypeSort: number };
 export type TemplateElementInput = {
   templateId: number;
   slug: string;
-  /** Shown in the timeline and inspector; defaults to the slug. */
+  /** Shown in the scene strip and panel; defaults to the slug. */
   name?: string;
+  /** M31: what the element is (tools/ingest ELEMENT_TYPES); overlay when not given. */
+  type?: string;
   zIndex: number;
   startFrame: number;
   endFrame: number;
 };
 
-export type TemplateElementRow = Omit<TemplateElementInput, 'name'> & { id: number; name: string };
+export type TemplateElementRow = Omit<TemplateElementInput, 'name' | 'type'> & { id: number; name: string; type: string };
+
+/** M31: one element of the library: any template's element, with its template. */
+export type LibraryElement = {
+  id: number;
+  slug: string;
+  name: string;
+  type: string;
+  durationInFrames: number;
+  templateId: number;
+  templateSlug: string;
+  templateName: string;
+  thumbPath: string;
+};
 
 export type ProjectValue = { elementId: number; key: string; value: unknown };
 
@@ -51,10 +67,16 @@ export type ProjectElement = {
   id: number;
   slug: string;
   name: string;
+  /** M31 */
+  type: string;
+  /** M31: the template whose files this element uses; the spot's own, or an added library element's. */
+  templateSlug: string;
   zIndex: number;
   startFrame: number;
   endFrame: number;
   enabled: boolean;
+  /** M31: true when the element was added from the library rather than coming with the spot's template. */
+  added: boolean;
 };
 
 export type ProjectElementPatch = Partial<Pick<ProjectElement, 'startFrame' | 'endFrame' | 'enabled'>>;
@@ -115,6 +137,12 @@ export type Db = Database.Database & {
   getTemplateBySlug(slug: string): TemplateRow | undefined;
   upsertTemplateElement(e: TemplateElementInput): { id: number };
   listTemplateElements(templateId: number): TemplateElementRow[];
+  /** M31: every element of every template. */
+  listLibraryElements(): LibraryElement[];
+  /** M31: add a library element to a project at a frame, with its authored length. Adding twice is one element. */
+  addProjectElement(projectId: number, elementId: number, startFrame: number): void;
+  /** M31: remove an added element and its values. False when the element is the spot's own (or absent). */
+  removeProjectElement(projectId: number, elementId: number): boolean;
   /** Drop a template's elements whose slug is not in `keep` (a re-ingest that lost an element). */
   deleteTemplateElementsExcept(templateId: number, keep: string[]): void;
   createProject(p: ProjectInput): { id: number };
@@ -163,6 +191,7 @@ CREATE TABLE IF NOT EXISTS template_element (
   template_id  INTEGER NOT NULL REFERENCES template(id) ON DELETE CASCADE,
   slug         TEXT    NOT NULL,
   name         TEXT    NOT NULL DEFAULT '',
+  type         TEXT    NOT NULL DEFAULT 'overlay',
   z_index      INTEGER NOT NULL DEFAULT 0,
   start_frame  INTEGER NOT NULL DEFAULT 0,
   end_frame    INTEGER NOT NULL,
@@ -249,6 +278,11 @@ export function openDb(file: string): Db {
   // M17: elements gained a display name. Add the column to databases created before it.
   const elementColumns = (db.prepare(`PRAGMA table_info(template_element)`).all() as { name: string }[]).map((c) => c.name);
   if (!elementColumns.includes('name')) db.exec(`ALTER TABLE template_element ADD COLUMN name TEXT NOT NULL DEFAULT ''`);
+  // M31: elements gained a type. Elements ingested before then are typed from their slug, the way the ingest would.
+  if (!elementColumns.includes('type')) {
+    db.exec(`ALTER TABLE template_element ADD COLUMN type TEXT NOT NULL DEFAULT 'overlay'`);
+    backfillElementTypes(db);
+  }
   // M20: media assets gained a kind (video or audio).
   const mediaColumns = (db.prepare(`PRAGMA table_info(media_asset)`).all() as { name: string }[]).map((c) => c.name);
   if (!mediaColumns.includes('kind')) db.exec(`ALTER TABLE media_asset ADD COLUMN kind TEXT NOT NULL DEFAULT 'video'`);
@@ -262,6 +296,9 @@ export function openDb(file: string): Db {
     getTemplateBySlug: (slug: string) => getTemplateBySlug(db, slug),
     upsertTemplateElement: (e: TemplateElementInput) => upsertTemplateElement(db, e),
     listTemplateElements: (templateId: number) => listTemplateElements(db, templateId),
+    listLibraryElements: () => listLibraryElements(db),
+    addProjectElement: (projectId: number, elementId: number, startFrame: number) => addProjectElement(db, projectId, elementId, startFrame),
+    removeProjectElement: (projectId: number, elementId: number) => removeProjectElement(db, projectId, elementId),
     deleteTemplateElementsExcept: (templateId: number, keep: string[]) => deleteTemplateElementsExcept(db, templateId, keep),
     createProject: (p: ProjectInput) => createProject(db, p),
     getProject: (id: number) => getProject(db, id),
@@ -310,20 +347,86 @@ function setProjectAudio(db: Database.Database, projectId: number, audio: Projec
 // ---- project timeline --------------------------------------------------
 
 function getProjectElements(db: Database.Database, projectId: number): ProjectElement[] {
+  // The spot's own elements (its template's, with any per-project overrides)
+  // and, since M31, elements added from other templates (present only as
+  // project_element rows). Own elements first, then added ones.
   const rows = db
     .prepare(
-      `SELECT e.id, e.slug, COALESCE(NULLIF(e.name, ''), e.slug) AS name, e.z_index AS zIndex,
+      `SELECT e.id AS id, e.slug AS slug, COALESCE(NULLIF(e.name, ''), e.slug) AS name, e.type AS type, t.slug AS templateSlug, e.z_index AS zIndex,
               COALESCE(pe.start_frame, e.start_frame) AS startFrame,
               COALESCE(pe.end_frame, e.end_frame) AS endFrame,
-              COALESCE(pe.enabled, 1) AS enabledInt
+              COALESCE(pe.enabled, 1) AS enabledInt,
+              0 AS addedInt
        FROM project p
        JOIN template_element e ON e.template_id = p.template_id
+       JOIN template t ON t.id = e.template_id
        LEFT JOIN project_element pe ON pe.project_id = p.id AND pe.element_id = e.id
-       WHERE p.id = ?
-       ORDER BY e.z_index, e.id`,
+       WHERE p.id = @projectId
+       UNION ALL
+       SELECT e.id AS id, e.slug AS slug, COALESCE(NULLIF(e.name, ''), e.slug) AS name, e.type AS type, t.slug AS templateSlug, e.z_index AS zIndex,
+              pe.start_frame AS startFrame, pe.end_frame AS endFrame, pe.enabled AS enabledInt, 1 AS addedInt
+       FROM project p
+       JOIN project_element pe ON pe.project_id = p.id
+       JOIN template_element e ON e.id = pe.element_id AND e.template_id <> p.template_id
+       JOIN template t ON t.id = e.template_id
+       WHERE p.id = @projectId
+       ORDER BY addedInt, zIndex, id`,
     )
-    .all(projectId) as (Omit<ProjectElement, 'enabled'> & { enabledInt: number })[];
-  return rows.map(({ enabledInt, ...r }) => ({ ...r, enabled: enabledInt === 1 }));
+    .all({ projectId }) as (Omit<ProjectElement, 'enabled' | 'added'> & { enabledInt: number; addedInt: number })[];
+  return rows.map(({ enabledInt, addedInt, ...r }) => ({ ...r, enabled: enabledInt === 1, added: addedInt === 1 }));
+}
+
+/** M31: give untyped elements the type their slug suggests. Safe to run again: only 'overlay' rows change, and only to something better. */
+export function backfillElementTypes(db: Database.Database): number {
+  const rows = db.prepare(`SELECT id, slug FROM template_element WHERE type = 'overlay'`).all() as { id: number; slug: string }[];
+  const update = db.prepare(`UPDATE template_element SET type = ? WHERE id = ?`);
+  let changed = 0;
+  for (const r of rows) {
+    const type = inferElementType(r.slug);
+    if (type !== 'overlay') {
+      update.run(type, r.id);
+      changed++;
+    }
+  }
+  return changed;
+}
+
+function listLibraryElements(db: Database.Database): LibraryElement[] {
+  return db
+    .prepare(
+      `SELECT e.id, e.slug, COALESCE(NULLIF(e.name, ''), e.slug) AS name, e.type, e.end_frame - e.start_frame AS durationInFrames,
+              t.id AS templateId, t.slug AS templateSlug, t.name AS templateName, t.thumb_path AS thumbPath
+       FROM template_element e JOIN template t ON t.id = e.template_id
+       ORDER BY t.id, e.z_index, e.id`,
+    )
+    .all() as LibraryElement[];
+}
+
+function addProjectElement(db: Database.Database, projectId: number, elementId: number, startFrame: number): void {
+  const element = db.prepare(`SELECT start_frame AS startFrame, end_frame AS endFrame FROM template_element WHERE id = ?`).get(elementId) as
+    | { startFrame: number; endFrame: number }
+    | undefined;
+  if (!element) throw new Error(`No template element ${elementId}`);
+  const start = Math.max(0, Math.round(startFrame));
+  db.prepare(
+    `INSERT INTO project_element (project_id, element_id, start_frame, end_frame, enabled) VALUES (?, ?, ?, ?, 1)
+     ON CONFLICT(project_id, element_id) DO NOTHING`,
+  ).run(projectId, elementId, start, start + (element.endFrame - element.startFrame));
+  db.prepare(`UPDATE project SET updated_at = datetime('now') WHERE id = ?`).run(projectId);
+}
+
+function removeProjectElement(db: Database.Database, projectId: number, elementId: number): boolean {
+  const own = db.prepare(`SELECT 1 FROM project p JOIN template_element e ON e.template_id = p.template_id WHERE p.id = ? AND e.id = ?`).get(projectId, elementId);
+  if (own) return false;
+  const run = db.transaction((): boolean => {
+    const gone = db.prepare(`DELETE FROM project_element WHERE project_id = ? AND element_id = ?`).run(projectId, elementId).changes;
+    if (gone === 0) return false;
+    db.prepare(`DELETE FROM project_value WHERE project_id = ? AND element_id = ?`).run(projectId, elementId);
+    db.prepare(`DELETE FROM project_transition WHERE project_id = ? AND after_element_id = ?`).run(projectId, elementId);
+    db.prepare(`UPDATE project SET updated_at = datetime('now') WHERE id = ?`).run(projectId);
+    return true;
+  });
+  return run();
 }
 
 function setProjectElement(db: Database.Database, projectId: number, elementId: number, patch: ProjectElementPatch): void {
@@ -488,22 +591,23 @@ function getTemplateBySlug(db: Database.Database, slug: string): TemplateRow | u
 function upsertTemplateElement(db: Database.Database, e: TemplateElementInput): { id: number } {
   return db
     .prepare(
-      `INSERT INTO template_element (template_id, slug, name, z_index, start_frame, end_frame)
-       VALUES (@templateId, @slug, @name, @zIndex, @startFrame, @endFrame)
+      `INSERT INTO template_element (template_id, slug, name, type, z_index, start_frame, end_frame)
+       VALUES (@templateId, @slug, @name, @type, @zIndex, @startFrame, @endFrame)
        ON CONFLICT(template_id, slug) DO UPDATE SET
          name = excluded.name,
+         type = excluded.type,
          z_index = excluded.z_index,
          start_frame = excluded.start_frame,
          end_frame = excluded.end_frame
        RETURNING id`,
     )
-    .get({ ...e, name: e.name ?? e.slug }) as { id: number };
+    .get({ ...e, name: e.name ?? e.slug, type: e.type ?? 'overlay' }) as { id: number };
 }
 
 function listTemplateElements(db: Database.Database, templateId: number): TemplateElementRow[] {
   return db
     .prepare(
-      `SELECT id, template_id AS templateId, slug, COALESCE(NULLIF(name, ''), slug) AS name,
+      `SELECT id, template_id AS templateId, slug, COALESCE(NULLIF(name, ''), slug) AS name, type,
               z_index AS zIndex, start_frame AS startFrame, end_frame AS endFrame
        FROM template_element WHERE template_id = ? ORDER BY z_index, id`,
     )

@@ -73,9 +73,9 @@ describe('ingestTemplate: multi-element handover', () => {
     const meta = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8')) as AnyRecord;
     expect(meta).toMatchObject({ slug: 'three', durationInFrames: 240, fps: 30, width: 1920, height: 1080, fonts: ['IBM Plex Sans'] });
     expect(meta.elements).toEqual([
-      { slug: 'open', name: 'Open', startFrame: 0, endFrame: 90, zIndex: 0, durationInFrames: 90, fonts: ['IBM Plex Sans'] },
-      { slug: 'lower-third', name: 'Lower third', startFrame: 60, endFrame: 120, zIndex: 1, durationInFrames: 60, fonts: ['IBM Plex Sans'] },
-      { slug: 'end-card', name: 'End card', startFrame: 150, endFrame: 240, zIndex: 0, durationInFrames: 90, fonts: ['IBM Plex Sans'] },
+      { slug: 'open', name: 'Open', type: 'open', startFrame: 0, endFrame: 90, zIndex: 0, durationInFrames: 90, fonts: ['IBM Plex Sans'] },
+      { slug: 'lower-third', name: 'Lower third', type: 'lower-third', startFrame: 60, endFrame: 120, zIndex: 1, durationInFrames: 60, fonts: ['IBM Plex Sans'] },
+      { slug: 'end-card', name: 'End card', type: 'end-card', startFrame: 150, endFrame: 240, zIndex: 0, durationInFrames: 90, fonts: ['IBM Plex Sans'] },
     ]);
 
     const template = db.listTemplates()[0]!;
@@ -192,7 +192,7 @@ describe('ingestTemplate: multi-element handover', () => {
     const dir = path.join(templatesDir, 'solo');
     expect(fs.existsSync(path.join(dir, 'elements', 'solo', 'template.json'))).toBe(true);
     const meta = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8')) as { elements: AnyRecord[] };
-    expect(meta.elements).toEqual([{ slug: 'solo', name: 'Solo', startFrame: 0, endFrame: 90, zIndex: 0, durationInFrames: 90, fonts: ['IBM Plex Sans'] }]);
+    expect(meta.elements).toEqual([{ slug: 'solo', name: 'Solo', type: 'overlay', startFrame: 0, endFrame: 90, zIndex: 0, durationInFrames: 90, fonts: ['IBM Plex Sans'] }]);
     const t = db.getTemplateBySlug('solo')!;
     expect(db.listTemplateElements(t.id)).toHaveLength(1);
   });
@@ -311,5 +311,65 @@ describe('ingestTemplate: font faces and the comp background (M27, found by the 
     await run(copyFixture(tmp));
     const meta = JSON.parse(fs.readFileSync(path.join(templatesDir, 'faces', 'meta.json'), 'utf8')) as { background?: string };
     expect(meta.background).toBeUndefined();
+  });
+});
+
+describe('ingestTemplate: element types (M31)', () => {
+  let tmp: string;
+  let templatesDir: string;
+  let fontsDir: string;
+  let db: Db;
+
+  beforeEach(() => {
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-types-'));
+    templatesDir = path.join(tmp, 'templates');
+    fontsDir = path.join(tmp, 'fonts');
+    fs.mkdirSync(fontsDir, { recursive: true });
+    fs.writeFileSync(path.join(fontsDir, 'IBMPlexSans-Regular.ttf'), 'plex');
+    db = openDb(':memory:');
+  });
+
+  afterEach(() => {
+    db.close();
+    fs.rmSync(tmp, { recursive: true, force: true });
+  });
+
+  const run = (input: string) => ingestTemplate({ input, adType: 'Contrast', name: 'Three Part', slug: 'three', templatesDir, fontsDir, db, renderThumbnail: fakeThumbnail });
+
+  it('infers each element type from its slug when the manifest is silent, and records it in meta and the database', async () => {
+    await run(copyFixture(tmp));
+    const meta = JSON.parse(fs.readFileSync(path.join(templatesDir, 'three', 'meta.json'), 'utf8')) as { elements: { slug: string; type: string }[] };
+    expect(meta.elements.map((e) => [e.slug, e.type])).toEqual([
+      ['open', 'open'],
+      ['lower-third', 'lower-third'],
+      ['end-card', 'end-card'],
+    ]);
+    const template = db.listTemplates()[0]!;
+    expect(db.listTemplateElements(template.id).map((e) => [e.slug, e.type]).sort()).toEqual([
+      ['end-card', 'end-card'],
+      ['lower-third', 'lower-third'],
+      ['open', 'open'],
+    ]);
+  });
+
+  it('keeps an explicit type from the manifest', async () => {
+    const input = copyFixture(tmp, (dir) => {
+      const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'elements.json'), 'utf8')) as { slug: string; type?: string }[];
+      manifest[1]!.type = 'caption';
+      fs.writeFileSync(path.join(dir, 'elements.json'), JSON.stringify(manifest));
+    });
+    await run(input);
+    const meta = JSON.parse(fs.readFileSync(path.join(templatesDir, 'three', 'meta.json'), 'utf8')) as { elements: { slug: string; type: string }[] };
+    expect(meta.elements.find((e) => e.slug === 'lower-third')!.type).toBe('caption');
+  });
+
+  it('rejects an unknown type naming the element and the allowed list, and writes nothing', async () => {
+    const input = copyFixture(tmp, (dir) => {
+      const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'elements.json'), 'utf8')) as { slug: string; type?: string }[];
+      manifest[0]!.type = 'banner';
+      fs.writeFileSync(path.join(dir, 'elements.json'), JSON.stringify(manifest));
+    });
+    await expect(run(input)).rejects.toMatchObject({ problems: [expect.stringMatching(/Element "open".*type "banner".*lower-third/)] });
+    expect(fs.existsSync(path.join(templatesDir, 'three'))).toBe(false);
   });
 });

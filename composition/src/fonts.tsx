@@ -13,7 +13,13 @@ import { cancelRender, continueRender, delayRender } from 'remotion';
 export type TemplateFont = { family: string; style?: string; url: string };
 
 /** What ingest writes into meta.json: family, style and the file shipped under templates/<slug>/fonts/. */
-export type TemplateFontFile = { family: string; style?: string; file: string };
+export type TemplateFontFile = {
+  family: string;
+  style?: string;
+  file: string;
+  /** M31: the template the file belongs to, when it is not the spot's own (an added library element). */
+  templateSlug?: string;
+};
 
 function formatFor(url: string): string {
   if (url.startsWith('data:')) {
@@ -89,7 +95,7 @@ export function fontFaceCss(fonts: TemplateFont[]): string {
 /** Meta font files -> URLs for a runner ('/api' in the Player, the server origin for export). */
 export function fontsFor(files: TemplateFontFile[] | undefined, slug: string, baseUrl: string): TemplateFont[] {
   if (!files || files.length === 0) return [];
-  return files.map((f) => ({ family: f.family, style: f.style, url: `${baseUrl}/templates/${slug}/fonts/${f.file}` }));
+  return files.map((f) => ({ family: f.family, style: f.style, url: `${baseUrl}/templates/${f.templateSlug ?? slug}/fonts/${f.file}` }));
 }
 
 /** The `document.fonts.load` spec for a face: "bold italic 1em Family". */

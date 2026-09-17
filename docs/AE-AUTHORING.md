@@ -170,13 +170,13 @@ A real ad is several pieces: an open, a lower third, a stat callout, an end card
 
 ```json
 [
-  { "folder": "01-open",        "slug": "open",        "name": "Open",        "startFrame": 0,   "zIndex": 0 },
-  { "folder": "02-lower-third", "slug": "lower-third", "name": "Lower third", "startFrame": 60,  "zIndex": 1 },
-  { "folder": "03-end-card",    "slug": "end-card",    "name": "End card",    "startFrame": 150, "zIndex": 0 }
+  { "folder": "01-open",        "slug": "open",        "name": "Open",        "type": "open",        "startFrame": 0,   "zIndex": 0 },
+  { "folder": "02-lower-third", "slug": "lower-third", "name": "Lower third", "type": "lower-third", "startFrame": 60,  "zIndex": 1 },
+  { "folder": "03-end-card",    "slug": "end-card",    "name": "End card",    "type": "end-card",    "startFrame": 150, "zIndex": 0 }
 ]
 ```
 
-Only `folder` is required. `startFrame` is where the element begins on the timeline; leave it out and the element starts where the previous one ends. `zIndex` is the stacking order when elements overlap (higher is on top). Each element plays for its comp's full length; the user can move and trim it afterwards.
+Only `folder` is required. `type` says what the element is, so the library can offer it to other spots as "a lower third": one of `open`, `headline`, `lower-third`, `caption`, `callout`, `overlay`, `stat`, `background`, `end-card`, `disclaimer`. Leave it out and the ingest reads the slug (`lower-third`, `end-card`, `stat-callout`, `paid-for-by` all work); anything else becomes `overlay`, and an unknown type is rejected naming the element. `startFrame` is where the element begins; leave it out and the element starts where the previous one ends. `zIndex` is the stacking order when elements overlap (higher is on top). Each element plays for its comp's full length; the user can lengthen it afterwards.
 
 Without `elements.json`, the folders are taken in name order and laid end to end. Number the folders so the order is what you meant.
 

@@ -65,3 +65,18 @@ describe('font faces by style (M27)', () => {
     ]);
   });
 });
+
+/** M31: a font file may belong to another template than the spot's (an added library element); it resolves against its own. */
+describe('fontsFor across templates (M31)', () => {
+  it('uses the file\'s own templateSlug when it carries one, else the spot\'s', () => {
+    const fonts = fontsFor(
+      [
+        { family: 'Plex', style: 'Regular', file: 'Plex.ttf' },
+        { family: 'Arial', style: 'Bold', file: 'Arial-Bold.ttf', templateSlug: 'contrast' },
+      ],
+      'bio',
+      'http://x',
+    );
+    expect(fonts.map((f) => f.url)).toEqual(['http://x/templates/bio/fonts/Plex.ttf', 'http://x/templates/contrast/fonts/Arial-Bold.ttf']);
+  });
+});

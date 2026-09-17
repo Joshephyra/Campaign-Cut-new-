@@ -600,6 +600,55 @@ Josh's verdict on M29 (2026-09-17): "polished and professional", the timeline "w
 
 ---
 
+## M31 · The element library · DONE
+
+Josh opened the phase-2 features on 2026-09-17 (CLAUDE.md, "Opened on 2026-09-17"). Everything on his list hangs off one change: elements stop belonging to one spot and become a library any spot can add from. Lower thirds, captions, callouts, overlays, backgrounds, end cards and disclaimers are all element types in that library; the app finally knows what an element is.
+
+**Build**
+- Element types. `elements.json` entries carry `type`, one of open, headline, lower-third, caption, callout, overlay, stat, background, end-card, disclaimer. When absent the ingest infers it from the slug and says so; an unknown type fails the ingest naming the element. The type lands in `meta.json` and in `template_element.type`.
+- The library. `GET /elements` lists every element of every ingested template, typed, with its template's name and thumbnail. A project element may come from any template: it carries its own `templateSlug` and `type`; files and fonts resolve per element, and the composition's font list is merged across the templates involved (both runners).
+- Add and remove. `POST /projects/:id/elements` adds a library element at a frame with its authored length and its schema defaults; `DELETE` removes an added element. The spot's own elements stay hideable, not removable.
+- Editor. An "Add" chip at the end of the scene strip opens the library grouped by type, from the left panel (never over the video); pressing one adds it at the playhead, selects it and seeks. The panel offers "Remove from spot" on added elements. Duplicating a project copies its added elements.
+
+**Tests**
+- Ingest: explicit type kept, missing type inferred from the slug, unknown type rejected naming the element, type written to meta.
+- DB: type column on old databases, library listing across templates, add with defaults, project elements include added ones with their template, remove, duplicate copies.
+- Server: the three routes; project detail carries templateSlug and type per element and merged font files; render props resolve files per element's template.
+- Composition: fontsFor resolves a file against its own template slug.
+- Editor: the Add chip lists the library by type, adding places the element at the playhead and selects it, Remove from spot deletes it.
+
+**Done when:** a lower third from one template can be added to a spot made from another, edited on the video, and exported.
+
+---
+
+## M32 · Style: overall updates and saved themes · TODO
+
+**Build**
+- A spot-level style: colour roles (accent, surface, text) and font families applied across every element that carries that role, on top of the designer's values; "Reset to designer" per role.
+- Saved themes: a named style kept in the library and applied to any spot.
+
+**Done when:** one theme change recolours every scene of a spot and the export matches.
+
+---
+
+## M33 · Client profiles · TODO
+
+**Build**
+- A client: name, logo, colours, fonts, disclaimer text, default music. Kept in the library; a spot belongs to one. Creating a spot from a template applies the client's brand (theme, logo, disclaimer). An agency keeps several clients. No users, roles or logins (still non-goals).
+
+**Done when:** a new spot for a client opens already branded.
+
+---
+
+## M34 · Stock footage · TODO
+
+**Build**
+- Search one stock site from the library panel (key in `.env`), preview results, import a clip into the media pipeline (proxy, thumbnail) and drop it on the video like any upload.
+
+**Done when:** a stock clip found in the app lands in a spot and exports. Needs Josh's API key for the chosen site.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

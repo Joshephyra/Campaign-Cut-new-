@@ -3,6 +3,7 @@ import type { Db } from '@campaigncut/server/db';
 import fs from 'node:fs';
 import path from 'node:path';
 import { findFontFileForStyle } from './fonts';
+import { ELEMENT_TYPES, inferElementType, isElementType, type ElementType } from './elementTypes';
 import { generateSchema, type TagReport } from './generateSchema';
 
 /** Every problem found, so the author can fix them all at once. */
@@ -51,6 +52,8 @@ export type ElementManifestEntry = {
   folder: string;
   slug?: string;
   name?: string;
+  /** M31: one of ELEMENT_TYPES. Inferred from the slug when absent. */
+  type?: string;
   /** Defaults to the previous element's out point (0 for the first). */
   startFrame?: number;
   /** Defaults to the element's position in the list. */
@@ -60,6 +63,8 @@ export type ElementManifestEntry = {
 export type ElementMeta = {
   slug: string;
   name: string;
+  /** M31: what the element is (ELEMENT_TYPES). */
+  type: ElementType;
   startFrame: number;
   endFrame: number;
   zIndex: number;
@@ -128,6 +133,7 @@ export function elementNameFromSlug(slug: string): string {
 type DiscoveredElement = {
   slug: string;
   name: string;
+  type: ElementType;
   /** The export folder: images/ and fonts/ are looked up here. */
   folder: string;
   jsonPath: string;
@@ -202,7 +208,7 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
     const startFrame = el.startFrame ?? cursor;
     const endFrame = startFrame + el.durationInFrames;
     cursor = endFrame;
-    elementMetas.push({ slug: el.slug, name: el.name, startFrame, endFrame, zIndex: el.zIndex ?? i, durationInFrames: el.durationInFrames, fonts: el.fonts });
+    elementMetas.push({ slug: el.slug, name: el.name, type: el.type, startFrame, endFrame, zIndex: el.zIndex ?? i, durationInFrames: el.durationInFrames, fonts: el.fonts });
   });
   const durationInFrames = elementMetas.reduce((max, e) => Math.max(max, e.endFrame), 0);
 
@@ -324,7 +330,7 @@ export async function ingestTemplate(options: IngestOptions): Promise<IngestResu
     thumbPath: path.relative(path.dirname(templatesDir), thumbPath).split(path.sep).join('/'),
   });
   for (const e of elementMetas) {
-    db.upsertTemplateElement({ templateId, slug: e.slug, name: e.name, zIndex: e.zIndex, startFrame: e.startFrame, endFrame: e.endFrame });
+    db.upsertTemplateElement({ templateId, slug: e.slug, name: e.name, type: e.type, zIndex: e.zIndex, startFrame: e.startFrame, endFrame: e.endFrame });
   }
   db.deleteTemplateElementsExcept(
     templateId,
@@ -397,7 +403,7 @@ function discoverElements(input: string, templateSlug: string, templateName: str
   const resolved = path.resolve(input);
   if (!fs.existsSync(resolved)) throw new IngestFailure([`Input not found: ${resolved}`], []);
 
-  const single = (jsonPath: string, folder: string): DiscoveredElement => ({ slug: templateSlug, name: templateName, folder, jsonPath });
+  const single = (jsonPath: string, folder: string): DiscoveredElement => ({ slug: templateSlug, name: templateName, type: inferElementType(templateSlug), folder, jsonPath });
 
   if (fs.statSync(resolved).isFile()) {
     return { handoverDir: path.dirname(resolved), elements: [single(resolved, path.dirname(resolved))], manifestProblems: [] };
@@ -435,9 +441,15 @@ function discoverElements(input: string, templateSlug: string, templateName: str
         continue;
       }
       const elSlug = entry.slug ? slugify(entry.slug) : elementSlugFromFolder(entry.folder);
+      let type: ElementType = inferElementType(elSlug);
+      if (entry.type !== undefined) {
+        if (isElementType(entry.type)) type = entry.type;
+        else problems.push(`Element "${elSlug}": unknown type "${String(entry.type)}" in elements.json; use one of ${ELEMENT_TYPES.join(', ')}`);
+      }
       elements.push({
         slug: elSlug,
         name: entry.name?.trim() || elementNameFromSlug(elSlug),
+        type,
         folder,
         jsonPath,
         startFrame: entry.startFrame === undefined ? undefined : Math.max(0, Math.round(Number(entry.startFrame))),
@@ -453,7 +465,7 @@ function discoverElements(input: string, templateSlug: string, templateName: str
       const jsonPath = exportJsonIn(path.join(resolved, f));
       if (!jsonPath) continue;
       const elSlug = elementSlugFromFolder(f);
-      elements.push({ slug: elSlug, name: elementNameFromSlug(elSlug), folder: path.join(resolved, f), jsonPath });
+      elements.push({ slug: elSlug, name: elementNameFromSlug(elSlug), type: inferElementType(elSlug), folder: path.join(resolved, f), jsonPath });
     }
   }
 

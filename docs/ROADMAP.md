@@ -2,7 +2,7 @@
 
 What Josh expects the product to need after the proof of concept passes its five acceptance tests. Recorded 2026-09-17. Nothing here is in scope until Josh moves it into `MILESTONES.md`.
 
-Items marked **non-goal** are on the list in `CLAUDE.md` that this build must not touch. Josh amends that list before any of them is started; they are not built quietly.
+Josh opened brand kits and themes, client profiles and stock footage on 2026-09-17 (see CLAUDE.md, "Opened on 2026-09-17"); they are now milestones M31 to M34 in `docs/MILESTONES.md`. Users, teams and accounts stay non-goals.
 
 ## Element types a template library will need
 

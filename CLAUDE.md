@@ -41,8 +41,6 @@ This list is a contract. The previous version of this project died by building t
 - Billing, subscriptions, usage metering
 - The FEC compliance rule engine. The legally required disclaimer is an ordinary editable text field in a locked safe zone. Nothing validates it.
 - Audit logging
-- Brand kits, saved themes, favorites
-- Stock footage integrations
 - Cloud object storage, S3, MinIO, CDN
 - Mobile support or responsive layout below laptop width
 - Automatic reflow across aspect ratios. Build 16:9 only.
@@ -51,6 +49,15 @@ This list is a contract. The previous version of this project died by building t
 If the app needs to be reachable on the public internet for a demo, put a single shared password in an env var behind one piece of middleware. That is the entire security model and it is deliberate.
 
 **If you believe something on this list is genuinely required to pass a milestone, stop and say so. Do not build it quietly.**
+
+### Opened on 2026-09-17 (Josh's decision, before the five acceptance tests are closed)
+
+These were non-goals for the proof of concept. Josh chose to start them; they are built in the numbered milestones, one at a time, and the five acceptance tests are still owed on the way.
+
+- An element library: every tagged element of every ingested template, typed (lower third, caption, callout, overlay, background, end card, disclaimer, and so on), addable to any spot.
+- Overall style updates and saved themes across a spot.
+- Client profiles (a brand guide: logo, colours, fonts, disclaimer) that a spot belongs to. An agency keeps several. This is a record, not an account: still no users, roles or logins.
+- Stock footage from one stock site's API, with the key in an environment variable.
 
 ---
 

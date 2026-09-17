@@ -13,14 +13,11 @@ import {
   type MainMedia,
   type MainProps,
   type ParamValues,
-  type TemplateFontFile,
   type TemplateParam,
   type TransitionPreset,
 } from '@campaigncut/composition';
-import fs from 'node:fs';
-import path from 'node:path';
 import type { Db } from './db/index';
-import { elementBaseUrl, loadElementFiles } from './templateFiles';
+import { elementBaseUrl, loadElementFiles, projectFontFiles, readTemplateMeta } from './templateFiles';
 
 /** Shown wherever no element covers the frame, unless the template's meta carries its own (M27). */
 export const DEFAULT_BACKGROUND = '#000000';
@@ -48,13 +45,13 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase, run
   const project = db.getProject(projectId);
   if (!project) throw new Error(`No project ${projectId}`);
 
-  const metaFile = path.join(templatesDir, project.templateSlug, 'meta.json');
-  const meta = fs.existsSync(metaFile) ? (JSON.parse(fs.readFileSync(metaFile, 'utf8')) as { fontFiles?: TemplateFontFile[]; background?: string }) : {};
-  const fonts = fontsFor(meta.fontFiles, project.templateSlug, serverBase);
+  const meta = readTemplateMeta(templatesDir, project.templateSlug);
+  const rows = db.getProjectElements(projectId);
+  // M31: fonts from every template an element came from, each against its own folder.
+  const fonts = fontsFor(projectFontFiles(templatesDir, project.templateSlug, rows), project.templateSlug, serverBase);
   const background = meta.background ?? DEFAULT_BACKGROUND;
 
-  const rows = db.getProjectElements(projectId);
-  const files = new Map(rows.map((e) => [e.id, loadElementFiles(templatesDir, project.templateSlug, e.slug)] as const));
+  const files = new Map(rows.map((e) => [e.id, loadElementFiles(templatesDir, e.templateSlug, e.slug)] as const));
   const valuesFor = (elementId: number): ParamValues => {
     const raw: ParamValues = {};
     for (const v of project.values) if (v.elementId === elementId) raw[v.key] = v.value;
@@ -92,7 +89,7 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase, run
 
   const elements = rows.map((e) => {
     const { lottie: source, schema } = files.get(e.id)!;
-    const resolvedSource = resolveLottieAssets(source, `${serverBase}${elementBaseUrl(templatesDir, project.templateSlug, e.slug)}`);
+    const resolvedSource = resolveLottieAssets(source, `${serverBase}${elementBaseUrl(templatesDir, e.templateSlug, e.slug)}`);
     const values = withBaseUrl(valuesFor(e.id), schema, serverBase);
     const lottie = applyLottieValues(resolvedSource, values, schema);
     return { id: String(e.id), lottie, startFrame: e.startFrame, endFrame: e.endFrame, zIndex: e.zIndex, enabled: e.enabled, media: mediaFor(e.id, source, schema) };
@@ -115,8 +112,7 @@ export function buildProjectProps({ db, templatesDir, projectId, serverBase, run
 export function buildTemplateDefaultProps({ db, templatesDir, slug, serverBase }: { db: Db; templatesDir: string; slug: string; serverBase: string }): MainProps {
   const template = db.getTemplateBySlug(slug);
   if (!template) throw new Error(`No template with slug "${slug}"`);
-  const metaFile = path.join(templatesDir, slug, 'meta.json');
-  const meta = fs.existsSync(metaFile) ? (JSON.parse(fs.readFileSync(metaFile, 'utf8')) as { fontFiles?: TemplateFontFile[]; background?: string }) : {};
+  const meta = readTemplateMeta(templatesDir, slug);
   const fonts = fontsFor(meta.fontFiles, slug, serverBase);
 
   const elements = db.listTemplateElements(template.id).map((e) => {

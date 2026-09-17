@@ -142,7 +142,7 @@ Ad Type            "Contrast", "Bio", "Issue", "GOTV", "Endorsement"
                    open, lower third, stat callout, transition, end card, disclaimer
 ```
 
-**The user starts from a finished spot, not a blank canvas.** They pick an ad example and it already has its elements arranged. Their job is to fill it in and swap footage, not to assemble it. This is a deliberate simplification and it should be preserved.
+**The user starts from a finished spot, not a blank canvas.** They pick an ad example and it already has its elements arranged. Their job is to fill it in and swap footage, not to assemble it. Since M31 they can also add any element of any template from the library (a lower third, a caption, an end card), typed at ingest: `template_element.type` names the type, and a `project_element` row pointing at another template's element is an added one.
 
 SQLite tables:
 
@@ -176,7 +176,7 @@ The video is the interface (M30). Three columns under one top bar.
 
 Nothing else ever sits over the video: no modals, no toasts, no floating panels. The outline, the in-place field and the drop target are the documented exceptions, present only while the pointer is doing that thing. A video editor's monitor has to be trustworthy.
 
-**Scene strip.** Under the monitor, one chip per element in play order with its start and length. Pressing a chip selects the element and moves the player to its start. There is no timeline: timing is the designer's, with the one adjustment below.
+**Scene strip.** Under the monitor, one chip per element in play order with its start and length, and an Add chip. Pressing a chip selects the element and moves the player to where its design is on screen. Add opens the element library (every element of every ingested template, grouped by type) in the left column; pressing one lands it at the playhead with its own length and its schema defaults (M31). There is no timeline: timing is the designer's, with the one adjustment below.
 
 **Panel (right).** Generated from the selected element's schema, plus the element's own controls.
 

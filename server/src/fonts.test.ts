@@ -41,7 +41,7 @@ describe('template fonts reach both runners', () => {
 
   it('GET /projects/:id includes the template meta with fontFiles, and the font is served with CORS', async () => {
     const detail = (await app.inject({ method: 'GET', url: `/projects/${projectId}` })).json() as { meta: typeof meta };
-    expect(detail.meta.fontFiles).toEqual(meta.fontFiles);
+    expect(detail.meta.fontFiles).toEqual(meta.fontFiles.map((f) => ({ ...f, templateSlug: 't' }))); // M31: each file tagged with its template
     const font = await app.inject({ method: 'GET', url: '/templates/t/fonts/IBMPlexSans-Regular.ttf', headers: { origin: 'http://localhost:5173' } });
     expect(font.statusCode).toBe(200);
     expect(font.headers['access-control-allow-origin']).toBeTruthy();

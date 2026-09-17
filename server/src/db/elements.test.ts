@@ -20,8 +20,8 @@ describe('per-project element timing', () => {
 
   it('starts from the template defaults, all enabled', () => {
     expect(db.getProjectElements(projectId)).toEqual([
-      { id: open, slug: 'open', name: 'open', zIndex: 0, startFrame: 0, endFrame: 150, enabled: true },
-      { id: card, slug: 'end-card', name: 'end-card', zIndex: 1, startFrame: 150, endFrame: 300, enabled: true },
+      { id: open, slug: 'open', name: 'open', type: 'overlay', templateSlug: 't', added: false, zIndex: 0, startFrame: 0, endFrame: 150, enabled: true },
+      { id: card, slug: 'end-card', name: 'end-card', type: 'overlay', templateSlug: 't', added: false, zIndex: 1, startFrame: 150, endFrame: 300, enabled: true },
     ]);
   });
 
@@ -29,8 +29,8 @@ describe('per-project element timing', () => {
     db.setProjectElement(projectId, card, { startFrame: 120, endFrame: 270 });
     db.setProjectElement(projectId, open, { enabled: false });
     expect(db.getProjectElements(projectId)).toEqual([
-      { id: open, slug: 'open', name: 'open', zIndex: 0, startFrame: 0, endFrame: 150, enabled: false },
-      { id: card, slug: 'end-card', name: 'end-card', zIndex: 1, startFrame: 120, endFrame: 270, enabled: true },
+      { id: open, slug: 'open', name: 'open', type: 'overlay', templateSlug: 't', added: false, zIndex: 0, startFrame: 0, endFrame: 150, enabled: false },
+      { id: card, slug: 'end-card', name: 'end-card', type: 'overlay', templateSlug: 't', added: false, zIndex: 1, startFrame: 120, endFrame: 270, enabled: true },
     ]);
     expect(db.listTemplateElements(templateId).find((e) => e.id === card)!.startFrame).toBe(150);
 

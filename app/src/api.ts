@@ -38,6 +38,12 @@ export type ProjectElement = {
   id: number;
   slug: string;
   name: string;
+  /** M31: what the element is (ELEMENT_TYPES). */
+  type: string;
+  /** M31: the template whose files this element uses. */
+  templateSlug: string;
+  /** M31: added from the library rather than part of the spot's template. Removable. */
+  added: boolean;
   zIndex: number;
   startFrame: number;
   endFrame: number;
@@ -45,6 +51,19 @@ export type ProjectElement = {
   schema: TemplateParam[];
   /** Server-relative, e.g. /templates/two/elements/open/template.json. */
   lottieUrl: string;
+};
+
+/** M31: one element of the library: any template's element, with its template. */
+export type LibraryElement = {
+  id: number;
+  slug: string;
+  name: string;
+  type: string;
+  durationInFrames: number;
+  templateId: number;
+  templateSlug: string;
+  templateName: string;
+  thumbUrl: string;
 };
 
 export type RenderJob = {
@@ -105,6 +124,23 @@ export const api = {
     }).then((r) => json<{ id: number }>(r)),
 
   project: (id: number) => fetch(`${API}/projects/${id}`).then((r) => json<ProjectDetail>(r)),
+
+  /** M31: every element of every template. */
+  libraryElements: () => fetch(`${API}/elements`).then((r) => json<LibraryElement[]>(r)),
+
+  /** M31: add a library element to a project at a frame. Answers the new project element with its files. */
+  addElement: (projectId: number, elementId: number, startFrame: number) =>
+    fetch(`${API}/projects/${projectId}/elements`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ elementId, startFrame }),
+    }).then((r) => json<ProjectElement>(r)),
+
+  /** M31: remove an added element from a project. */
+  removeElement: async (projectId: number, elementId: number) => {
+    const res = await fetch(`${API}/projects/${projectId}/elements/${elementId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  },
 
   /** M22: every project, newest first. */
   projects: () => fetch(`${API}/projects`).then((r) => json<ProjectRow[]>(r)),

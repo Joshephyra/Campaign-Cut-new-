@@ -4,6 +4,8 @@ import {
   compositionDurationWithTransitions,
   DEFAULT_TRANSFORM,
   DEFAULT_TRANSITION_FRAMES,
+  ELEMENT_TYPE_LABELS,
+  ELEMENT_TYPES,
   EMPTY_LOTTIE,
   fontsFor,
   isChromaKey,
@@ -14,6 +16,7 @@ import {
   mediaSourceFor,
   mediaTiming,
   resolveLottieAssets,
+  successorOf,
   TRANSITION_PRESETS,
   withBaseUrl,
   type ElementProps,
@@ -26,7 +29,7 @@ import {
   type TransitionProps,
 } from '@campaigncut/composition';
 import { Player, type PlayerRef } from '@remotion/player';
-import { ChevronLeft, EyeOff, Maximize2, Pause, Pencil, Play, Redo2, Undo2, Volume2, VolumeX } from 'lucide-react';
+import { ChevronLeft, EyeOff, Maximize2, Pause, Pencil, Play, Plus, Redo2, Trash2, Undo2, Volume2, VolumeX, X } from 'lucide-react';
 import {
   useCallback,
   useEffect,
@@ -38,12 +41,12 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import { API, api, type MediaAsset, type ProjectAudio, type ProjectDetail, type ProjectElement, type ProjectTransition } from '../api';
+import { API, api, type LibraryElement, type MediaAsset, type ProjectAudio, type ProjectDetail, type ProjectElement, type ProjectTransition } from '../api';
 import { ExportHistory } from '../components/ExportHistory';
 import { ExportPanel } from '../components/ExportPanel';
 import { Inspector } from '../components/Inspector';
 import { ASSET_DRAG_TYPE, MediaPanel } from '../components/MediaPanel';
-import { IconButton, Section, Segmented, Slider, Switch, Wordmark } from '../components/ui';
+import { Button, IconButton, Section, Segmented, Slider, Switch, Wordmark } from '../components/ui';
 import { canRedo, canUndo, createHistory, isTextEntry, pushHistory, redoHistory, undoHistory, undoRedoFor, type History } from '../history';
 import { findLayerBoxes, pickLayer, type Box } from '../monitorHit';
 import { measurePlayback, type PlaybackSummary } from '../perf';
@@ -80,10 +83,10 @@ function mediaElementOf(elements: ProjectElement[]): ProjectElement | undefined 
   return inStartOrder(elements).find((e) => e.schema.some((p) => p.kind === 'media'));
 }
 
-/** Boundaries exist between consecutive ENABLED elements in start order; a transition lives on each. */
+/** An element has a boundary (and so a transition) when another enabled element actually follows it, the way the composition chains them. */
 function boundariesAfter(elements: ProjectElement[]): Set<number> {
-  const inOrder = inStartOrder(elements.filter((e) => e.enabled));
-  return new Set(inOrder.slice(0, -1).map((e) => e.id));
+  const inOrder = inStartOrder(elements.filter((e) => e.enabled)).map((e) => ({ ...e, id: String(e.id) }));
+  return new Set(inOrder.filter((e) => successorOf(e, inOrder, new Set()) !== undefined).map((e) => Number(e.id)));
 }
 
 const seconds = (frames: number) => frames / compositionConfig.fps;
@@ -428,6 +431,60 @@ export function Editor({ projectId, onBack }: Props) {
 
   const boundaries = boundariesAfter(elements);
 
+  // M31: the element library. The Add chip opens it; pressing an element
+  // adds it at the playhead, selects it and shows it. Added elements can be
+  // removed again; the spot's own can only be hidden.
+  const [library, setLibrary] = useState<LibraryElement[] | null>(null);
+  const [picking, setPicking] = useState(false);
+  const [libraryError, setLibraryError] = useState<string | null>(null);
+  const frameRef = useRef(0);
+  const seekRef = useRef<(frame: number) => void>(() => {});
+  const openLibrary = () => {
+    setPicking(true);
+    if (library === null) {
+      api
+        .libraryElements()
+        .then(setLibrary)
+        .catch((e: Error) => setLibraryError(e.message));
+    }
+  };
+  const addFromLibrary = async (item: LibraryElement) => {
+    setLibraryError(null);
+    try {
+      const element = await api.addElement(projectId, item.id, frameRef.current);
+      const lottie = await api.elementLottie(element.lottieUrl);
+      setLoaded((prev) => (prev ? { ...prev, lotties: { ...prev.lotties, [element.id]: lottie } } : prev));
+      changeKey.current = `add:${element.id}`;
+      setValues((prev) => {
+        if (prev[element.id]) return prev;
+        const defaults: ParamValues = {};
+        for (const p of element.schema) defaults[p.key] = p.default;
+        return { ...prev, [element.id]: defaults };
+      });
+      setElements((prev) => (prev.some((e) => e.id === element.id) ? prev.map((e) => (e.id === element.id ? { ...e, ...element } : e)) : [...prev, element]));
+      setSelectedId(element.id);
+      setPicking(false);
+      seekRef.current(holdFrame(element));
+    } catch (e) {
+      setLibraryError((e as Error).message);
+    }
+  };
+  const removeFromSpot = async (elementId: number) => {
+    try {
+      await api.removeElement(projectId, elementId);
+      changeKey.current = `remove:${elementId}`;
+      setElements((prev) => prev.filter((e) => e.id !== elementId));
+      setTransitions((prev) => prev.filter((t) => t.afterElementId !== elementId));
+      setValues((prev) => {
+        const { [elementId]: _gone, ...rest } = prev;
+        return rest;
+      });
+      if (selectedId === elementId) setSelectedId(inStartOrder(elements.filter((e) => e.id !== elementId))[0]?.id ?? null);
+    } catch (e) {
+      setLibraryError((e as Error).message);
+    }
+  };
+
   return (
     <main className="h-screen bg-bg text-fg flex flex-col overflow-hidden">
       <header className="h-[52px] px-4 flex items-center justify-between shrink-0 gap-4 border-b border-line bg-panel">
@@ -463,7 +520,11 @@ export function Editor({ projectId, onBack }: Props) {
       {loaded && (
         <div className="flex flex-1 min-h-0">
           <aside className="w-[280px] shrink-0 border-r border-line bg-panel overflow-y-auto">
-            <MediaPanel onSelect={selectFootage} selectedId={selectedAssetId} onChange={setAssets} audio={audio} onAudioChange={onAudioChange} />
+            {picking ? (
+              <LibraryPicker library={library} error={libraryError} inSpot={new Set(elements.map((e) => e.id))} onAdd={(item) => void addFromLibrary(item)} onClose={() => setPicking(false)} />
+            ) : (
+              <MediaPanel onSelect={selectFootage} selectedId={selectedAssetId} onChange={setAssets} audio={audio} onAudioChange={onAudioChange} />
+            )}
           </aside>
 
           <Monitor
@@ -478,6 +539,11 @@ export function Editor({ projectId, onBack }: Props) {
             schemaFor={schemaFor}
             onPress={onPress}
             onDrag={onDrag}
+            onAdd={openLibrary}
+            onFrame={(f) => {
+              frameRef.current = f;
+            }}
+            seekRef={seekRef}
             onTextEdit={setElementValue}
             onDropAsset={(elementId, assetId) => {
               const element = elements.find((e) => e.id === elementId);
@@ -541,6 +607,14 @@ export function Editor({ projectId, onBack }: Props) {
                 {boundaries.has(selected.id) && (
                   <Section title="How it ends">
                     <TransitionControl element={selected} transition={transitions.find((t) => t.afterElementId === selected.id)} onChange={(t) => void onTransitionChange(selected.id, t)} />
+                  </Section>
+                )}
+                {selected.added && (
+                  <Section title="From the library">
+                    <p className="text-[11px] text-fg-3 mb-2">Added from another template. Removing it puts the spot back as it was.</p>
+                    <Button variant="danger" size="sm" icon={Trash2} onClick={() => void removeFromSpot(selected.id)}>
+                      Remove from spot
+                    </Button>
                   </Section>
                 )}
               </>
@@ -654,6 +728,72 @@ function ProjectName({ name, templateName, onRename }: { name: string | null; te
   );
 }
 
+/**
+ * M31: the element library, grouped by type, in the left column while
+ * choosing. Never over the video.
+ */
+function LibraryPicker({
+  library,
+  error,
+  inSpot,
+  onAdd,
+  onClose,
+}: {
+  library: LibraryElement[] | null;
+  error: string | null;
+  inSpot: Set<number>;
+  onAdd: (item: LibraryElement) => void;
+  onClose: () => void;
+}) {
+  const groups = ELEMENT_TYPES.map((type) => ({ type, label: ELEMENT_TYPE_LABELS[type], items: (library ?? []).filter((e) => e.type === type) })).filter((g) => g.items.length > 0);
+  const untyped = (library ?? []).filter((e) => !(ELEMENT_TYPES as readonly string[]).includes(e.type));
+  if (untyped.length > 0) groups.push({ type: 'overlay', label: 'Other', items: untyped });
+  return (
+    <div role="dialog" aria-label="Add to the spot" className="flex flex-col">
+      <div className="px-4 py-3 border-b border-line flex items-center justify-between">
+        <h2 className="text-[13px] font-semibold">Add to the spot</h2>
+        <IconButton label="Close the library" icon={X} onClick={onClose} className="!w-7 !h-7" />
+      </div>
+      <p className="px-4 pt-3 text-[11px] text-fg-3">Every element of every template. It lands at the playhead with its own length.</p>
+      {error && <p className="px-4 pt-2 text-xs text-red">{error}</p>}
+      {library === null && !error && <p className="px-4 py-3 text-xs text-fg-3">Loading…</p>}
+      {library !== null && library.length === 0 && <p className="px-4 py-3 text-xs text-fg-2">Nothing in the library yet. Add a template first.</p>}
+      {groups.map((g) => (
+        <section key={g.type} className="px-4 py-3">
+          <h3 className="text-xs font-semibold text-fg-2 mb-2">{g.label}</h3>
+          <ul className="flex flex-col gap-1.5">
+            {g.items.map((item) => {
+              const already = inSpot.has(item.id);
+              return (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    aria-label={`Add ${item.name} from ${item.templateName}`}
+                    disabled={already}
+                    onClick={() => onAdd(item)}
+                    className="w-full flex items-center gap-3 rounded-lg bg-raised border border-line p-2 text-left transition-colors hover:bg-hover hover:border-line-strong disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue"
+                  >
+                    <div className="w-16 aspect-video rounded-md bg-stage overflow-hidden shrink-0">
+                      {item.thumbUrl && <img src={api.fileUrl(item.thumbUrl)} alt="" className="w-full h-full object-cover block" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-medium truncate">{item.name}</div>
+                      <div className="text-[11px] text-fg-3 truncate tabular-nums">
+                        {item.templateName} · {seconds(item.durationInFrames).toFixed(1)} s{already ? ' · in the spot' : ''}
+                      </div>
+                    </div>
+                    <Plus size={14} strokeWidth={1.75} aria-hidden="true" className="text-blue shrink-0" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
+    </div>
+  );
+}
+
 function SaveIndicator({ state }: { state: SaveState }) {
   const text = { idle: 'Saved', dirty: 'Unsaved', saving: 'Saving…', saved: 'Saved', error: 'Save failed' }[state];
   const colour = state === 'error' ? 'text-red' : state === 'saved' || state === 'idle' ? 'text-fg-3' : 'text-blue';
@@ -690,6 +830,9 @@ function Monitor({
   schemaFor,
   onPress,
   onDrag,
+  onAdd,
+  onFrame,
+  seekRef,
   onTextEdit,
   onDropAsset,
   onDropFile,
@@ -709,6 +852,12 @@ function Monitor({
   onPress: (elementId: number, key: string) => void;
   /** Fractions of the monitor the pointer moved since the last call, for one placement. */
   onDrag: (elementId: number, key: string, dx: number, dy: number) => void;
+  /** M31: the Add chip at the end of the scene strip. */
+  onAdd: () => void;
+  /** M31: the playhead, for adding at the current frame. */
+  onFrame: (frame: number) => void;
+  /** M31: the editor seeks through this after adding. */
+  seekRef: { current: (frame: number) => void };
   /** M30: typing on the video changes one text value. */
   onTextEdit: (elementId: number, key: string, value: string) => void;
   /** M30: a library clip dropped on the video lands in this element's slot. */
@@ -937,6 +1086,8 @@ function Monitor({
     playerRef.current?.seekTo(f);
     setFrame(f);
   };
+  seekRef.current = seek;
+  useEffect(() => onFrame(frame), [frame, onFrame]);
   const togglePlay = () => {
     const player = playerRef.current;
     if (!player) return;
@@ -1149,6 +1300,16 @@ function Monitor({
             </button>
           );
         })}
+        <button
+          type="button"
+          aria-label="Add a scene"
+          title="Add a lower third, caption, end card or any other element from the library"
+          onClick={onAdd}
+          className="shrink-0 self-stretch flex items-center gap-1.5 rounded-lg border border-dashed border-line-strong px-3 text-xs font-medium text-fg-2 hover:text-fg hover:border-blue hover:bg-blue-tint/40 transition-colors"
+        >
+          <Plus size={14} strokeWidth={1.75} aria-hidden="true" />
+          Add
+        </button>
       </div>
     </section>
   );

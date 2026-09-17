@@ -4,6 +4,31 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M31 The element library · DONE
+
+**Why**
+
+Josh opened the phase-2 features ("I want to start adding in the other features"). CLAUDE.md's non-goals were amended for the four he chose (element library, style and themes, client profiles, stock footage; users and accounts stay out). Every one of those hangs off elements becoming a library any spot can add from, and the app knowing what an element is.
+
+**What exists now**
+
+- Element types: `open`, `headline`, `lower-third`, `caption`, `callout`, `overlay`, `stat`, `background`, `end-card`, `disclaimer` (in the composition package, shared by ingest, server and app). `elements.json` entries may carry `type`; when absent the ingest infers it from the slug; an unknown type fails the ingest naming the element and the allowed list. The type lands in `meta.json` and `template_element.type` (old databases get the column and a backfill from slugs; `server/src/cli-backfill-types.ts` does the same by hand).
+- The library: `GET /elements` lists every element of every template with its type, template and thumbnail. `POST /projects/:id/elements` adds one at a frame with its authored length and its schema defaults; `DELETE` removes an added one; the spot's own elements are refused (hide them instead). Project elements carry `templateSlug`, `type` and `added`; files, image bases and fonts resolve per element's own template in both runners, and the font list is merged across every template involved (`projectFontFiles`). Duplicating a project copies added elements.
+- Editor: an Add chip at the end of the scene strip opens the library in the left column (never over the video), grouped by type with template thumbnails; pressing one adds it at the playhead, selects it, seeks to it and shows its controls; elements already in the spot are dimmed. "Remove from spot" in the panel for added elements.
+- Docs: `docs/AE-AUTHORING.md` documents `type`; `docs/SPEC.md` sections 3 and 4 describe the library.
+- Transitions and overlaps: chaining now leads into the next scene that actually follows (starts at or after the element's end); a scene added over another, a lower third over the open, keeps its own timing instead of being pulled into the open's transition. The panel's "How it ends" follows the same rule.
+- Tests: 2 element-type, 3 ingest, 5 database, 4 route, 3 composition, 2 editor. 403 tests green across the repo.
+
+**Verified**
+
+- In the real browser on the Contrast :30 project: Add opened the library grouped Open / Lower thirds / Stats / End cards / Overlays; pressing "Lower third from Three Part" added a fifth scene at the playhead, selected it, rendered its layers on the video with the Three Part template's own font, showed its Subhead control, and saved it with `templateSlug: three`; at its own frame it rendered over the Open beside the spot's own lower third; Remove from spot took it out again.
+
+**Next**
+
+M32: overall style and saved themes.
+
+---
+
 ## 2026-09-17 · M30 The video is the interface · DONE
 
 **Why**

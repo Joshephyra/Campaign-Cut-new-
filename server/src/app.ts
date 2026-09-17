@@ -11,7 +11,7 @@ import { makePoster, makeProxy, probe, probeAudio } from './media/ffmpeg';
 import { paths } from './paths';
 import { renderComposition } from './render';
 import { RenderQueue, type RenderFn } from './renderQueue';
-import { elementLottieUrl, loadElementSchema } from './templateFiles';
+import { elementLottieUrl, loadElementSchema, projectFontFiles } from './templateFiles';
 import { defaultUploadsDir, makeStagingDir, problemsFrom, runIngestCommand, stagedRelativePath, type RunIngest } from './ingestUpload';
 
 export type { RunIngest } from './ingestUpload';
@@ -225,15 +225,54 @@ export function buildApp(options: AppOptions = {}) {
     const t = db.getTemplateBySlug(project.templateSlug)!;
     const dir = path.join(templatesDir, t.slug);
     const { values, ...rest } = project;
+    const elements = db.getProjectElements(project.id);
+    const meta = (readJson(path.join(dir, 'meta.json')) as Record<string, unknown> | undefined) ?? {};
     return {
       project: rest,
       template: templateJson(t),
-      meta: readJson(path.join(dir, 'meta.json')) ?? null,
-      elements: db.getProjectElements(project.id).map((e) => withElementFiles(t.slug, e)),
+      // M31: the font files of every template an element came from, each tagged with its template.
+      meta: { ...meta, fontFiles: projectFontFiles(templatesDir, t.slug, elements) },
+      elements: elements.map((e) => withElementFiles(e.templateSlug, e)),
       transitions: db.getProjectTransitions(project.id),
       audio: db.getProjectAudio(project.id),
       values,
     };
+  });
+
+  // ---- the element library (M31) ---------------------------------------
+
+  /** Every element of every template, typed, with its template and thumbnail. */
+  app.get('/elements', async () => db.listLibraryElements().map(({ thumbPath, ...e }) => ({ ...e, thumbUrl: thumbPath ? `/${thumbPath.replace(/^\/+/, '')}` : '' })));
+
+  /** Add a library element to a project at a frame, with its authored length and its schema defaults. */
+  app.post<{ Params: { id: string }; Body: { elementId?: number; startFrame?: number } }>('/projects/:id/elements', async (req, reply) => {
+    const id = Number(req.params.id);
+    if (!db.getProject(id)) return reply.code(404).send({ error: `No project ${id}` });
+    const elementId = Number(req.body?.elementId);
+    const library = db.listLibraryElements().find((e) => e.id === elementId);
+    if (!library) return reply.code(404).send({ error: `No element ${String(req.body?.elementId)} in the library` });
+    const startFrame = Math.max(0, Math.round(Number(req.body?.startFrame ?? 0)));
+    if (!Number.isFinite(startFrame)) return reply.code(400).send({ error: 'startFrame must be a number' });
+    const already = db.getProjectElements(id).some((e) => e.id === elementId);
+    db.addProjectElement(id, elementId, startFrame);
+    if (!already) {
+      const defaults = loadElementSchema(templatesDir, library.templateSlug, library.slug).map((p: TemplateParam) => ({ elementId, key: p.key, value: p.default }));
+      if (defaults.length > 0) db.setProjectValues(id, defaults);
+    }
+    const element = db.getProjectElements(id).find((e) => e.id === elementId)!;
+    return reply.code(201).send(withElementFiles(element.templateSlug, element));
+  });
+
+  /** Remove an added element from a project. The spot's own elements can be hidden, not removed. */
+  app.delete<{ Params: { id: string; elementId: string } }>('/projects/:id/elements/:elementId', async (req, reply) => {
+    const id = Number(req.params.id);
+    const elementId = Number(req.params.elementId);
+    if (!db.getProject(id)) return reply.code(404).send({ error: `No project ${id}` });
+    const current = db.getProjectElements(id).find((e) => e.id === elementId);
+    if (!current) return reply.code(404).send({ error: `No element ${elementId} in project ${id}` });
+    if (!current.added) return reply.code(400).send({ error: `Element ${elementId} came with the spot's template; hide it instead of removing it` });
+    db.removeProjectElement(id, elementId);
+    return { ok: true };
   });
 
   /** Choose the transition on the boundary after an element. 'cut' clears it. */

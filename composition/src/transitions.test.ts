@@ -75,3 +75,28 @@ describe('compositionDurationWithTransitions', () => {
     expect(compositionDurationWithTransitions([el('a', 0, 100), el('b', 100, 200)], [])).toBe(200);
   });
 });
+
+/**
+ * M31: an element added over another (a lower third over the open) is not
+ * the open's successor. The open's transition leads into the next element
+ * that actually follows it; the lower third keeps its own in and out.
+ */
+describe('transitions skip overlapping elements (M31)', () => {
+  it('a fade after the open joins the end card, not the lower third sitting over the open', () => {
+    const t: TransitionProps[] = [{ afterElementId: 'open', preset: 'fade', durationInFrames: 10 }];
+    const out = effectiveTimeline([el('open', 0, 100), el('lower', 30, 90, { zIndex: 1 }), el('card', 100, 200)], t);
+    expect(out.chains.map((c) => c.elementIds)).toEqual([['open', 'card'], ['lower']]);
+    expect(out.elements).toEqual([
+      { id: 'open', startFrame: 0, endFrame: 100 },
+      { id: 'card', startFrame: 90, endFrame: 190 },
+      { id: 'lower', startFrame: 30, endFrame: 90 },
+    ]);
+    expect(compositionDurationWithTransitions([el('open', 0, 100), el('lower', 30, 90, { zIndex: 1 }), el('card', 100, 200)], t)).toBe(190);
+  });
+
+  it('with nothing following, a transition after the last real scene does nothing', () => {
+    const t: TransitionProps[] = [{ afterElementId: 'open', preset: 'fade', durationInFrames: 10 }];
+    const out = effectiveTimeline([el('open', 0, 100), el('lower', 30, 90, { zIndex: 1 })], t);
+    expect(out.chains.map((c) => c.elementIds)).toEqual([['open'], ['lower']]);
+  });
+});

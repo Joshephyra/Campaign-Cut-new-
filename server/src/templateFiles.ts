@@ -1,4 +1,4 @@
-import type { LottieAnimationData, TemplateParam } from '@campaigncut/composition';
+import type { LottieAnimationData, TemplateFontFile, TemplateParam } from '@campaigncut/composition';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -44,4 +44,27 @@ export function loadElementFiles(templatesDir: string, templateSlug: string, ele
 export function loadElementSchema(templatesDir: string, templateSlug: string, elementSlug: string): TemplateParam[] {
   const file = path.join(elementDir(templatesDir, templateSlug, elementSlug), 'schema.json');
   return fs.existsSync(file) ? (JSON.parse(fs.readFileSync(file, 'utf8')) as TemplateParam[]) : [];
+}
+
+/** A template's meta.json, or an empty object when it has none. */
+export function readTemplateMeta(templatesDir: string, templateSlug: string): { fontFiles?: TemplateFontFile[]; background?: string; [k: string]: unknown } {
+  const file = path.join(templatesDir, templateSlug, 'meta.json');
+  return fs.existsSync(file) ? (JSON.parse(fs.readFileSync(file, 'utf8')) as { fontFiles?: TemplateFontFile[]; background?: string }) : {};
+}
+
+/**
+ * M31: the font files a spot needs: its own template's, then those of every
+ * other template an added element came from, each file tagged with its
+ * template so both runners resolve it against the right folder.
+ */
+export function projectFontFiles(templatesDir: string, templateSlug: string, elements: { templateSlug: string }[]): TemplateFontFile[] {
+  const slugs = [templateSlug, ...elements.map((e) => e.templateSlug).filter((s) => s !== templateSlug)];
+  const seen = new Set<string>();
+  const files: TemplateFontFile[] = [];
+  for (const slug of slugs) {
+    if (seen.has(slug)) continue;
+    seen.add(slug);
+    for (const f of readTemplateMeta(templatesDir, slug).fontFiles ?? []) files.push({ ...f, templateSlug: slug });
+  }
+  return files;
 }
