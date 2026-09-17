@@ -256,6 +256,7 @@ if (typeof app !== 'undefined' && app && app.project) {
       alert('CampaignCut sample: could not find the logo image at\n' + logoSource.fsName + '\n\nRun this script from its place inside the CampaignCut folder.');
       return;
     }
+    if (app.project) app.project.close(CloseOptions.DO_NOT_SAVE_CHANGES);
     app.newProject();
     app.beginUndoGroup('CampaignCut sample project');
 

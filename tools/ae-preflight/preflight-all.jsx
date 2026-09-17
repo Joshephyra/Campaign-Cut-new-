@@ -13,6 +13,7 @@
 
 var PROJECT = 'C:/Users/josho/Desktop/contrast-30/contrast-30.aep';
 var LOG_DIR = 'C:/Users/josho/Desktop/contrast-30';
+var QUIT_WHEN_DONE = true;
 
 (function () {
   var lines = [];
@@ -66,6 +67,11 @@ var LOG_DIR = 'C:/Users/josho/Desktop/contrast-30';
 
     alert = realAlert;
     log(count + ' comp(s) checked. Reports are the preflight-*.txt files in this folder.');
+    /* Unattended runs end by quitting cleanly, so the next launch starts fresh and never sees a crash dialog. */
+    if (QUIT_WHEN_DONE) {
+      app.project.close(CloseOptions.DO_NOT_SAVE_CHANGES);
+      app.quit();
+    }
   } catch (outer) {
     log('ERROR: ' + outer + (outer.line ? ' (line ' + outer.line + ')' : ''));
   }

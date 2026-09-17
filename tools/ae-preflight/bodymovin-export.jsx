@@ -28,6 +28,7 @@ var EXPORTS = [
 ];
 /* Bodymovin's "ascent" for a font is a percentage of the size; Arial is close to this. */
 var FONT_ASCENT = 71.6;
+var QUIT_WHEN_DONE = true;
 
 var CC_BM = (function () {
   var lines = [];
@@ -151,6 +152,8 @@ var CC_BM = (function () {
       current += 1;
       if (current >= EXPORTS.length) {
         log('ALL DONE ' + new Date().toString());
+        /* Quit cleanly so the next launch starts fresh with no crash dialog; nothing in the project is worth saving. */
+        if (QUIT_WHEN_DONE) app.scheduleTask('app.project.close(CloseOptions.DO_NOT_SAVE_CHANGES); app.quit();', 1000, false);
         return;
       }
       var job = EXPORTS[current];
