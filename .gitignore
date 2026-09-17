@@ -19,3 +19,6 @@ build/
 .idea/
 .DS_Store
 Thumbs.db
+
+# The sample template built from After Effects on this machine carries Arial font files, which cannot be redistributed.
+templates/contrast-30/
