@@ -1255,16 +1255,18 @@ function Monitor({
     else player.mute?.();
     setMuted(player.isMuted?.() ?? !muted);
   };
-  // Space plays and pauses, outside text fields.
+  // Space plays and pauses, outside text fields. One listener for the monitor's life.
+  const togglePlayRef = useRef(togglePlay);
+  togglePlayRef.current = togglePlay;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== ' ' || isTextEntry(e.target)) return;
       e.preventDefault();
-      togglePlay();
+      togglePlayRef.current();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  });
+  }, []);
   // Open on a frame where the first scene's design is on screen, not on the empty first frame of its entrance.
   const firstScene = inStartOrder(elements)[0];
   const initialFrame = firstScene ? holdFrame(firstScene) : 0;

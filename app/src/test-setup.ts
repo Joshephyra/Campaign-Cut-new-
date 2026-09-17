@@ -32,7 +32,7 @@ vi.mock('@remotion/player', () => ({
       getCurrentFrame: () => Number(div.current?.getAttribute('data-seek') ?? 0),
       addEventListener: (...args: [string, EventListener]) => div.current?.addEventListener(...args),
       removeEventListener: (...args: [string, EventListener]) => div.current?.removeEventListener(...args),
-    }));
+    }), []);
     return createElement('div', { ref: div, 'data-testid': 'player', 'data-props': JSON.stringify(props.inputProps) });
   }),
 }));

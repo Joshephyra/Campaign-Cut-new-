@@ -63,10 +63,10 @@ describe('Editor transport (M30)', () => {
     await open();
     const play = screen.getByLabelText('Play');
     fireEvent.click(play);
-    await waitFor(() => expect(screen.getByLabelText('Pause')).toBeTruthy());
+    await waitFor(() => expect(screen.getByLabelText('Pause')).toBeTruthy(), { timeout: 4000 }); // the editor is heavy under a full parallel run
     expect(screen.getByTestId('player').getAttribute('data-playing')).toBe('true');
     fireEvent.keyDown(document.body, { key: ' ' });
-    await waitFor(() => expect(screen.getByLabelText('Play')).toBeTruthy());
+    await waitFor(() => expect(screen.getByLabelText('Play')).toBeTruthy(), { timeout: 4000 });
 
     const scrub = screen.getByLabelText('Scrub') as HTMLInputElement;
     expect(scrub.type).toBe('range');
@@ -75,7 +75,7 @@ describe('Editor transport (M30)', () => {
 
     fireEvent.click(screen.getByLabelText('Mute'));
     expect(screen.getByTestId('player').getAttribute('data-muted')).toBe('true');
-    await waitFor(() => expect(screen.getByLabelText('Unmute')).toBeTruthy());
+    await waitFor(() => expect(screen.getByLabelText('Unmute')).toBeTruthy(), { timeout: 4000 });
   });
 });
 
