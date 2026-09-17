@@ -4,6 +4,28 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M35 The disclaimer's four seconds · DONE
+
+**Why**
+
+Josh's ruling after reviewing the original prototype: a disclaimer must be on screen for at least 4 seconds. CLAUDE.md's rule is amended to exactly that one check; the wording is still nobody's business but the campaign's.
+
+**What exists now**
+
+- One pure rule in the composition package (`disclaimerCheck`): the seconds a disclaimer is on screen are the union of the enabled scenes whose disclaimer text is not empty. Below 4.0 s the message says the seconds it has and what to do; with none it says so.
+- The export route refuses a spot under the minimum with that sentence (400) before anything is queued. The editor computes the same rule from the same function and shows it beside Export: a green shield with the seconds when fine, the red sentence with Export disabled when not. Lengthening the scene in its panel frees it live.
+- Tests: 5 rule, 2 route, 1 editor; two older render fixtures gained a five-second disclaimer because a spot without one no longer exports. 437 tests green.
+
+**Verified**
+
+- Real browser and server on the Contrast :30 project, whose end card had been shortened to 2.5 s: the line reads "Disclaimer on screen for 2.5 s; it must be at least 4.0 s. Lengthen the scene that carries it.", Export is disabled, and `POST /render` answers 400 with the same sentence.
+
+**Next**
+
+M36: aspect-ratio versions.
+
+---
+
 ## 2026-09-17 · M34 Stock footage · DONE (live run awaits Josh's key)
 
 **Why**

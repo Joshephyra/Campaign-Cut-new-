@@ -664,12 +664,44 @@ Colours only, by Josh's choice (fonts wait for client profiles, where the client
 
 ---
 
+## M35 · The disclaimer's four seconds · DONE
+
+Josh's ruling on the prototype (2026-09-17): the disclaimer must be on screen for at least 4 seconds. The wording is still nobody's business but the campaign's.
+
+**Build**
+- One pure rule in the composition package: the seconds a disclaimer is on screen are the union of the enabled elements that carry a non-empty disclaimer text, in seconds; the minimum is 4.0.
+- The export refuses a spot under the minimum, naming the seconds it has and what to do (lengthen the scene, or add a disclaimer from the library). The editor shows the same line beside Export, green or red, and disables Export while red. Nothing else is validated.
+
+**Tests**
+- Rule: union of overlapping scenes, disabled scenes skipped, empty text skipped, no disclaimer is zero. Route: a short disclaimer is 400 naming the seconds; a long one renders. Editor: the line beside Export and the disabled button.
+
+**Done when:** an export with a 2.5 s disclaimer is refused with a clear reason, and the same spot exports once its end card is lengthened.
+
+---
+
+## M36 · Aspect-ratio versions · TODO
+
+Josh's ruling on the prototype (2026-09-17): 16:9 is the master; a spot is versioned into 1:1, 4:5 and 9:16.
+
+**Build**
+- A spot has an aspect (16:9 by default). The frame size follows it in both runners (1920×1080, 1080×1080, 1080×1350, 1080×1920); the monitor and the export use it; positions stay fractions of the frame.
+- Designer variants: `elements.json` entries may name a variant export per ratio (`"variants": { "9:16": "02-lower-third-9x16" }`); the ingest validates and ships them beside the element with the same tags, so the same values apply. A spot in 9:16 renders each element's 9:16 variant where one exists.
+- Auto-fit: where no variant exists, the 16:9 element is contained and centred in the new frame over the template background, footage slots that fill the 16:9 frame fill the new frame instead, and the scene's panel says "Auto-fitted from 16:9" so nobody mistakes it for a design.
+- A version chip row in the top bar (16:9 · 1:1 · 4:5 · 9:16). Exports carry the ratio in the file name.
+
+**Tests**
+- Frame size per aspect; variant resolution per element; auto-fit geometry (contain, background, full-bleed slot); ingest variants validated and shipped; render props at each ratio; the chip row changes the monitor and the export.
+
+**Done when:** a 16:9 spot switched to 9:16 previews and exports at 1080×1920, with a designer's 9:16 lower third used where it exists and the rest auto-fitted and labelled.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:
 
 - The full UXP After Effects panel (Phase B)
-- Multi-aspect-ratio reflow
+- Automatic reflow as the way to make other aspect ratios (versions are M36)
 - Remotion Lambda or distributed rendering
 - Broadcast delivery specs (bitrate targets, LUFS normalization)
 - The FEC compliance rule engine

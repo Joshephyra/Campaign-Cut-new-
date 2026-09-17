@@ -1,4 +1,4 @@
-import { Download, Loader2, Share } from 'lucide-react';
+import { Download, Loader2, Share, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { api, type RenderJob } from '../api';
 import { Button, ICON } from './ui';
@@ -8,13 +8,15 @@ type Props = {
   pollIntervalMs?: number;
   /** M25: fired when a render ends (done or failed) so the export history can reload. */
   onFinished?: () => void;
+  /** M35: the disclaimer check; red and blocking while not ok. */
+  check?: { ok: boolean; seconds: number; message: string };
 };
 
 /**
  * Export: queue a server-side render of THE composition with the original
  * footage, poll until it is done, then offer the MP4. AT-5 is watching it.
  */
-export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished }: Props) {
+export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, check }: Props) {
   const [job, setJob] = useState<RenderJob | null>(null);
   const [error, setError] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -53,6 +55,17 @@ export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished }: Pr
 
   return (
     <div className="flex items-center gap-3 text-xs">
+      {check && (
+        <span
+          data-testid="disclaimer-check"
+          data-ok={check.ok ? 'true' : 'false'}
+          title={check.message}
+          className={`inline-flex items-center gap-1.5 max-w-72 truncate ${check.ok ? 'text-fg-3' : 'text-red'}`}
+        >
+          {check.ok ? <ShieldCheck size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" className="text-green shrink-0" /> : <ShieldAlert size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" className="shrink-0" />}
+          {check.ok ? `Disclaimer ${check.seconds.toFixed(1)} s` : check.message}
+        </span>
+      )}
       {job?.status === 'queued' && <span className="text-fg-2">Queued</span>}
       {job?.status === 'rendering' && (
         <span className="inline-flex items-center gap-2 text-fg-2">
@@ -68,7 +81,7 @@ export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished }: Pr
       )}
       {job?.status === 'failed' && <span className="text-red max-w-64 truncate" title={job.error ?? ''}>Export failed: {job.error ?? 'unknown error'}</span>}
       {error && <span className="text-red">{error}</span>}
-      <Button variant="primary" icon={Share} onClick={() => void start()} disabled={busy} className={busy ? 'cursor-wait' : ''}>
+      <Button variant="primary" icon={Share} onClick={() => void start()} disabled={busy || (check !== undefined && !check.ok)} title={check && !check.ok ? check.message : undefined} className={busy ? 'cursor-wait' : ''}>
         Export MP4
       </Button>
     </div>

@@ -39,11 +39,11 @@ This list is a contract. The previous version of this project died by building t
 - Users, roles, permissions, teams, invitations
 - Workspaces, multi-tenancy, row-level security
 - Billing, subscriptions, usage metering
-- The FEC compliance rule engine. The legally required disclaimer is an ordinary editable text field in a locked safe zone. Nothing validates it.
+- The FEC compliance rule engine. The legally required disclaimer is an ordinary editable text field in a locked safe zone. The one check that exists (Josh, 2026-09-17) is that a disclaimer is on screen for at least 4 seconds before an export; nothing validates its wording.
 - Audit logging
 - Cloud object storage, S3, MinIO, CDN
 - Mobile support or responsive layout below laptop width
-- Automatic reflow across aspect ratios. Build 16:9 only.
+- Automatic reflow across aspect ratios as the way to make other ratios. 16:9 is the master; other ratios (1:1, 4:5, 9:16) are versions of a spot (Josh, 2026-09-17): a designer-authored variant of each element where one exists, and a labelled auto-fit of the 16:9 element where none does. See M35.
 - Real-time collaboration
 
 If the app needs to be reachable on the public internet for a demo, put a single shared password in an env var behind one piece of middleware. That is the entire security model and it is deliberate.
@@ -58,6 +58,7 @@ These were non-goals for the proof of concept. Josh chose to start them; they ar
 - Overall style updates and saved themes across a spot.
 - Client profiles (a brand guide: logo, colours, fonts, disclaimer) that a spot belongs to. An agency keeps several. This is a record, not an account: still no users, roles or logins.
 - Stock footage from one stock site's API, with the key in an environment variable.
+- Aspect-ratio versions of a spot (16:9 master; 1:1, 4:5, 9:16 versions) and the disclaimer's 4-second minimum, both opened by Josh on 2026-09-17 after reviewing the original prototype. The timeline stays out.
 
 ---
 

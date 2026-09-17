@@ -1,6 +1,8 @@
 import {
   applyLottieValues,
+  carriesDisclaimer,
   compositionConfig,
+  disclaimerCheck,
   compositionDurationWithTransitions,
   DEFAULT_TRANSFORM,
   DEFAULT_TRANSITION_FRAMES,
@@ -432,6 +434,12 @@ export function Editor({ projectId, onBack }: Props) {
 
   const boundaries = boundariesAfter(elements);
 
+  // M35: the one compliance check, the same rule the export enforces.
+  const disclaimer = useMemo(
+    () => disclaimerCheck(elements.map((e) => ({ startFrame: e.startFrame, endFrame: e.endFrame, enabled: e.enabled, hasDisclaimer: carriesDisclaimer(e.schema, values[e.id] ?? {}) })), compositionConfig.fps),
+    [elements, values],
+  );
+
   // M31: the element library. The Add chip opens it; pressing an element
   // adds it at the playhead, selects it and shows it. Added elements can be
   // removed again; the spot's own can only be hidden.
@@ -577,7 +585,7 @@ export function Editor({ projectId, onBack }: Props) {
             </span>
           )}
           <span className="text-xs w-20 text-right">{loaded && <SaveIndicator state={saveState} />}</span>
-          {loaded && <ExportPanel projectId={projectId} onFinished={() => setExportsTick((t) => t + 1)} />}
+          {loaded && <ExportPanel projectId={projectId} onFinished={() => setExportsTick((t) => t + 1)} check={disclaimer} />}
         </div>
       </header>
 

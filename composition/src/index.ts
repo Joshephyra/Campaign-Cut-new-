@@ -25,3 +25,5 @@ export { mediaTiming } from './media';
 export type { MainAudio } from './config';
 export { COLOR_ROLES, ELEMENT_TYPES, ELEMENT_TYPE_LABELS, inferElementType, isElementType } from './elementTypes';
 export type { ElementType } from './elementTypes';
+export { carriesDisclaimer, DISCLAIMER_MIN_SECONDS, disclaimerCheck, disclaimerSeconds } from './compliance';
+export type { DisclaimerCheck, DisclaimerScene } from './compliance';

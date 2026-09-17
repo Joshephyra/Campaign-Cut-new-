@@ -1,7 +1,7 @@
 import fastifyCors from '@fastify/cors';
 import fastifyMultipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
-import { TRANSITION_PRESETS, type TemplateParam } from '@campaigncut/composition';
+import { carriesDisclaimer, disclaimerCheck, TRANSITION_PRESETS, type TemplateParam } from '@campaigncut/composition';
 import Fastify from 'fastify';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -646,7 +646,17 @@ export function buildApp(options: AppOptions = {}) {
   app.post<{ Body: { projectId?: number } }>('/render', async (req, reply) => {
     const projectId = Number(req.body?.projectId);
     if (!projectId) return reply.code(400).send({ error: 'projectId is required' });
-    if (!db.getProject(projectId)) return reply.code(404).send({ error: `No project ${projectId}` });
+    const project = db.getProject(projectId);
+    if (!project) return reply.code(404).send({ error: `No project ${projectId}` });
+    // M35: the one compliance check. A disclaimer must be on screen for four seconds.
+    const template = db.getTemplateBySlug(project.templateSlug)!;
+    const scenes = db.getProjectElements(projectId).map((e) => {
+      const values: Record<string, unknown> = {};
+      for (const v of project.values) if (v.elementId === e.id) values[v.key] = v.value;
+      return { startFrame: e.startFrame, endFrame: e.endFrame, enabled: e.enabled, hasDisclaimer: carriesDisclaimer(loadElementSchema(templatesDir, e.templateSlug, e.slug), values) };
+    });
+    const check = disclaimerCheck(scenes, template.fps);
+    if (!check.ok) return reply.code(400).send({ error: check.message });
     const { id } = queue.enqueue(projectId);
     return reply.code(202).send(renderJson(db.getRender(id)!));
   });

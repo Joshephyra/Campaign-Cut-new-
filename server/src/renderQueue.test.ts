@@ -25,10 +25,10 @@ describe('RenderQueue', () => {
     tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-rq-'));
     fs.mkdirSync(path.join(tmp, 'templates', 't'), { recursive: true });
     fs.writeFileSync(path.join(tmp, 'templates', 't', 'template.json'), JSON.stringify(lottie));
-    fs.writeFileSync(path.join(tmp, 'templates', 't', 'schema.json'), '[]');
+    fs.writeFileSync(path.join(tmp, 'templates', 't', 'schema.json'), JSON.stringify([{ key: 'disclaimer', role: 'safe.disclaimer', kind: 'text', label: 'Disclaimer', default: 'Paid for by Example Committee', path: '/layers/0', locked: true }])); // M35: an export needs a 4 s disclaimer
     db = openDb(':memory:');
     const t = db.upsertTemplate({ slug: 't', name: 'T', adType: 'Bio', durationFrames: 30, fps: 30, width: 1920, height: 1080, thumbPath: '' });
-    db.upsertTemplateElement({ templateId: t.id, slug: 't', zIndex: 0, startFrame: 0, endFrame: 30 });
+    db.upsertTemplateElement({ templateId: t.id, slug: 't', zIndex: 0, startFrame: 0, endFrame: 150 });
     projectId = db.createProject({ templateId: t.id, name: 'P', values: [] }).id;
   });
 
@@ -111,10 +111,10 @@ describe('render API', () => {
     tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-rapi-'));
     fs.mkdirSync(path.join(tmp, 'templates', 't'), { recursive: true });
     fs.writeFileSync(path.join(tmp, 'templates', 't', 'template.json'), JSON.stringify(lottie));
-    fs.writeFileSync(path.join(tmp, 'templates', 't', 'schema.json'), '[]');
+    fs.writeFileSync(path.join(tmp, 'templates', 't', 'schema.json'), JSON.stringify([{ key: 'disclaimer', role: 'safe.disclaimer', kind: 'text', label: 'Disclaimer', default: 'Paid for by Example Committee', path: '/layers/0', locked: true }])); // M35: an export needs a 4 s disclaimer
     db = openDb(':memory:');
     const t = db.upsertTemplate({ slug: 't', name: 'T', adType: 'Bio', durationFrames: 30, fps: 30, width: 1920, height: 1080, thumbPath: '' });
-    db.upsertTemplateElement({ templateId: t.id, slug: 't', zIndex: 0, startFrame: 0, endFrame: 30 });
+    db.upsertTemplateElement({ templateId: t.id, slug: 't', zIndex: 0, startFrame: 0, endFrame: 150 });
     app = buildApp({ db, templatesDir: path.join(tmp, 'templates'), mediaDir: path.join(tmp, 'media'), render: fakeRender, serverBase: 'http://x' });
     projectId = ((await app.inject({ method: 'POST', url: '/projects', payload: { templateSlug: 't' } })).json() as { id: number }).id;
   });
