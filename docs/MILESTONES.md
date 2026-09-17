@@ -772,6 +772,14 @@ With an element library and a starter pack, a spot no longer has to begin as a t
 
 ---
 
+## M42 · The composer's copy lands; overlays fit the last scene · DONE
+
+- The copy typed in the picker's composer lands with the element you add (its first text role, never a disclaimer) and is saved.
+- An overlay is pulled back to end with the last scene when it fits on the scene under the playhead; longer than that scene, it stays put.
+- The picker's Lotties are cached for the page.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

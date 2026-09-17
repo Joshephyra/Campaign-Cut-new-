@@ -7,19 +7,26 @@ type Placed = { startFrame: number; endFrame: number; enabled: boolean };
  * A scene (open, headline, stat, background, end card) lands at the
  * playhead, never past the end of the last scene, so a spot built from
  * nothing grows one scene after another. An overlay (lower third, caption,
- * callout, bar, disclaimer) lands at the playhead too, but never past the
- * end: past it, on the start of the last scene, so it always overlays
- * something. An empty spot puts everything at 0.
+ * callout, bar, disclaimer) lands at the playhead, pulled back so it ends
+ * no later than the last scene does when it can fit on the scene under the
+ * playhead; past the end, it lands on the last scene. So an overlay always
+ * sits on something and, where it can, never runs on over nothing. An
+ * empty spot puts everything at 0.
  */
-export function landingFrame(type: string, elements: Placed[], playhead: number): number {
+export function landingFrame(type: string, elements: Placed[], playhead: number, length = 0): number {
   const placed = elements.filter((e) => e.enabled);
   if (placed.length === 0) return 0;
   const end = Math.max(...placed.map((e) => e.endFrame));
   const at = Math.max(0, Math.round(playhead));
   if (isSceneType(type)) return Math.min(at, end);
-  if (at < end) return at;
   const last = placed.reduce((a, b) => (b.startFrame >= a.startFrame ? b : a));
-  return last.startFrame;
+  const from = at < end ? at : last.startFrame;
+  const covering = placed.filter((e) => e.startFrame <= from && from < e.endFrame);
+  const under = covering.length > 0 ? covering.reduce((a, b) => (b.startFrame >= a.startFrame ? b : a)) : last;
+  // Pull back only when the overlay can fit on the scene under the playhead; when it is longer than
+  // that scene it stays where it was put, and the person shortens it or lengthens the scene.
+  const fit = end - Math.max(0, Math.round(length));
+  return fit >= under.startFrame ? Math.min(from, fit) : from;
 }
 
 /**

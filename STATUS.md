@@ -4,6 +4,29 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M42 The composer's copy lands; overlays fit the last scene · DONE
+
+**Why**
+
+Two loose ends from M37 and M41 found while building a spot from nothing: the copy typed in the composer previewed in every element but did not travel with the one you picked, and an overlay added near the end of the spot could run on past the last scene over nothing.
+
+**What exists now**
+
+- Adding an element from the picker gives its first text role the composer's copy (never a disclaimer), exactly as the preview showed, and saves it with the element's other values. Nothing typed, nothing changed.
+- An overlay is pulled back so it ends with the last scene when it can fit on the scene under the playhead; when it is longer than that scene it stays where it was put (`app/src/landing.ts`).
+- The picker's Lotties are fetched once per page and kept for every opening of the picker.
+- Tests: 1 editor (copy lands and is saved), 1 landing. 501 tests green.
+
+**Verified**
+
+- Real browser on the spot from nothing: "Costs down, wages up." typed in the composer, Boxed caption added: it landed at the playhead (1.0 s, 4 s) with that line drawn in the monitor, and the spot saved.
+
+**Next**
+
+Josh's call. The prototype's inventory is built but Bubbly (M40) and the timeline (parked).
+
+---
+
 ## 2026-09-17 · M41 A spot from nothing · DONE
 
 **Why**

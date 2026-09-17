@@ -520,19 +520,21 @@ export function Editor({ projectId, onBack }: Props) {
         .catch((e: Error) => setLibraryError(e.message));
     }
   };
-  const addFromLibrary = async (item: LibraryElement) => {
+  /** M42: the copy typed in the composer lands with the element: its first text role gets it, as the preview showed. */
+  const addFromLibrary = async (item: LibraryElement, copy = '') => {
     setLibraryError(null);
     try {
       // M41: a scene lands at the playhead and moves it on; an overlay lands on the scene under the playhead.
-      const element = await api.addElement(projectId, item.id, landingFrame(item.type, elements, frameRef.current));
+      const element = await api.addElement(projectId, item.id, landingFrame(item.type, elements, frameRef.current, item.durationInFrames));
       const lottie = await api.elementLottie(element.lottieUrl);
       setLoaded((prev) => (prev ? { ...prev, lotties: { ...prev.lotties, [element.id]: lottie } } : prev));
       changeKey.current = `add:${element.id}`;
+      const withCopy = previewValues(element.schema, copy);
       setValues((prev) => {
-        if (prev[element.id]) return prev;
+        if (prev[element.id]) return Object.keys(withCopy).length > 0 ? { ...prev, [element.id]: { ...prev[element.id], ...withCopy } } : prev;
         const defaults: ParamValues = {};
         for (const p of element.schema) defaults[p.key] = p.default;
-        return { ...prev, [element.id]: defaults };
+        return { ...prev, [element.id]: { ...defaults, ...withCopy } };
       });
       setElements((prev) => (prev.some((e) => e.id === element.id) ? prev.map((e) => (e.id === element.id ? { ...e, ...element } : e)) : [...prev, element]));
       setSelectedId(element.id);
@@ -676,7 +678,7 @@ export function Editor({ projectId, onBack }: Props) {
         <div className="flex flex-1 min-h-0">
           <aside className="w-[280px] shrink-0 border-r border-line bg-panel overflow-y-auto">
             {picking ? (
-              <LibraryPicker library={library} error={libraryError} inSpot={new Set(elements.map((e) => e.id))} onAdd={(item) => void addFromLibrary(item)} onClose={() => setPicking(false)} />
+              <LibraryPicker library={library} error={libraryError} inSpot={new Set(elements.map((e) => e.id))} onAdd={(item, copy) => void addFromLibrary(item, copy)} onClose={() => setPicking(false)} />
             ) : (
               <>
                 <MediaPanel onSelect={selectFootage} selectedId={selectedAssetId} onChange={setAssets} audio={audio} onAudioChange={onAudioChange} />
@@ -918,6 +920,9 @@ function ProjectName({ name, templateName, onRename }: { name: string | null; te
  * M31: the element library, grouped by type, in the left column while
  * choosing. Never over the video.
  */
+/** M42: the library's Lotties, fetched once per page for every opening of the picker (a template's files do not change under a session). */
+const pickerLotties = new Map<string, LottieAnimationData>();
+
 function LibraryPicker({
   library,
   error,
@@ -928,7 +933,7 @@ function LibraryPicker({
   library: LibraryElement[] | null;
   error: string | null;
   inSpot: Set<number>;
-  onAdd: (item: LibraryElement) => void;
+  onAdd: (item: LibraryElement, copy: string) => void;
   onClose: () => void;
 }) {
   const groups = ELEMENT_TYPES.map((type) => ({ type, label: ELEMENT_TYPE_LABELS[type], items: (library ?? []).filter((e) => e.type === type) })).filter((g) => g.items.length > 0);
@@ -938,7 +943,14 @@ function LibraryPicker({
   // M37: the composer. Type your copy once; every text element previews
   // with it. Each element's Lottie is fetched once and drawn as a still.
   const [copy, setCopy] = useState('');
-  const [previews, setPreviews] = useState<Record<number, LottieAnimationData>>({});
+  const [previews, setPreviews] = useState<Record<number, LottieAnimationData>>(() => {
+    const cached: Record<number, LottieAnimationData> = {};
+    for (const item of library ?? []) {
+      const l = pickerLotties.get(item.lottieUrl);
+      if (l) cached[item.id] = l;
+    }
+    return cached;
+  });
   useEffect(() => {
     let cancelled = false;
     for (const item of library ?? []) {
@@ -946,6 +958,7 @@ function LibraryPicker({
       api
         .elementLottie(item.lottieUrl)
         .then((l) => {
+          pickerLotties.set(item.lottieUrl, l);
           if (!cancelled) setPreviews((prev) => (prev[item.id] ? prev : { ...prev, [item.id]: l }));
         })
         .catch(() => {});
@@ -1015,7 +1028,7 @@ function LibraryPicker({
                     type="button"
                     aria-label={`Add ${item.name} from ${item.templateName}`}
                     disabled={already}
-                    onClick={() => onAdd(item)}
+                    onClick={() => onAdd(item, copy)}
                     className="w-full flex items-center gap-3 rounded-lg bg-raised border border-line p-2 text-left transition-colors hover:bg-hover hover:border-line-strong disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue"
                   >
                     <div className="w-24 aspect-video rounded-md bg-stage overflow-hidden shrink-0">

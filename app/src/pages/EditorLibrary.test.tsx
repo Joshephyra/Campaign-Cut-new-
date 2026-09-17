@@ -79,6 +79,22 @@ describe('Editor element library (M31)', () => {
     expect(texts.every((t) => t === 'A NEW DIRECTION')).toBe(true);
   });
 
+  it('the copy typed in the composer lands with the element and is saved (M42)', async () => {
+    const calls = mockApi();
+    render(<Editor projectId={7} onBack={() => {}} />);
+    await waitFor(() => expect(screen.getByLabelText('Headline')).toBeTruthy());
+    fireEvent.click(screen.getByLabelText('Add a scene'));
+    await screen.findByRole('dialog', { name: 'Add to the spot' });
+    fireEvent.change(screen.getByLabelText('Preview every text element with your copy'), { target: { value: 'A NEW DIRECTION' } });
+    fireEvent.click(screen.getByLabelText('Add Lower third from Contrast :30'));
+    await waitFor(() => expect(screen.getByLabelText('Subhead')).toBeTruthy());
+    expect((screen.getByLabelText('Subhead') as HTMLInputElement).value).toBe('A NEW DIRECTION');
+    await waitFor(() => {
+      const put = calls.find((c) => c.url === '/api/projects/7/values' && c.init?.method === 'PUT' && (c.init.body as string).includes('A NEW DIRECTION'));
+      expect(put).toBeTruthy();
+    });
+  });
+
   it('the Add chip opens the library grouped by type; pressing an element adds it at the playhead, selects it and shows its controls', async () => {
     const calls = mockApi();
     render(<Editor projectId={7} onBack={() => {}} />);

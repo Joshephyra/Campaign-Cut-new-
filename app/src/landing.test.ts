@@ -27,6 +27,17 @@ describe('landingFrame', () => {
     expect(landingFrame('caption', scenes, 270)).toBe(120);
     expect(landingFrame('disclaimer', scenes, 900)).toBe(120);
   });
+
+  it('pulls an overlay back so it ends with the last scene, but never before the scene under the playhead starts (M42)', () => {
+    // 150 frames long from 200 would run to 350, past the end at 270: pulled back to 120
+    expect(landingFrame('lower-third', scenes, 200, 150)).toBe(120);
+    // 60 long from 250 would end at 310: pulled back to 210, still on the second scene
+    expect(landingFrame('caption', scenes, 250, 60)).toBe(210);
+    // longer than what is under the playhead: stays where it was put
+    expect(landingFrame('caption', scenes, 200, 400)).toBe(200);
+    // fits as it is: unchanged
+    expect(landingFrame('caption', scenes, 60, 30)).toBe(60);
+  });
 });
 
 describe('frameAfterLanding', () => {
