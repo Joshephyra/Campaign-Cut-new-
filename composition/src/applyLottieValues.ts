@@ -3,6 +3,7 @@ import { hexToRgba } from './hexToRgba';
 import { resolvePointer } from './jsonPointer';
 import type { ParamValues, TemplateParam } from './schema';
 import { applyTransform, isTransformValue, LAYER_CLASS, TEXT_CLASS, layerClassFor } from './transform';
+import { ACCENT_CLASS } from './treatments';
 
 type AnyRecord = Record<string, unknown>;
 
@@ -47,14 +48,22 @@ export function applyLottieValues(
     const layer = resolvePointer(result, param.path);
     if (layer && typeof layer === 'object') (layer as AnyRecord).cl = `${LAYER_CLASS} ${layerClassFor(param.key)}`;
   }
-  // M39: tag every text layer too, so a treatment can address the text
-  // (the opaque plate is an SVG filter on these). Changes no pixel.
+  // M39: tag every text layer and every accent-coloured layer too, so a
+  // treatment can address them (glow is a shadow on these; the opaque
+  // plate is an SVG filter on the text). Changes no pixel.
+  const addClass = (pointer: string, classes: string) => {
+    const layer = resolvePointer(result, pointer);
+    if (!layer || typeof layer !== 'object') return;
+    const existing = typeof (layer as AnyRecord).cl === 'string' ? ((layer as AnyRecord).cl as string).split(' ').filter(Boolean) : [];
+    for (const c of classes.split(' ')) if (!existing.includes(c)) existing.push(c);
+    (layer as AnyRecord).cl = existing.join(' ');
+  };
   for (const param of schema) {
-    if (param.kind !== 'text') continue;
-    const layer = resolvePointer(result, param.path);
-    if (!layer || typeof layer !== 'object') continue;
-    const existing = typeof (layer as AnyRecord).cl === 'string' ? ((layer as AnyRecord).cl as string) : '';
-    if (!existing.split(' ').includes(TEXT_CLASS)) (layer as AnyRecord).cl = `${existing ? existing + ' ' : ''}${TEXT_CLASS} ${layerClassFor(param.key)}`;
+    if (param.kind === 'text') addClass(param.path, `${TEXT_CLASS} ${layerClassFor(param.key)}`);
+    if (param.kind === 'color' && param.role === 'accent') {
+      const layerPath = param.path.match(/^\/layers\/\d+/)?.[0];
+      if (layerPath) addClass(layerPath, ACCENT_CLASS);
+    }
   }
 
   memo.set(values, { source, schema, result });

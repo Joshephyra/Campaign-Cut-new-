@@ -11,8 +11,7 @@ import type { ElementProps } from './elements';
 import { LottieLayer } from './LottieLayer';
 import { TemplateFonts } from './fonts';
 import { effectiveTimeline, type TransitionPreset } from './transitions';
-import { GRIT_NOISE, OPAQUE_INK, OPAQUE_PLATE_FILTER_ID, treatmentLayerFilter, type TreatmentProps } from './treatments';
-import { TEXT_CLASS } from './transform';
+import { GRIT_NOISE, OPAQUE_PLATE_FILTER_ID, treatmentCss, treatmentLayerFilter, type TreatmentProps } from './treatments';
 
 /** Each preset carries its own props type; the series only needs the common shape. */
 type AnyPresentation = TransitionPresentation<Record<string, unknown>>;
@@ -130,10 +129,11 @@ function TreatmentLayers({ treatment }: { treatment: TreatmentProps }) {
             </filter>
           </defs>
         </svg>
-        <style>{`[data-treatment="opaque"] .${TEXT_CLASS}:not(.cc-key-disclaimer) { filter: url(#${OPAQUE_PLATE_FILTER_ID}); color: ${OPAQUE_INK}; }`}</style>
+        <style>{treatmentCss(treatment)}</style>
       </>
     );
   }
+  if (treatment.name === 'glow') return <style>{treatmentCss(treatment)}</style>;
   if (treatment.name === 'grit') {
     return <AbsoluteFill data-testid="grit" style={{ backgroundImage: GRIT_NOISE, backgroundSize: '180px 180px', opacity: 0.22, mixBlendMode: 'overlay', pointerEvents: 'none' }} />;
   }
@@ -157,7 +157,7 @@ export function Main({ background, audio = null, elements, transitions = [], fon
 
   return (
     <AbsoluteFill style={{ backgroundColor: background }} data-treatment={treatment?.name ?? 'clean'}>
-      {treatment && treatment.name === 'opaque' && <TreatmentLayers treatment={treatment} />}
+      {treatment && treatment.name !== 'grit' && <TreatmentLayers treatment={treatment} />}
       {audio && <Audio src={audio.src} volume={audio.volume} startFrom={audio.startFrom} />}
 
       {/* M38: the elements mount once the faces are ready, so lottie-web measures text in the right font. */}

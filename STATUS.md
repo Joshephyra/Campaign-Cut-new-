@@ -12,7 +12,7 @@ Josh's "overall style updates": the prototype's Clean, Grit, Glow, Bubbly, Opaqu
 
 **What exists now**
 
-- `composition/src/treatments.ts` and the composition draw the treatment, so the preview and the export are the same code path: grit is film grain over the whole frame (a fractal-noise SVG tile at 22% overlay blend, footage included) with a touch more contrast on each design; glow is a two-stop drop shadow in the spot's accent colour on each design, never on the footage; opaque runs every editable text layer but the disclaimer through one SVG filter that dilates the glyphs into a white plate and sets the words in dark ink, the prototype's highlighter look.
+- `composition/src/treatments.ts` and the composition draw the treatment, so the preview and the export are the same code path: grit is film grain over the whole frame (a fractal-noise SVG tile at 22% overlay blend, footage included) with a touch more contrast on each design; glow is a two-stop drop shadow in the spot's accent colour on each text layer and each accent-coloured layer inside the design (a shadow on the whole design follows its silhouette, and a design's surface fills the frame, so the first try glowed nothing: found by sampling the export), never on the footage; opaque runs every editable text layer but the disclaimer through one SVG filter that dilates the glyphs into a white plate and sets the words in dark ink, the prototype's highlighter look.
 - `project.treatment`, clean by default, kept by duplicate; `PATCH /projects/:id { treatment }` (unknown refused, naming the four). Render props carry `treatment`, glow with the accent the spot has set.
 - Style panel: "Treatment" under the colours, a segmented Clean · Grit · Glow · Opaque. Pressing one changes the monitor at once and saves.
 - `applyLottieValues` tags text layers `cc-text` beside the placement class.
@@ -21,7 +21,7 @@ Josh's "overall style updates": the prototype's Clean, Grit, Glow, Bubbly, Opaqu
 **Verified**
 
 - Real browser on the Contrast :30 spot: each button sets `data-treatment` on the composition root; grit draws the grain layer last at 0.22 overlay and the design's filter reads contrast(1.12); glow reads drop-shadow in #F05929 (the spot's accent) on the design and none on the footage; opaque puts the plate filter on the headline's text layer. Captures in `.impeccable/review/m39-*.png`.
-- Export parity with glow on a duplicate of the spot (npm run parity, frames 30, 120, 240): all within threshold, worst mean 4.05 at frame 30 where the glow sits over the first headline; the export carries the glow.
+- Export parity with glow on a duplicate of the spot (npm run parity, frames 30, 120, 240): all within threshold, worst mean 4.16 at frame 30. Pixels sampled above the accent bar in both renders fade from orange to navy over 30 px the same way: the export carries the glow.
 
 **Next**
 

@@ -163,4 +163,15 @@ describe('text layers carry cc-text (M39)', () => {
     expect((out.layers[0] as AnyRecord).cl).toBe(`cc-layer ${layerClassFor('headline.transform')} cc-text ${layerClassFor('headline')}`);
     expect((out.layers[1] as AnyRecord).cl).toBe('cc-text cc-key-disclaimer');
   });
+
+  it('tags the layer of an accent colour with cc-accent (the colour path points inside its shapes)', () => {
+    const withAccent = lottie([{ ty: 4, nm: 'cc.accent', shapes: [{ ty: 'gr', it: [{ ty: 'rc' }, { ty: 'fl', c: { a: 0, k: [1, 0, 0, 1] } }] }] }, { ty: 4, nm: 'cc.surface', shapes: [{ ty: 'gr', it: [{ ty: 'rc' }, { ty: 'fl', c: { a: 0, k: [0, 0, 1, 1] } }] }] }]);
+    const colours: TemplateParam[] = [
+      { key: 'accent', role: 'accent', kind: 'color', label: 'Accent colour', default: '#FF0000', path: '/layers/0/shapes/0/it/1' },
+      { key: 'surface', role: 'surface', kind: 'color', label: 'Surface colour', default: '#0000FF', path: '/layers/1/shapes/0/it/1' },
+    ];
+    const out = applyLottieValues(withAccent, {}, colours);
+    expect((out.layers[0] as AnyRecord).cl).toBe('cc-accent');
+    expect((out.layers[1] as AnyRecord).cl).toBeUndefined();
+  });
 });

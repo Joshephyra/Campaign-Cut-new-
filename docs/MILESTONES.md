@@ -737,7 +737,7 @@ The prototype's Clean, Grit, Glow and Opaque: a look over the whole spot that th
 
 **Build**
 - `composition/src/treatments.ts`: `TREATMENTS` (clean, grit, glow, opaque), `treatmentFor` (glow takes the spot's first accent colour), `treatmentLayerFilter`. `MainProps.treatment`.
-- The composition draws each treatment, so both runners agree: grit lays a fractal-noise tile over the whole frame at 22% overlay and puts `contrast(1.12)` on each design; glow puts a two-stop drop shadow in the accent on each design (never on the footage); opaque runs every editable text layer but the disclaimer through one SVG filter that dilates the glyphs into a white plate and sets the text in dark ink. Text layers carry `cc-text` from `applyLottieValues` for that.
+- The composition draws each treatment, so both runners agree: grit lays a fractal-noise tile over the whole frame at 22% overlay and puts `contrast(1.12)` on each design; glow puts a two-stop drop shadow in the accent on each text and accent layer inside the design (never on the whole design, whose surface fills the frame, and never on the footage); opaque runs every editable text layer but the disclaimer through one SVG filter that dilates the glyphs into a white plate and sets the text in dark ink. Text layers carry `cc-text` from `applyLottieValues` for that.
 - `project.treatment` (clean by default, copied by duplicate); `PATCH /projects/:id { treatment }` refuses an unknown one; the detail and the render props carry it.
 - Style panel: a "Treatment" segmented control under the colours, "across the spot"; the Player takes it at once, the project route saves it.
 

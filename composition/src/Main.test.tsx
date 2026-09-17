@@ -211,9 +211,11 @@ describe('Main style treatments (M39)', () => {
     expect(grain.parentElement!.lastElementChild).toBe(grain);
   });
 
-  it('glow: the design glows in the accent, the footage does not', () => {
-    render(<Main background="#000" treatment={{ name: 'glow', accent: '#00FF00' }} elements={[element('e', { src: '/media/proxies/1.mp4', rect, fit: 'cover' })]} />);
-    expect(screen.getByTestId('lottie-wrapper').style.filter).toContain('#00FF00');
+  it('glow: the text and accent layers glow in the accent; the design as a whole and the footage do not', () => {
+    const { container } = render(<Main background="#000" treatment={{ name: 'glow', accent: '#00FF00' }} elements={[element('e', { src: '/media/proxies/1.mp4', rect, fit: 'cover' })]} />);
+    const css = [...container.querySelectorAll('style')].map((s) => s.textContent).join('');
+    expect(css).toContain('[data-treatment="glow"] .cc-text, [data-treatment="glow"] .cc-accent { filter: drop-shadow(0 0 8px #00FF00)');
+    expect(screen.getByTestId('lottie-wrapper').style.filter).toBe('');
     expect(screen.getByTestId('video').style.filter).toBe('');
   });
 

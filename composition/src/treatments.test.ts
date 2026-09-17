@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TemplateParam } from './schema';
-import { DEFAULT_ACCENT, isTreatment, TREATMENT_LABELS, TREATMENTS, treatmentFor, treatmentLayerFilter } from './treatments';
+import { DEFAULT_ACCENT, isTreatment, TREATMENT_LABELS, TREATMENTS, treatmentCss, treatmentFor, treatmentLayerFilter } from './treatments';
 
 /** M39: style treatments over the whole spot, the same in both runners. */
 const accent: TemplateParam = { key: 'accent', role: 'accent', kind: 'color', label: 'Accent colour', default: '#F05929', path: '/layers/0' };
@@ -29,10 +29,17 @@ describe('treatments (M39)', () => {
     expect(treatmentFor('grit', [{ schema: [accent], values: {} }])).toEqual({ name: 'grit' });
   });
 
-  it('puts a filter on the design for grit and glow, none for opaque (its plate is an SVG filter on text)', () => {
+  it('puts a filter on the whole design only for grit; glow and opaque address layers inside it', () => {
     expect(treatmentLayerFilter(undefined)).toBeUndefined();
     expect(treatmentLayerFilter({ name: 'grit' })).toBe('contrast(1.12)');
-    expect(treatmentLayerFilter({ name: 'glow', accent: '#00FF00' })).toBe('drop-shadow(0 0 8px #00FF00) drop-shadow(0 0 18px #00FF00)');
+    expect(treatmentLayerFilter({ name: 'glow', accent: '#00FF00' })).toBeUndefined();
     expect(treatmentLayerFilter({ name: 'opaque' })).toBeUndefined();
+  });
+
+  it('glow is a shadow on each text and accent layer (a shadow on the whole design would follow its full-frame surface, not the words)', () => {
+    expect(treatmentCss({ name: 'glow', accent: '#00FF00' })).toBe('[data-treatment="glow"] .cc-text, [data-treatment="glow"] .cc-accent { filter: drop-shadow(0 0 8px #00FF00) drop-shadow(0 0 18px #00FF00); }');
+    expect(treatmentCss({ name: 'opaque' })).toContain('[data-treatment="opaque"] .cc-text:not(.cc-key-disclaimer) { filter: url(#cc-opaque-plate)');
+    expect(treatmentCss({ name: 'grit' })).toBe('');
+    expect(treatmentCss(undefined)).toBe('');
   });
 });

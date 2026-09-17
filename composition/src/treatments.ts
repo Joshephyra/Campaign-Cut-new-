@@ -53,19 +53,44 @@ export function treatmentFor(name: Treatment | string | null | undefined, elemen
   return { name: 'glow', accent: DEFAULT_ACCENT };
 }
 
-/** The CSS filter a treatment puts on each element's design (not its footage). */
+/** The CSS filter a treatment puts on each element's whole design (not its footage). */
 export function treatmentLayerFilter(t: TreatmentProps | undefined): string | undefined {
   if (!t) return undefined;
   switch (t.name) {
     case 'grit':
       return 'contrast(1.12)';
-    case 'glow': {
-      const c = t.accent ?? DEFAULT_ACCENT;
-      return `drop-shadow(0 0 8px ${c}) drop-shadow(0 0 18px ${c})`;
-    }
+    case 'glow':
     case 'opaque':
     case 'clean':
       return undefined;
+  }
+}
+
+/** The class every accent-coloured layer carries, so glow can find it. */
+export const ACCENT_CLASS = 'cc-accent';
+/** The class every editable text layer carries (also in transform.ts as TEXT_CLASS). */
+const TEXT = 'cc-text';
+
+/**
+ * The CSS a treatment addresses to layers inside the designs. Glow is a
+ * drop shadow on each text and accent layer, not on the whole design: a
+ * shadow follows the element's silhouette, and a design's surface fills
+ * the frame, so a shadow on the whole would fall off the frame and never
+ * round the words. Opaque is the plate filter on text (the filter itself
+ * is an SVG in Main).
+ */
+export function treatmentCss(t: TreatmentProps | undefined): string {
+  if (!t) return '';
+  switch (t.name) {
+    case 'glow': {
+      const c = t.accent ?? DEFAULT_ACCENT;
+      return `[data-treatment="glow"] .${TEXT}, [data-treatment="glow"] .${ACCENT_CLASS} { filter: drop-shadow(0 0 8px ${c}) drop-shadow(0 0 18px ${c}); }`;
+    }
+    case 'opaque':
+      return `[data-treatment="opaque"] .${TEXT}:not(.cc-key-disclaimer) { filter: url(#${OPAQUE_PLATE_FILTER_ID}); color: ${OPAQUE_INK}; }`;
+    case 'grit':
+    case 'clean':
+      return '';
   }
 }
 
