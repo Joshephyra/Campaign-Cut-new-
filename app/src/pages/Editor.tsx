@@ -43,7 +43,7 @@ import {
   type TransitionProps,
 } from '@campaigncut/composition';
 import { Player, type PlayerRef } from '@remotion/player';
-import { ChevronLeft, Copy, EyeOff, Maximize2, Pause, Pencil, Play, Plus, Redo2, Trash2, Undo2, Volume2, VolumeX, X } from 'lucide-react';
+import { ArrowLeftToLine, ArrowRightToLine, ChevronLeft, Copy, EyeOff, Maximize2, Pause, Pencil, Play, Plus, Redo2, Trash2, Undo2, Volume2, VolumeX, X } from 'lucide-react';
 import {
   useCallback,
   useEffect,
@@ -332,6 +332,14 @@ export function Editor({ projectId, onBack }: Props) {
     for (const [elementId, patch] of patches) pendingPatches.current.set(elementId, { ...pendingPatches.current.get(elementId), ...patch });
     setSaveState('dirty');
     flushPatches();
+  };
+
+  /** The scenes before and after one, in play order, for the Move earlier / later buttons. */
+  const neighbours = (sceneId: number): { before: number | null; after: number | null } => {
+    const scenes = elements.filter((e) => e.enabled && isSceneType(e.type)).sort((a, b) => a.startFrame - b.startFrame || a.id - b.id);
+    const at = scenes.findIndex((e) => e.id === sceneId);
+    if (at < 0) return { before: null, after: null };
+    return { before: scenes[at - 1]?.id ?? null, after: scenes[at + 1]?.id ?? null };
   };
 
   /** M43: a scene chip dropped before or after another scene: the scenes are re-laid in the new order; overlays stay put. */
@@ -859,9 +867,22 @@ export function Editor({ projectId, onBack }: Props) {
                       ? 'A second copy of this scene, with its words and colours, right after it.'
                       : 'A second copy of this overlay, with its words and colours, on the same scene. Drag its chip onto another scene.'}
                   </p>
-                  <Button variant="ghost" size="sm" icon={Copy} onClick={() => void duplicateScene(selected.id)}>
-                    {isSceneType(selected.type) ? 'Duplicate scene' : 'Duplicate'}
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="ghost" size="sm" icon={Copy} onClick={() => void duplicateScene(selected.id)}>
+                      {isSceneType(selected.type) ? 'Duplicate scene' : 'Duplicate'}
+                    </Button>
+                    {isSceneType(selected.type) && (
+                      <>
+                        {/* The keyboard's route to what a chip drag does (finish review, 2026-09-17). */}
+                        <Button variant="ghost" size="sm" icon={ArrowLeftToLine} disabled={!neighbours(selected.id).before} onClick={() => neighbours(selected.id).before && onReorder(selected.id, neighbours(selected.id).before!, 'before')}>
+                          Move earlier
+                        </Button>
+                        <Button variant="ghost" size="sm" icon={ArrowRightToLine} disabled={!neighbours(selected.id).after} onClick={() => neighbours(selected.id).after && onReorder(selected.id, neighbours(selected.id).after!, 'after')}>
+                          Move later
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </Section>
                 {selected.added && (
                   <Section title="From the library">

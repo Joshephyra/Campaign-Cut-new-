@@ -110,3 +110,24 @@ describe('Editor: move an overlay onto a scene (M44)', () => {
     expect(playerOrder()).toEqual([['3', 0, 90], ['4', 180, 240], ['5', 180, 270]]);
   });
 });
+
+/** The keyboard's route: Move earlier / Move later in the panel do what a chip drag does, and stop at the ends. */
+describe('Editor: move a scene with buttons', () => {
+  it('Move later on the open swaps it after the end card; Move later is then disabled and Move earlier brings it back', async () => {
+    const puts = mockApi();
+    render(<Editor projectId={7} onBack={() => {}} />);
+    await waitFor(() => expect(screen.getByTestId('scene-3')).toBeTruthy());
+    fireEvent.click(screen.getByLabelText('Select open'));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Move later' })).toBeTruthy());
+    expect((screen.getByRole('button', { name: 'Move earlier' }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Move later' }));
+    await waitFor(() => expect(playerOrder()).toEqual([['5', 0, 90], ['4', 60, 120], ['3', 180, 270]]));
+    await waitFor(() => expect((screen.getByRole('button', { name: 'Move later' }) as HTMLButtonElement).disabled).toBe(true));
+    fireEvent.click(screen.getByRole('button', { name: 'Move earlier' }));
+    await waitFor(() => expect(playerOrder()).toEqual([['3', 0, 90], ['4', 60, 120], ['5', 180, 270]]));
+    await waitFor(() => expect(puts.some((p) => p.url.includes('/elements/'))).toBe(true), { timeout: 4000 });
+    // an overlay has no move buttons
+    fireEvent.click(screen.getByLabelText('Select lower-third'));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Move later' })).toBeNull());
+  });
+});
