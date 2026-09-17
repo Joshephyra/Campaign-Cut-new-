@@ -24,6 +24,10 @@ On the library page, below the templates, **Start from nothing**. The spot opens
 
 Spot **New spot** in the projects list is one built this way, from the starter pack.
 
+## 5. Move a scene (M43)
+
+Drag a scene chip under the video onto another scene chip: left half puts it before, right half after (a blue edge shows which). The scenes re-lay with their lengths; lower thirds and other overlays stay where they were.
+
 ## For you to do
 
 - Close After Effects (File > Exit); an unattended run left it open on an empty project.

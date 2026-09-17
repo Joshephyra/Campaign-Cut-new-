@@ -4,6 +4,27 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M43 Reorder scenes by dragging chips · DONE
+
+**Why**
+
+A spot from nothing (M41) grows scene by scene, and the second thing a person does after adding scenes is move one. Josh ruled out a timeline; the chips are the scenes, so the chips drag.
+
+**What exists now**
+
+- A scene chip drags (overlay chips do not). Over another scene chip, a blue edge on its left or right half says where the drop lands; the drop re-lays the scenes in the new order (`app/src/reorder.ts`): each keeps its length, the gaps between positions stay, overlays keep their frames. The Player takes it at once; each moved scene is saved through `PUT /projects/:id/elements/:elementId`, debounced, undoable.
+- Tests: 4 reorder, 2 editor. 507 tests green.
+
+**Verified**
+
+- Real browser on the spot from nothing (five chips): only the three scene chips are draggable; Headline dragged onto the left half of Footage background showed the blue "before" edge and, dropped, played first (0.0 s) with the background at 4.0 s, the caption, lower third and disclaimer unmoved, and the spot saved; dragged back the same way, the order returned.
+
+**Next**
+
+Josh's call. Built from the prototype's list: everything but Bubbly (M40, waits for a designed pack) and the timeline (parked).
+
+---
+
 ## 2026-09-17 · Finish review of the M37–M42 surfaces · DONE
 
 The Impeccable finish reviewer went over the composer and picker, the scene-chip stills, the Treatment control, the "From nothing" card and the empty states against the editor's direction contract. Disposition: fix, one round, then ship. Applied: scene-chip text truncates instead of running under the Add chip; a footage scene's chip draws its clip under the design; one filled accent on an empty spot (the stage's button; the panel's is ghost); "From nothing" follows the template groups (the audience starts from a designer's template); the picker's "Other" group has its own key; the composer takes focus when the picker opens; the Treatment segmented fills the panel like "How it ends"; the surface brief and DESIGN.md record the stills. Not worth a fix, per the review: the thumbnail-then-still swap on open, the four-line picker note. Captures: .impeccable/review/review-editor.png, review-library.png.

@@ -780,6 +780,22 @@ With an element library and a starter pack, a spot no longer has to begin as a t
 
 ---
 
+## M43 · Reorder scenes by dragging chips · DONE
+
+A spot built from nothing needs its scenes moved; until now the only way was to remove and re-add. Still no timeline: the chips under the video are the scenes, and a scene chip drags.
+
+**Build**
+- Scene chips (open, headline, stat, background, end card) are draggable. Dropping one on the left half of another scene chip puts it before, on the right half after; a blue edge on the target says which while you hover.
+- `app/src/reorder.ts`: the scenes are re-laid in the new order, each keeping its length, with the gaps between consecutive positions kept, so a template's pacing survives and an end-to-end spot stays end to end. Overlays (lower thirds, captions, callouts, bars, disclaimers) stay at their frames: they sit on whatever scene is under them.
+- Every moved scene is saved through the existing element route, debounced like a length change. Undo covers it.
+
+**Tests**
+- Re-laying before and after, gaps kept, end-to-end kept, overlays untouched, no-ops; the editor: only scene chips drag, a drop re-lays the Player at once and saves the moved scenes.
+
+**Done when:** a scene dragged to a new place in the strip plays there, and the export follows.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:
