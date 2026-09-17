@@ -308,6 +308,7 @@ Controls are CapCut's vocabulary played straight: tactile, filled, quiet until t
 - **Secondary:** raised fill, foreground text, hairline border; hover steps to hover fill and line-strong border. The default variant (Upload, Download).
 - **Ghost:** no fill, fg-2 text; hover to fg text on hover fill. Cancel, Keep, Back to library.
 - **Danger:** red text, no fill; hover on red tint. Only for confirming a delete.
+- **Transition marker:** a 24 px round pill between two scene chips, vertically centred on the chip row: a hairline pill with a bar in `fg-3` for a cut, a blue-tinted pill with the preset's name in `blue` otherwise; pressed, a panel-toned segmented group floats above it with the four presets.
 - **Length chips:** the same raised group as the version chips, to their left: :06 · :15 · :30 · :60 in tabular 12 px/500, the spot's own filled blue. The facts line under the monitor reads "14.0 s of 30.0 s" with the gap in its title.
 - **Export split button:** the filled blue Export MP4 with its right corners squared, and a 32 px caret IconButton in the same blue against a 20% white hairline; the caret opens a 256 px panel-toned menu (role menu) with "This version (16:9)" and "All four versions".
 - **Section title:** 13 px/600 in `fg` (12 px/600 in `fg-2` for a block inside a section), a 14 px chevron in `fg-3` before it that turns -90° when folded; the whole title is the button (aria-expanded), the fold is remembered per browser, and the action beside the title stays live while folded.

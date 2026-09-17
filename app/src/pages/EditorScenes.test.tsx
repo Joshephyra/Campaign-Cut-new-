@@ -141,3 +141,22 @@ describe('Editor strip structure (M51)', () => {
     expect(document.getElementById('picker-lower-third')).toBeTruthy();
   });
 });
+
+
+/** M55: how a scene ends is a marker between the chips, with the panel's four choices. */
+describe('Editor strip transitions (M55)', () => {
+  it('shows a marker between two scenes reading the current transition, and a press picks a new one and saves it', async () => {
+    const calls = mockApi();
+    await open();
+    const marker = screen.getByRole('button', { name: 'Transition after Open' });
+    expect(marker.textContent).toBe('|'); // a cut
+    expect(screen.queryByRole('button', { name: 'Transition after End card' })).toBeNull(); // the last scene ends the spot
+    fireEvent.click(marker);
+    const choices = screen.getByRole('group', { name: 'Choose the transition after Open' });
+    expect(Array.from(choices.querySelectorAll('button')).map((b) => b.textContent)).toEqual(['Cut', 'Fade', 'Wipe', 'Slide']);
+    fireEvent.click(Array.from(choices.querySelectorAll('button')).find((b) => b.textContent === 'Fade')!); // the panel has a Fade too
+    await waitFor(() => expect(calls.some((c) => c.url === '/api/projects/7/transitions/3' && (c.init!.body as string).includes('"preset":"fade"'))).toBe(true));
+    expect(screen.getByRole('button', { name: 'Transition after Open' }).textContent).toBe('Fade');
+    expect(screen.queryByRole('group', { name: 'Choose the transition after Open' })).toBeNull();
+  });
+});

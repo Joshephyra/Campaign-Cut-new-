@@ -4,6 +4,19 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M55 Transitions between the chips · DONE
+
+**What exists now**
+
+- A marker between scene chips (`transition-marker-<sceneId>`, button "Transition after <name>"): a bar for a cut, the preset's name in blue otherwise; pressed, a small group "Choose the transition after <name>" with Cut · Fade · Wipe · Slide, saved through the same route as the panel. The Transitions shelf button still jumps to "How it ends".
+- Tests: 1. 545 tests green.
+
+**Verified**
+
+- Real browser on spot 9: the marker between Opening and End card read a bar (title "How opening ends: Cut"); pressed, Cut · Fade · Wipe · Slide appeared above it; Wipe saved (transition after scene 20, wipe, 15 frames) and the marker read "Wipe". Capture in .impeccable/review/m55-markers.png.
+
+---
+
 ## 2026-09-17 · M54 Stock outlets · DONE
 
 **What exists now**

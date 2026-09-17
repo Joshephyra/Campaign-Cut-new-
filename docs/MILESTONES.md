@@ -893,6 +893,12 @@ Josh (2026-09-17): timing should be locked; spots are exactly :30, :15 and so on
 
 ---
 
+## M55 · Transitions between the chips · DONE
+
+- Between two scene chips a small round marker says how the first ends: a bar for a cut, or Fade / Wipe / Slide in blue. Pressing it opens the panel's four choices right there; the choice saves as it does from "How it ends". The last scene has no marker: it ends the spot.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

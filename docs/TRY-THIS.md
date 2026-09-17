@@ -48,6 +48,10 @@ The length chips (:06 :15 :30 :60) sit beside the version chips. Under the video
 
 Under Footage, "Find stock footage" now offers Pexels, Shutterstock, Filmpac, Filmsupply and Envato. Pexels searches for real once its key is in .env; the others are there to see and say "not connected yet" when searched.
 
+## 11. Transitions where the scenes meet (M55)
+
+Between two scene chips under the video sits a small marker: a bar for a cut, or the transition's name. Press it and pick Cut, Fade, Wipe or Slide right there.
+
 ## For you to do
 
 - Close After Effects (File > Exit); an unattended run left it open on an empty project.

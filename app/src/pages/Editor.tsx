@@ -49,7 +49,7 @@ import {
 } from '@campaigncut/composition';
 import { Player, type PlayerRef } from '@remotion/player';
 import { ArrowLeftToLine, ArrowRightToLine, ChevronLeft, Copy, EyeOff, Maximize2, Pause, Pencil, Play, Plus, Redo2, Trash2, Undo2, Volume2, VolumeX, X } from 'lucide-react';
-import {
+import { Fragment,
   useCallback,
   useEffect,
   useMemo,
@@ -820,6 +820,7 @@ export function Editor({ projectId, onBack }: Props) {
             values={values}
             elements={elements}
             transitions={transitions}
+            onTransitionChange={(id, t) => void onTransitionChange(id, t)}
             audio={audio}
             assets={assets}
             selectedId={selected?.id}
@@ -1240,6 +1241,7 @@ function Monitor({
   values,
   elements,
   transitions,
+  onTransitionChange,
   audio,
   assets,
   selectedId,
@@ -1262,6 +1264,8 @@ function Monitor({
   values: ValuesByElement;
   elements: ProjectElement[];
   transitions: ProjectTransition[];
+  /** M55: a transition chosen on the marker between two scene chips. */
+  onTransitionChange: (afterElementId: number, t: { preset: TransitionPreset; durationInFrames: number }) => void;
   /** M20: the music bed, or null. */
   audio: ProjectAudio | null;
   assets: MediaAsset[];
@@ -1307,6 +1311,8 @@ function Monitor({
   const [outline, setOutline] = useState<Outline | null>(null);
   // M43: which scene chip a dragged scene would land before or after.
   const [dropEdge, setDropEdge] = useState<{ id: number; place: DropPlace } | null>(null);
+  // M55: which scene's "how it ends" marker is open in the strip.
+  const [transitionMenu, setTransitionMenu] = useState<number | null>(null);
   const relative = (box: Box, monitor: DOMRect, dx = 0, dy = 0): Outline => ({ left: box.left - monitor.left + dx, top: box.top - monitor.top + dy, width: box.width, height: box.height });
   const layerAt = (monitor: HTMLElement, x: number, y: number) => pickLayer(findLayerBoxes(monitor, schemaFor), x, y);
 
@@ -1832,13 +1838,52 @@ function Monitor({
             {structure.stray.map((e) => chip(e, 'overlay'))}
           </div>
         )}
-        {structure.groups.map((g) => (
-          <div key={g.scene.id} data-testid={`group-${g.scene.id}`} className="flex flex-col gap-1 shrink-0" style={{ flexGrow: Math.max(1, seconds(g.scene.endFrame - g.scene.startFrame)), flexBasis: 0 }}>
-            <span className="text-[11px] font-medium text-fg-3 uppercase tracking-wide px-1">{g.label}</span>
-            {chip(g.scene, 'scene')}
-            {g.overlays.length > 0 && <div className="flex flex-wrap gap-1">{g.overlays.map((o) => chip(o, 'overlay'))}</div>}
-          </div>
-        ))}
+        {structure.groups.map((g, i) => {
+          const next = structure.groups[i + 1];
+          const current = transitions.find((t) => t.afterElementId === g.scene.id)?.preset ?? 'cut';
+          return (
+            <Fragment key={g.scene.id}>
+              <div data-testid={`group-${g.scene.id}`} className="flex flex-col gap-1 shrink-0" style={{ flexGrow: Math.max(1, seconds(g.scene.endFrame - g.scene.startFrame)), flexBasis: 0 }}>
+                <span className="text-[11px] font-medium text-fg-3 uppercase tracking-wide px-1">{g.label}</span>
+                {chip(g.scene, 'scene')}
+                {g.overlays.length > 0 && <div className="flex flex-wrap gap-1">{g.overlays.map((o) => chip(o, 'overlay'))}</div>}
+              </div>
+              {next && (
+                <div className="relative shrink-0 flex flex-col justify-center" data-testid={`transition-marker-${g.scene.id}`}>
+                  {/* M55: how this scene ends, right where it ends. The same four choices as the panel. */}
+                  <button
+                    type="button"
+                    aria-label={`Transition after ${g.scene.name}`}
+                    aria-expanded={transitionMenu === g.scene.id}
+                    title={`How ${g.label.toLowerCase()} ends: ${PRESET_LABEL[current]}`}
+                    onClick={() => setTransitionMenu((open) => (open === g.scene.id ? null : g.scene.id))}
+                    className={`mt-4 h-6 min-w-6 px-1.5 rounded-full border text-[10px] font-medium tabular-nums transition-colors ${current === 'cut' ? 'border-line bg-panel text-fg-3 hover:text-fg hover:border-line-strong' : 'border-blue bg-blue-tint text-blue'}`}
+                  >
+                    {current === 'cut' ? '|' : PRESET_LABEL[current]}
+                  </button>
+                  {transitionMenu === g.scene.id && (
+                    <div role="group" aria-label={`Choose the transition after ${g.scene.name}`} className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-20 flex items-center gap-0.5 rounded-md bg-panel border border-line shadow-float p-0.5 cc-appear">
+                      {TRANSITION_PRESETS.map((p) => (
+                        <button
+                          key={p}
+                          type="button"
+                          aria-pressed={p === current}
+                          onClick={() => {
+                            onTransitionChange(g.scene.id, { preset: p, durationInFrames: transitions.find((t) => t.afterElementId === g.scene.id)?.durationInFrames ?? DEFAULT_TRANSITION_FRAMES });
+                            setTransitionMenu(null);
+                          }}
+                          className={`h-7 px-2.5 rounded-[6px] text-xs font-medium whitespace-nowrap transition-colors ${p === current ? 'bg-blue text-white' : 'text-fg-2 hover:text-fg hover:bg-hover'}`}
+                        >
+                          {PRESET_LABEL[p]}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </Fragment>
+          );
+        })}
         <button
           type="button"
           aria-label="Add a scene"
