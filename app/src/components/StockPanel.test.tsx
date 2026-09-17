@@ -62,7 +62,7 @@ describe('stock outlets (M54)', () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response('[]', { status: 200 }));
     const { unmount } = render(<StockPanel onImported={() => {}} />);
     const group = screen.getByRole('group', { name: 'Stock outlet' });
-    expect(Array.from(group.querySelectorAll('button')).map((b) => b.textContent?.replace(' (not connected)', ''))).toEqual(['Pexels', 'Shutterstock', 'Filmpac', 'Filmsupply', 'Envato']);
+    expect(Array.from(group.querySelectorAll('button')).map((b) => b.textContent?.replace(' · soon', ''))).toEqual(['Pexels', 'Shutterstock', 'Filmpac', 'Filmsupply', 'Envato']);
     expect(screen.getByRole('button', { name: 'Pexels' }).getAttribute('aria-pressed')).toBe('true');
     fireEvent.click(screen.getByRole('button', { name: /Shutterstock/ }));
     expect(screen.getByTestId('stock-licence').textContent).toContain('Not connected yet');

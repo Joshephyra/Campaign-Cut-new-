@@ -136,7 +136,7 @@ describe('Editor strip structure (M51)', () => {
     expect(opening.contains(screen.getByTestId('scene-4'))).toBe(true); // the lower third sits on the open
     expect(screen.getByTestId('group-5').contains(screen.getByTestId('scene-4'))).toBe(false);
     // the left column offers every shelf, and the shelf opens the picker on its group
-    fireEvent.click(screen.getByRole('button', { name: 'Add lower thirds' }));
+    fireEvent.click((fireEvent.click(screen.getByRole('button', { name: 'Add to the spot' })), screen.getByRole('button', { name: 'Add lower thirds' })));
     await screen.findByRole('dialog', { name: 'Add to the spot' });
     expect(document.getElementById('picker-lower-third')).toBeTruthy();
   });
@@ -149,7 +149,7 @@ describe('Editor strip transitions (M55)', () => {
     const calls = mockApi();
     await open();
     const marker = screen.getByRole('button', { name: 'Transition after Open' });
-    expect(marker.textContent).toBe('|'); // a cut
+    expect(marker.querySelector('[data-testid="cut-bar"]')).toBeTruthy(); // a cut: a drawn bar, no word
     expect(screen.queryByRole('button', { name: 'Transition after End card' })).toBeNull(); // the last scene ends the spot
     fireEvent.click(marker);
     const choices = screen.getByRole('group', { name: 'Choose the transition after Open' });

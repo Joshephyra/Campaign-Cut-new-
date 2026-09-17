@@ -192,7 +192,7 @@ describe('ingestTemplate: multi-element handover', () => {
     const dir = path.join(templatesDir, 'solo');
     expect(fs.existsSync(path.join(dir, 'elements', 'solo', 'template.json'))).toBe(true);
     const meta = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8')) as { elements: AnyRecord[] };
-    expect(meta.elements).toEqual([{ slug: 'solo', name: 'Solo', type: 'overlay', startFrame: 0, endFrame: 90, zIndex: 0, durationInFrames: 90, fonts: ['IBM Plex Sans'] }]);
+    expect(meta.elements).toEqual([{ slug: 'solo', name: 'Solo', type: 'open', startFrame: 0, endFrame: 90, zIndex: 0, durationInFrames: 90, fonts: ['IBM Plex Sans'] }]); // a one-comp handover is the whole spot: a scene, not a lone overlay
     const t = db.getTemplateBySlug('solo')!;
     expect(db.listTemplateElements(t.id)).toHaveLength(1);
   });

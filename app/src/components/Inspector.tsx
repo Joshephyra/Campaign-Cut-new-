@@ -21,7 +21,7 @@ import {
 import { ImageUp, Lock, RotateCcw } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { api, type MediaAsset } from '../api';
-import { FieldLabel, ICON, Segmented, Slider, Switch } from './ui';
+import { FieldLabel, ICON, Segmented, Slider, Switch, Chip } from './ui';
 
 type Props = {
   schema: TemplateParam[];
@@ -162,26 +162,42 @@ function TextControl({
   const id = `param-${param.key}-input`;
   const words = wordRanges(value).map((w) => w.word);
   const chosen = callout && callout.word < words.length ? callout : null;
+  // M62 (finish review): the panel names the field; the word chips come out only when asked for, or while a callout is on.
+  const [calloutOpen, setCalloutOpen] = useState(false);
+  const offersCallout = onCallout !== undefined && words.length > 0;
   return (
     <div>
-      <FieldLabel htmlFor={id} right={max ? `${value.length}/${max}` : undefined}>
+      <FieldLabel
+        htmlFor={id}
+        right={
+          max || offersCallout ? (
+            <>
+              {max ? `${value.length}/${max}` : null}
+              {offersCallout && !chosen && (
+                <button
+                  type="button"
+                  aria-label={`Call out a word of ${param.label}`}
+                  aria-expanded={calloutOpen}
+                  onClick={() => setCalloutOpen((o) => !o)}
+                  className={`${max ? 'ml-2' : ''} text-xs font-medium text-fg-2 hover:text-fg rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue`}
+                >
+                  Call out a word
+                </button>
+              )}
+            </>
+          ) : undefined
+        }
+      >
         {param.label}
       </FieldLabel>
       <input id={id} type="text" value={value} maxLength={max} onChange={(e) => onChange(max ? e.target.value.slice(0, max) : e.target.value)} className="field" />
-      {onCallout && words.length > 0 && (
+      {offersCallout && (calloutOpen || chosen) && (
         <div className="mt-2" data-testid={`callout-${param.key}`}>
-          <div className="text-[11px] text-fg-3 mb-1">Call out a word</div>
           <div role="group" aria-label={`Call out a word of ${param.label}`} className="flex flex-wrap gap-1 mb-1.5">
             {words.map((w, i) => (
-              <button
-                key={`${i}-${w}`}
-                type="button"
-                aria-pressed={chosen?.word === i}
-                onClick={() => onCallout(chosen?.word === i ? null : { word: i, style: chosen?.style ?? 'circle' })}
-                className={`h-6 px-2 rounded-md text-[11px] font-medium transition-colors ${chosen?.word === i ? 'bg-blue text-white' : 'bg-raised border border-line text-fg-2 hover:text-fg hover:bg-hover'}`}
-              >
+              <Chip key={`${i}-${w}`} pressed={chosen?.word === i} onClick={() => onCallout!(chosen?.word === i ? null : { word: i, style: chosen?.style ?? 'circle' })}>
                 {w}
-              </button>
+              </Chip>
             ))}
           </div>
           {chosen && (

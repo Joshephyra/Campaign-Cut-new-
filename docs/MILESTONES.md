@@ -976,6 +976,23 @@ Josh (2026-09-17): a plate that does not grow with longer copy, and an underline
 
 ---
 
+## M62 · Finish review of the day's additions · DONE
+
+Josh (2026-09-17): "keep going with the review pass". The Impeccable finish reviewer went over M51 to M59 as one surface against the editor's direction contract (app/.impeccable/surfaces/app-src-pages-editor-tsx.md) and DESIGN.md. Disposition: fix, one round. All eight applied:
+
+- One `Chip` in ui.tsx (28 px, 12 px label, raised at rest, blue when pressed) at every small row of choices: the shelves, the words to call out, the stock outlets, the cut-down fix, the font list; the strip's overlay pills at the same height. DESIGN.md gains the chip.
+- The top bar's length and version in one raised frame with a divider, the chosen ones in the hover tone: Export MP4 is the only blue in the bar.
+- The shelves fold by default, so the left column opens on the clips; the Transitions chip is gone (the markers and How it ends own transitions).
+- The strip's group labels in sentence case at 12 px, no tracking; the Add card keeps a scene chip's height; the transition marker centred on the chip, 11 px, a drawn bar for a cut, hover in both states.
+- The callout control folds: "Call out a word" sits beside the field's label and the word chips come out on a press or while a callout is on.
+- Unconnected stock outlets read as such at rest: dashed, dimmed, "· soon".
+- The length gauge says the delta on the surface ("14.0 s of 30.0 s · 16.0 s to fill"), no tooltip.
+- Found by eye on the way: a one-comp handover ingested as a lone overlay with no scene to sit on; it is now an opening scene (the designer's file is one comp).
+
+Not worth a fix, per the review: "Proof point n" numbering (the ad's own structure), the stray-overlay strip on a one-element demo, the readiness pill's red (the disclaimer block, the one case red is allowed). Selecting the callout word on the video itself is noted for later.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:

@@ -3,7 +3,7 @@ import { ChevronDown, Circle, CircleCheck, Download, Loader2, Share, ShieldAlert
 import { useEffect, useRef, useState } from 'react';
 import { api, type RenderJob } from '../api';
 import { exportFileName } from '../exportName';
-import { Button, ICON, IconButton } from './ui';
+import { Button, ICON, IconButton, Chip } from './ui';
 
 type Props = {
   projectId: number;
@@ -120,9 +120,9 @@ export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, read
                     <span>
                       {i.message}
                       {i.key === 'length' && i.over && onCutDown && (
-                        <button type="button" onClick={onCutDown} className="ml-2 inline-flex items-center h-6 px-2 rounded-md bg-raised border border-line text-xs font-medium text-fg hover:bg-hover">
+                        <Chip onClick={onCutDown} className="ml-2 !text-fg">
                           Cut down to {lengthLabel}
-                        </button>
+                        </Chip>
                       )}
                     </span>
                   </li>

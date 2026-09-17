@@ -72,7 +72,7 @@ import { ExportHistory } from '../components/ExportHistory';
 import { ExportPanel } from '../components/ExportPanel';
 import { Inspector } from '../components/Inspector';
 import { ASSET_DRAG_TYPE, MediaPanel } from '../components/MediaPanel';
-import { Button, IconButton, Section, Segmented, Slider, Switch, Wordmark } from '../components/ui';
+import { Button, IconButton, Section, Segmented, Slider, Switch, Wordmark, Chip } from '../components/ui';
 import { canRedo, canUndo, createHistory, isTextEntry, pushHistory, redoHistory, undoHistory, undoRedoFor, type History } from '../history';
 import { findLayerBoxes, pickLayer, type Box } from '../monitorHit';
 import { measurePlayback, type PlaybackSummary } from '../perf';
@@ -723,36 +723,38 @@ export function Editor({ projectId, onBack }: Props) {
         />
         <div className="flex items-center gap-3 shrink-0 justify-end">
           {loaded && (
-            <div role="group" aria-label="Spot length" title="A spot is exactly its length. Change it and the list beside Export says what to add or cut." className="inline-flex items-center rounded-md bg-raised border border-line p-0.5">
-              {[...new Set<number>([...SPOT_LENGTHS, lengthS])].sort((a, b) => a - b).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  aria-label={`Length ${lengthLabel(s)}`}
-                  aria-pressed={s === lengthS}
-                  onClick={() => void changeLength(s)}
-                  className={`h-7 px-2.5 rounded-[6px] text-xs font-medium tabular-nums transition-colors ${s === lengthS ? 'bg-blue text-white' : 'text-fg-2 hover:text-fg hover:bg-hover'}`}
-                >
-                  {lengthLabel(s)}
-                </button>
-              ))}
-            </div>
-          )}
-          {loaded && (
-            <div role="group" aria-label="Version" className="inline-flex items-center rounded-md bg-raised border border-line p-0.5">
-              {ASPECTS.map((a) => (
-                <button
-                  key={a}
-                  type="button"
-                  aria-label={`Version ${a}`}
-                  aria-pressed={a === aspect}
-                  disabled={switchingAspect}
-                  onClick={() => void changeAspect(a)}
-                  className={`h-7 px-2.5 rounded-[6px] text-xs font-medium tabular-nums transition-colors ${a === aspect ? 'bg-blue text-white' : 'text-fg-2 hover:text-fg hover:bg-hover'} disabled:opacity-60`}
-                >
-                  {a}
-                </button>
-              ))}
+            /* M62 (finish review): the length and the version in one raised frame, the chosen ones in the hover tone, so Export is the top bar's only blue. */
+            <div className="inline-flex items-center rounded-md bg-raised border border-line p-0.5">
+              <div role="group" aria-label="Spot length" title="A spot is exactly its length. Change it and the list beside Export says what to add or cut." className="inline-flex items-center">
+                {[...new Set<number>([...SPOT_LENGTHS, lengthS])].sort((a, b) => a - b).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    aria-label={`Length ${lengthLabel(s)}`}
+                    aria-pressed={s === lengthS}
+                    onClick={() => void changeLength(s)}
+                    className={`h-7 px-2.5 rounded-[6px] text-xs font-medium tabular-nums transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue ${s === lengthS ? 'bg-hover text-fg' : 'text-fg-2 hover:text-fg hover:bg-hover'}`}
+                  >
+                    {lengthLabel(s)}
+                  </button>
+                ))}
+              </div>
+              <span aria-hidden="true" className="w-px h-4 bg-line mx-1" />
+              <div role="group" aria-label="Version" className="inline-flex items-center">
+                {ASPECTS.map((a) => (
+                  <button
+                    key={a}
+                    type="button"
+                    aria-label={`Version ${a}`}
+                    aria-pressed={a === aspect}
+                    disabled={switchingAspect}
+                    onClick={() => void changeAspect(a)}
+                    className={`h-7 px-2.5 rounded-[6px] text-xs font-medium tabular-nums transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue ${a === aspect ? 'bg-hover text-fg' : 'text-fg-2 hover:text-fg hover:bg-hover'} disabled:opacity-60`}
+                  >
+                    {a}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
           {loaded && (
@@ -776,27 +778,14 @@ export function Editor({ projectId, onBack }: Props) {
             ) : (
               <>
                 {/* M51: the library's shelves, one press from the spot. Transitions live between the chips and in the panel. */}
-                <Section id="shelves" title="Add to the spot" className="!px-4 !py-3">
+                {/* M62 (finish review): folded by default, so the column opens on the clips; the strip's Add card and the panel open the same picker. */}
+                <Section id="shelves" title="Add to the spot" defaultCollapsed className="!px-4 !py-3">
                   <div className="flex flex-wrap gap-1.5">
                     {PICKER_ORDER.map((type) => (
-                      <button
-                        key={type}
-                        type="button"
-                        aria-label={`Add ${ELEMENT_TYPE_LABELS[type].toLowerCase()}`}
-                        onClick={() => openLibrary(type)}
-                        className="h-7 px-2.5 rounded-md bg-raised border border-line text-xs text-fg-2 hover:text-fg hover:bg-hover hover:border-line-strong transition-colors"
-                      >
+                      <Chip key={type} aria-label={`Add ${ELEMENT_TYPE_LABELS[type].toLowerCase()}`} onClick={() => openLibrary(type)}>
                         {ELEMENT_TYPE_LABELS[type]}
-                      </button>
+                      </Chip>
                     ))}
-                    <button
-                      type="button"
-                      aria-label="Choose a transition"
-                      onClick={() => document.getElementById('how-it-ends')?.scrollIntoView?.({ block: 'center' })}
-                      className="h-7 px-2.5 rounded-md bg-raised border border-line text-xs text-fg-2 hover:text-fg hover:bg-hover hover:border-line-strong transition-colors"
-                    >
-                      Transitions
-                    </button>
                   </div>
                 </Section>
                 <MediaPanel onSelect={selectFootage} selectedId={selectedAssetId} onChange={setAssets} audio={audio} onAudioChange={onAudioChange} />
@@ -1650,7 +1639,7 @@ function Monitor({
                 const box = ev.currentTarget.getBoundingClientRect();
                 onReorder(sceneId, e.id, ev.clientX < box.left + box.width / 2 ? 'before' : 'after');
               }}
-              className={`group relative overflow-hidden flex items-center text-left transition-colors ${kind === 'scene' ? 'min-w-44 gap-3 rounded-lg px-2 py-2' : 'gap-1.5 rounded-md px-2 py-1 text-xs'} ${e.enabled ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'} ${
+              className={`group relative overflow-hidden flex items-center text-left transition-colors ${kind === 'scene' ? 'min-w-44 gap-3 rounded-lg px-2 py-2' : 'gap-1.5 rounded-md h-7 px-2.5 text-xs'} ${e.enabled ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'} ${
                 onScreen ? 'bg-blue text-white' : dropEdge?.id === e.id && dropEdge.place === 'on' ? 'bg-blue-tint text-fg' : 'bg-raised text-fg hover:bg-hover'
               } ${isSelected || dropEdge?.id === e.id && dropEdge.place === 'on' ? 'ring-2 ring-blue ring-offset-2 ring-offset-panel' : ''} ${e.enabled ? '' : 'opacity-60'} ${
                 dropEdge?.id === e.id && dropEdge.place !== 'on' ? (dropEdge.place === 'before' ? 'shadow-[inset_3px_0_0_0_var(--color-blue)]' : 'shadow-[inset_-3px_0_0_0_var(--color-blue)]') : ''
@@ -1819,8 +1808,9 @@ function Monitor({
                 {frameSize.width}×{frameSize.height}
               </span>
               <span>{compositionConfig.fps} fps</span>
-              <span data-testid="length-gauge" title={contentS === lengthS ? 'The content is exactly the length' : contentS < lengthS ? `${(lengthS - contentS).toFixed(1)} s to fill` : `${(contentS - lengthS).toFixed(1)} s over`}>
+              <span data-testid="length-gauge" className={contentS === lengthS ? '' : 'text-fg-2'}>
                 {contentS.toFixed(1)} s of {lengthS.toFixed(1)} s
+                {contentS !== lengthS && ` · ${Math.abs(lengthS - contentS).toFixed(1)} s ${contentS < lengthS ? 'to fill' : 'over'}`}
               </span>
               {hasFootage && <span>preview at proxy quality</span>}
             </span>
@@ -1846,23 +1836,25 @@ function Monitor({
           return (
             <Fragment key={g.scene.id}>
               <div data-testid={`group-${g.scene.id}`} className="flex flex-col gap-1 shrink-0" style={{ flexGrow: Math.max(1, seconds(g.scene.endFrame - g.scene.startFrame)), flexBasis: 0 }}>
-                <span className="text-[11px] font-medium text-fg-3 uppercase tracking-wide px-1">{g.label}</span>
+                <span className="text-xs font-medium text-fg-2 px-1">{g.label}</span>
                 {chip(g.scene, 'scene')}
                 {g.overlays.length > 0 && <div className="flex flex-wrap gap-1">{g.overlays.map((o) => chip(o, 'overlay'))}</div>}
               </div>
               {next && (
-                <div className="relative shrink-0 flex flex-col justify-center" data-testid={`transition-marker-${g.scene.id}`}>
-                  {/* M55: how this scene ends, right where it ends. The same four choices as the panel. */}
-                  <button
-                    type="button"
-                    aria-label={`Transition after ${g.scene.name}`}
-                    aria-expanded={transitionMenu === g.scene.id}
-                    title={`How ${g.label.toLowerCase()} ends: ${PRESET_LABEL[current]}`}
-                    onClick={() => setTransitionMenu((open) => (open === g.scene.id ? null : g.scene.id))}
-                    className={`mt-4 h-6 min-w-6 px-1.5 rounded-full border text-[10px] font-medium tabular-nums transition-colors ${current === 'cut' ? 'border-line bg-panel text-fg-3 hover:text-fg hover:border-line-strong' : 'border-blue bg-blue-tint text-blue'}`}
-                  >
-                    {current === 'cut' ? '|' : PRESET_LABEL[current]}
-                  </button>
+                <div className="relative shrink-0 flex flex-col pt-[21px]" data-testid={`transition-marker-${g.scene.id}`}>
+                  {/* M55: how this scene ends, right where it ends. The same four choices as the panel. M62: centred on the scene chip (label line above, chip height below). */}
+                  <div className="h-[52px] flex items-center">
+                    <button
+                      type="button"
+                      aria-label={`Transition after ${g.scene.name}`}
+                      aria-expanded={transitionMenu === g.scene.id}
+                      title={`How ${g.label.toLowerCase()} ends: ${PRESET_LABEL[current]}`}
+                      onClick={() => setTransitionMenu((open) => (open === g.scene.id ? null : g.scene.id))}
+                      className={`inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded-full border text-[11px] font-medium tabular-nums transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue ${current === 'cut' ? 'border-line bg-panel text-fg-3 hover:text-fg hover:border-line-strong' : 'border-blue bg-blue-tint text-blue hover:bg-blue-tint/70'}`}
+                    >
+                      {current === 'cut' ? <span aria-hidden="true" data-testid="cut-bar" className="block w-px h-3 bg-current" /> : PRESET_LABEL[current]}
+                    </button>
+                  </div>
                   {transitionMenu === g.scene.id && (
                     <div role="group" aria-label={`Choose the transition after ${g.scene.name}`} className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-20 flex items-center gap-0.5 rounded-md bg-panel border border-line shadow-float p-0.5 cc-appear">
                       {TRANSITION_PRESETS.map((p) => (
@@ -1891,7 +1883,7 @@ function Monitor({
           aria-label="Add a scene"
           title="Add a lower third, caption, end card or any other element from the library"
           onClick={onAdd}
-          className="sticky right-0 z-10 shrink-0 self-stretch flex items-center gap-1.5 rounded-lg border border-dashed border-line-strong bg-panel px-3 text-xs font-medium text-fg-2 shadow-[-12px_0_12px_-6px_var(--color-panel)] hover:text-fg hover:border-blue hover:bg-blue-tint/40 transition-colors"
+          className="sticky right-0 z-10 shrink-0 self-stretch min-h-[52px] flex items-center gap-1.5 rounded-lg border border-dashed border-line-strong bg-panel px-3 text-xs font-medium text-fg-2 shadow-[-12px_0_12px_-6px_var(--color-panel)] hover:text-fg hover:border-blue hover:bg-blue-tint/40 transition-colors"
         >
           <Plus size={14} strokeWidth={1.75} aria-hidden="true" />
           Add

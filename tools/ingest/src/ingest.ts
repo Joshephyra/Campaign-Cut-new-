@@ -505,7 +505,9 @@ function discoverElements(input: string, templateSlug: string, templateName: str
   const resolved = path.resolve(input);
   if (!fs.existsSync(resolved)) throw new IngestFailure([`Input not found: ${resolved}`], []);
 
-  const single = (jsonPath: string, folder: string): DiscoveredElement => ({ slug: templateSlug, name: templateName, type: inferElementType(templateSlug), folder, jsonPath, variants: [] });
+  // A one-comp handover is the whole spot, so it is a scene: an opening unless its name says otherwise (M62 review; a lone overlay would have no scene to sit on).
+  const singleType = (): ElementType => { const t = inferElementType(templateSlug); return t === 'overlay' ? 'open' : t; };
+  const single = (jsonPath: string, folder: string): DiscoveredElement => ({ slug: templateSlug, name: templateName, type: singleType(), folder, jsonPath, variants: [] });
 
   if (fs.statSync(resolved).isFile()) {
     return { handoverDir: path.dirname(resolved), elements: [single(resolved, path.dirname(resolved))], libraryOnly: false, manifestProblems: [] };

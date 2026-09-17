@@ -69,7 +69,7 @@ describe('Editor: the spot\'s length (M52)', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Length :15' })).toBeTruthy());
     fireEvent.click(screen.getByRole('button', { name: 'Length :15' }));
     await waitFor(() => expect(calls.some((c) => c.method === 'PATCH' && c.body.lengthS === 15)).toBe(true));
-    expect(screen.getByTestId('length-gauge').textContent).toBe('30.0 s of 15.0 s');
+    expect(screen.getByTestId('length-gauge').textContent).toBe('30.0 s of 15.0 s · 15.0 s over');
     expect(props().lengthFrames).toBe(450);
     expect(screen.getByTestId('readiness').getAttribute('data-blocked')).toBe('true');
     fireEvent.click(screen.getByTestId('readiness'));
@@ -77,7 +77,7 @@ describe('Editor: the spot\'s length (M52)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cut down to :15' }));
     // the three proof points go (hidden), the end card moves back: opening 5 s + end card 7 s
     await waitFor(() => expect(props().elements.filter((e) => e.enabled).map((e) => [e.id, e.startFrame, e.endFrame])).toEqual([['1', 0, 150], ['2', 30, 150], ['6', 150, 360]]));
-    expect(screen.getByTestId('length-gauge').textContent).toBe('12.0 s of 15.0 s');
+    expect(screen.getByTestId('length-gauge').textContent).toBe('12.0 s of 15.0 s · 3.0 s to fill');
     expect(screen.getByTestId('check-length').textContent).toContain('Add 3.0 s of scenes');
     await waitFor(() => expect(calls.some((c) => c.url === '/api/projects/7/elements/5' && c.method === 'PUT' && c.body.enabled === false)).toBe(true), { timeout: 4000 });
     expect(calls.find((c) => c.url === '/api/projects/7/elements/6' && c.method === 'PUT')?.body).toMatchObject({ startFrame: 150, endFrame: 360 });

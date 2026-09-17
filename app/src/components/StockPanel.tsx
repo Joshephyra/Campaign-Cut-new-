@@ -1,7 +1,7 @@
 import { Check, Loader2, Plus, Search } from 'lucide-react';
 import { useState } from 'react';
 import { api, type MediaAsset, type StockResult } from '../api';
-import { Button, ICON } from './ui';
+import { Button, ICON, Chip } from './ui';
 
 /**
  * M54: the outlets a campaign buys footage from. Pexels searches for real
@@ -97,17 +97,16 @@ export function StockPanel({ onImported, bare = false }: Props) {
       {!bare && <h3 className="text-xs font-semibold text-fg-2 mb-2">Find stock footage</h3>}
       <div role="group" aria-label="Stock outlet" className="flex flex-wrap gap-1 mb-2">
         {STOCK_OUTLETS.map((o) => (
-          <button
+          <Chip
             key={o.id}
-            type="button"
-            aria-pressed={o.id === outletId}
+            pressed={o.id === outletId}
             title={o.connected ? `Search ${o.name}` : `${o.name}: not connected yet`}
             onClick={() => chooseOutlet(o.id)}
-            className={`h-6 px-2 rounded-md text-[11px] font-medium transition-colors ${o.id === outletId ? 'bg-blue text-white' : 'bg-raised border border-line text-fg-2 hover:text-fg hover:bg-hover'}`}
+            className={!o.connected && o.id !== outletId ? 'border-dashed !text-fg-3' : ''}
           >
             {o.name}
-            {!o.connected && <span className="sr-only"> (not connected)</span>}
-          </button>
+            {!o.connected && <span className="text-[11px] font-normal opacity-80"> · soon</span>}
+          </Chip>
         ))}
       </div>
       <div className="flex items-center gap-2">
@@ -136,7 +135,7 @@ export function StockPanel({ onImported, bare = false }: Props) {
               <li key={r.id} data-testid={`stock-result-${r.id}`} className="rounded-lg overflow-hidden bg-raised border border-line">
                 <div className="relative aspect-video bg-stage">
                   {r.thumbUrl && <img src={r.thumbUrl} alt="" className="w-full h-full object-cover block" />}
-                  <span className="absolute bottom-1 right-1 px-1 py-px rounded-xs bg-black/70 text-[10px] text-fg tabular-nums">{r.durationS.toFixed(1)} s</span>
+                  <span className="absolute bottom-1 right-1 px-1 py-px rounded-xs bg-black/70 text-[11px] text-fg tabular-nums">{r.durationS.toFixed(1)} s</span>
                 </div>
                 <div className="px-2 py-1.5">
                   <div className="text-xs truncate" title={r.title}>

@@ -123,6 +123,19 @@ components:
     rounded: "{rounded.md}"
     height: "28px"
     padding: "0 10px"
+  chip:
+    backgroundColor: "{colors.raised}"
+    textColor: "{colors.fg-2}"
+    typography: "{typography.label}"
+    rounded: "{rounded.md}"
+    height: "28px"
+    padding: "0 10px"
+  chip-hover:
+    backgroundColor: "{colors.hover}"
+    textColor: "{colors.fg}"
+  chip-pressed:
+    backgroundColor: "{colors.blue}"
+    textColor: "{colors.white}"
   icon-button:
     textColor: "{colors.fg-2}"
     rounded: "{rounded.md}"

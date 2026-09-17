@@ -39,6 +39,27 @@ export function Button({
   );
 }
 
+/**
+ * M62 (finish review): the one small pressable chip, at one size, wherever a
+ * row of choices sits inside a panel: a shelf to add from, a word to call
+ * out, a stock outlet, the fix beside a readiness line. Pressed is the
+ * selection blue; at rest it is raised with the hairline.
+ */
+export const CHIP_CLASS = 'inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-xs font-medium whitespace-nowrap select-none transition-colors duration-150';
+
+export function Chip({ pressed, className = '', children, ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & { pressed?: boolean }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      className={`${CHIP_CLASS} ${pressed ? 'bg-blue text-white' : 'bg-raised border border-line text-fg-2 hover:text-fg hover:bg-hover hover:border-line-strong'} focus:outline-none focus-visible:ring-2 focus-visible:ring-blue disabled:opacity-40 disabled:pointer-events-none ${className}`}
+      {...rest}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function IconButton({ label, icon: Icon, className = '', ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string; icon: LucideIcon }) {
   return (
     <button
@@ -182,6 +203,7 @@ export function Section({
   note,
   defaultCollapsed = false,
   level = 2,
+  onToggle,
 }: {
   title: ReactNode;
   action?: ReactNode;
@@ -193,6 +215,8 @@ export function Section({
   defaultCollapsed?: boolean;
   /** 2 for a panel's sections, 3 for a block inside one. */
   level?: 2 | 3;
+  /** M62: told when the fold changes, so an owner can load on first open. */
+  onToggle?: (collapsed: boolean) => void;
 }) {
   const [collapsed, setCollapsed] = useCollapsed(id, defaultCollapsed);
   const foldable = id !== undefined;
@@ -212,7 +236,10 @@ export function Section({
             <button
               type="button"
               aria-expanded={!collapsed}
-              onClick={() => setCollapsed(!collapsed)}
+              onClick={() => {
+                setCollapsed(!collapsed);
+                onToggle?.(!collapsed);
+              }}
               className="inline-flex items-center gap-2 max-w-full whitespace-nowrap text-left rounded-sm -ml-1 pl-1 pr-1 hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-blue"
             >
               <ChevronDown size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" className={`shrink-0 text-fg-3 transition-transform duration-150 ${collapsed ? '-rotate-90' : ''}`} />

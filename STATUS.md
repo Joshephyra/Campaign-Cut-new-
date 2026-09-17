@@ -4,6 +4,17 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M62 Finish review of the day's additions · DONE
+
+- The Impeccable finish reviewer's eight fixes, applied in one round (see MILESTONES M62): one Chip primitive, one blue in the top bar, the shelves folded, sentence-case strip labels and a centred marker, the callout control folded, "· soon" on unconnected outlets, the gauge's delta on the surface. Plus the one-comp handover as an opening scene.
+- Verified: captures before (`.impeccable/review/review3-*.png`) and after (`review4-editor-9.png`, `review4-editor-13.png`) at 1440; the detector over the changed files answers one advisory (a 10 px duration badge in the stock results), fixed. App suite and typecheck green.
+
+**Next**
+
+The designer's handover folder, then the acceptance session.
+
+---
+
 ## 2026-09-17 · M60 + M61 The design follows the copy · DONE
 
 **What exists now**

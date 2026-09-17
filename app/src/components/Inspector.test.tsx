@@ -98,6 +98,8 @@ describe('call out a word (M56)', () => {
   it('pressing a word emits <key>.callout as a circle, a style press changes it, pressing the word again clears it', () => {
     const onChange = vi.fn();
     render(<Inspector schema={schema} values={{ headline: 'LOWER COSTS NOW' }} onChange={onChange} />);
+    expect(screen.queryByRole('group', { name: 'Call out a word of Headline' })).toBeNull(); // M62: folded until asked for
+    fireEvent.click(screen.getByRole('button', { name: 'Call out a word of Headline' }));
     const group = screen.getByRole('group', { name: 'Call out a word of Headline' });
     expect(Array.from(group.querySelectorAll('button')).map((b) => b.textContent)).toEqual(['LOWER', 'COSTS', 'NOW']);
     fireEvent.click(screen.getByRole('button', { name: 'COSTS' }));
