@@ -4,6 +4,12 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · Downloads named for the spot and its version · DONE
+
+A download now lands as "rivera-for-senate-new-spot-9x16.mp4" rather than "project-9-7-9x16.mp4" (`app/src/exportName.ts`, on the panel's and the history's links; the render keeps its own name on the server). Tests: 2.
+
+---
+
 ## 2026-09-17 · M50 Export every version in one go · DONE
 
 **What exists now**

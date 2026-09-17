@@ -1,16 +1,19 @@
 import { Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api, type RenderJob } from '../api';
+import { exportFileName } from '../exportName';
 import { ICON } from './ui';
 
 type Props = {
   projectId: number;
   /** Bump to reload, e.g. when an export finishes. */
   refreshKey?: number;
+  /** The spot's name, for the downloaded file's name. */
+  projectName?: string | null;
 };
 
 /** M25: this project's earlier exports, newest first: time and a download link, or the error. */
-export function ExportHistory({ projectId, refreshKey = 0 }: Props) {
+export function ExportHistory({ projectId, refreshKey = 0, projectName = null }: Props) {
   const [renders, setRenders] = useState<RenderJob[] | null>(null);
 
   useEffect(() => {
@@ -41,7 +44,7 @@ export function ExportHistory({ projectId, refreshKey = 0 }: Props) {
                 {r.aspect && <span className="ml-2 text-fg-3">{r.aspect}</span>}
               </span>
               {r.status === 'done' && r.outputUrl ? (
-                <a href={api.fileUrl(r.outputUrl)} download className="inline-flex items-center gap-1.5 text-blue hover:text-blue-hover font-medium">
+                <a href={api.fileUrl(r.outputUrl)} download={exportFileName(projectName, r.aspect)} className="inline-flex items-center gap-1.5 text-blue hover:text-blue-hover font-medium">
                   <Download size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" />
                   Download
                 </a>

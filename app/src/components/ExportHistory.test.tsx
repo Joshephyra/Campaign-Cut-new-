@@ -20,12 +20,13 @@ describe('ExportHistory (M25)', () => {
       if (String(input) === '/api/renders?projectId=3') return new Response(JSON.stringify(served), { status: 200 });
       return new Response('not found', { status: 404 });
     });
-    const { rerender } = render(<ExportHistory projectId={3} refreshKey={0} />);
+    const { rerender } = render(<ExportHistory projectId={3} refreshKey={0} projectName="Jane for Senate: Bio" />);
     await waitFor(() => expect(screen.getByTestId('export-history')).toBeTruthy());
     const rows = screen.getAllByRole('listitem');
     expect(rows).toHaveLength(2); // the one still rendering is not history
     expect(rows[0]!.textContent).toContain('2026-09-13 18:53');
     expect((screen.getByRole('link', { name: 'Download' }) as HTMLAnchorElement).getAttribute('href')).toBe('/api/media/renders/project-3-9.mp4');
+    expect((screen.getByRole('link', { name: 'Download' }) as HTMLAnchorElement).getAttribute('download')).toBe('jane-for-senate-bio-16x9.mp4');
     expect(rows[1]!.textContent).toContain('Chrome exploded');
 
     served = [{ ...renders[0]!, id: 10, updatedAt: '2026-09-13 19:00:00', outputUrl: '/media/renders/project-3-10.mp4' }, ...renders];

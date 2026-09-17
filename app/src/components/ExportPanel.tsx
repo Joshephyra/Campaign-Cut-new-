@@ -2,6 +2,7 @@ import { ASPECTS, type Readiness } from '@campaigncut/composition';
 import { ChevronDown, Circle, CircleCheck, Download, Loader2, Share, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { api, type RenderJob } from '../api';
+import { exportFileName } from '../exportName';
 import { Button, ICON, IconButton } from './ui';
 
 type Props = {
@@ -13,13 +14,15 @@ type Props = {
   readiness?: Readiness;
   /** M50: the spot's current version, named on the export menu. */
   aspect?: string;
+  /** The spot's name, for the downloaded file's name. */
+  projectName?: string | null;
 };
 
 /**
  * Export: queue a server-side render of THE composition with the original
  * footage, poll until it is done, then offer the MP4. AT-5 is watching it.
  */
-export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, readiness, aspect = '16:9' }: Props) {
+export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, readiness, aspect = '16:9', projectName = null }: Props) {
   // M50: one job for this version, or one per version for a batch.
   const [jobs, setJobs] = useState<RenderJob[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -138,7 +141,7 @@ export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, read
         </span>
       )}
       {job?.status === 'done' && job.outputUrl && (
-        <a href={api.fileUrl(job.outputUrl)} download className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md text-[13px] font-medium text-fg bg-raised border border-line hover:bg-hover">
+        <a href={api.fileUrl(job.outputUrl)} download={exportFileName(projectName, job.aspect ?? aspect)} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md text-[13px] font-medium text-fg bg-raised border border-line hover:bg-hover">
           <Download size={ICON.size} strokeWidth={ICON.strokeWidth} aria-hidden="true" />
           Download MP4
         </a>

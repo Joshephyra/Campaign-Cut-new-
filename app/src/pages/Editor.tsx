@@ -731,7 +731,7 @@ export function Editor({ projectId, onBack }: Props) {
             </span>
           )}
           <span className="text-xs w-20 text-right">{loaded && <SaveIndicator state={saveState} />}</span>
-          {loaded && <ExportPanel projectId={projectId} onFinished={() => setExportsTick((t) => t + 1)} readiness={ready} aspect={aspect} />}
+          {loaded && <ExportPanel projectId={projectId} onFinished={() => setExportsTick((t) => t + 1)} readiness={ready} aspect={aspect} projectName={loaded.detail.project.name} />}
         </div>
       </header>
 
@@ -895,7 +895,7 @@ export function Editor({ projectId, onBack }: Props) {
               </>
             )}
             <Section title="Exports">
-              <ExportHistory projectId={projectId} refreshKey={exportsTick} />
+              <ExportHistory projectId={projectId} refreshKey={exportsTick} projectName={loaded.detail.project.name} />
             </Section>
           </aside>
         </div>
