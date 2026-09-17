@@ -47,7 +47,8 @@ var QUIT_WHEN_DONE = true;
       }
     }
 
-    /* Silence the per-comp summary box so the run needs no clicks. */
+    /* Silence the per-comp summary box so the run needs no clicks: preflight.jsx checks this flag. */
+    $.__ccQuiet = true;
     var realAlert = alert;
     alert = function () {};
 

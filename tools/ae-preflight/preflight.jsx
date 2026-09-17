@@ -316,10 +316,13 @@ if (typeof app !== 'undefined' && app && app.project) {
     file.write(report.text);
     file.close();
 
-    alert(
-      'CampaignCut pre-flight: ' + report.tags.length + ' tag(s), ' + report.problems.length + ' problem(s), ' + report.fonts.length + ' font(s).\n\n' +
-      'Report written to:\n' + file.fsName + '\n\n' +
-      (report.problems.length ? 'Fix the problems before exporting.' : 'Ready to export.')
-    );
+    /* Unattended runs (preflight-all.jsx) set $.__ccQuiet: a pop-up would stop them. */
+    if (!$.__ccQuiet) {
+      alert(
+        'CampaignCut pre-flight: ' + report.tags.length + ' tag(s), ' + report.problems.length + ' problem(s), ' + report.fonts.length + ' font(s).\n\n' +
+        'Report written to:\n' + file.fsName + '\n\n' +
+        (report.problems.length ? 'Fix the problems before exporting.' : 'Ready to export.')
+      );
+    }
   })();
 }

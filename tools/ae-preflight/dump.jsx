@@ -610,10 +610,12 @@ if (typeof app !== 'undefined' && app && app.project) {
 
     var total = 0;
     for (var c = 0; c < result.project.comps.length; c++) total += result.project.comps[c].summary.keyframes;
-    alert(
-      'CampaignCut project dump: ' + result.project.comps.length + ' comp(s), ' + result.project.items.length + ' item(s), ' + total + ' keyframe(s).\n\n' +
-      'Written:\n' + txt + '\n' + js + '\n\n' +
-      'Hand both files over with the Bodymovin export.'
-    );
+    if (!$.__ccQuiet) {
+      alert(
+        'CampaignCut project dump: ' + result.project.comps.length + ' comp(s), ' + result.project.items.length + ' item(s), ' + total + ' keyframe(s).\n\n' +
+        'Written:\n' + txt + '\n' + js + '\n\n' +
+        'Hand both files over with the Bodymovin export.'
+      );
+    }
   })();
 }
