@@ -1,8 +1,9 @@
 import { formatTimecode } from '@campaigncut/composition';
 import { Copy, FolderUp, Pencil, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { api, type LibraryGroup, type ProjectRow, type TemplateSummary } from '../api';
+import { api, type Client, type LibraryGroup, type ProjectRow, type TemplateSummary } from '../api';
 import { AddTemplate } from '../components/AddTemplate';
+import { ClientsPanel } from '../components/ClientsPanel';
 import { Button, ICON, Wordmark } from '../components/ui';
 
 type Props = {
@@ -20,12 +21,23 @@ export function Library({ onOpenProject }: Props) {
   const [projects, setProjects] = useState<ProjectRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busySlug, setBusySlug] = useState<string | null>(null);
+  // M33: which client new spots are for. Null is "no client".
+  const [clients, setClients] = useState<Client[]>([]);
+  const [clientId, setClientId] = useState<number | null>(null);
 
   const loadProjects = () =>
     api
       .projects()
       .then(setProjects)
       .catch(() => setProjects([]));
+  const loadClients = () =>
+    api
+      .clients()
+      .then((list) => {
+        setClients(list);
+        setClientId((id) => (id !== null && list.some((c) => c.id === id) ? id : null));
+      })
+      .catch(() => setClients([]));
 
   const loadGroups = () =>
     api
@@ -36,12 +48,13 @@ export function Library({ onOpenProject }: Props) {
   useEffect(() => {
     void loadGroups();
     void loadProjects();
+    void loadClients();
   }, []);
 
   const open = async (t: TemplateSummary) => {
     setBusySlug(t.slug);
     try {
-      const { id } = await api.createProject(t.slug);
+      const { id } = await api.createProject(t.slug, clientId ?? undefined);
       onOpenProject(id);
     } catch (e) {
       setError((e as Error).message);
@@ -81,11 +94,21 @@ export function Library({ onOpenProject }: Props) {
           />
         )}
 
+        {clients.length > 0 && (
+          <div className="mb-6 flex flex-wrap items-center gap-2" role="group" aria-label="New spots are for">
+            <span className="text-xs text-fg-2 mr-1">New spots for</span>
+            <ClientChip label="no client" active={clientId === null} onClick={() => setClientId(null)} />
+            {clients.map((c) => (
+              <ClientChip key={c.id} label={c.name} active={clientId === c.id} onClick={() => setClientId(c.id)} />
+            ))}
+          </div>
+        )}
+
         {groups?.map((group) => (
           <section key={group.adType} className="mb-10">
             <div className="flex items-baseline justify-between mb-3">
               <h2 className="text-base font-semibold tracking-tight">{group.adType}</h2>
-              <span className="text-xs text-fg-3">Start a new spot from a template</span>
+              <span className="text-xs text-fg-3">{clientId === null ? 'Start a new spot from a template' : `Start a new spot for ${clients.find((c) => c.id === clientId)?.name ?? 'the client'}`}</span>
             </div>
             <div className="grid grid-cols-3 gap-4">
               {group.templates.map((t) => (
@@ -116,11 +139,28 @@ export function Library({ onOpenProject }: Props) {
           </section>
         ))}
 
+        <ClientsPanel clients={clients} onCreate={api.createClient} onUpdate={api.updateClient} onDelete={api.deleteClient} onChange={() => void loadClients()} />
+
         <div ref={addSection}>
           <AddTemplate open={adding || groups?.length === 0} onOpenChange={setAdding} onIngested={() => void loadGroups()} />
         </div>
       </div>
     </main>
+  );
+}
+
+/** M33: one client in the "new spots for" row. */
+function ClientChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label={`New spots for ${label}`}
+      aria-pressed={active}
+      onClick={onClick}
+      className={`h-8 px-3 rounded-md text-xs font-medium transition-colors ${active ? 'bg-blue text-white' : 'bg-raised border border-line text-fg-2 hover:text-fg hover:bg-hover'}`}
+    >
+      {label}
+    </button>
   );
 }
 
@@ -220,6 +260,7 @@ function ProjectList({
               )}
             </div>
             <span className="text-xs text-fg-2 w-40 truncate">{p.templateName}</span>
+            <span className="text-xs text-fg-3 w-40 truncate">{p.clientName ?? ''}</span>
             <span className="text-xs text-fg-3 w-36 tabular-nums">{shortStamp(p.updatedAt)}</span>
             <div className="flex gap-1">
               <button type="button" aria-label={`Rename ${p.name}`} onClick={() => startRename(p)} disabled={busyId === p.id} className={iconButton}>

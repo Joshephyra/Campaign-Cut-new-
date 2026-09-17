@@ -26,3 +26,15 @@ describe('parseTag', () => {
     expect(parseTag('cc.Accent')).toEqual({ tag: 'cc.Accent', role: 'Accent', index: undefined });
   });
 });
+
+/** M33: the colour roles a client's brand can set are the colour roles the tag vocabulary knows. Keep the two lists the same. */
+describe('COLOR_ROLES matches the role table', () => {
+  it('lists every colour role with its label', async () => {
+    const { COLOR_ROLES } = await import('@campaigncut/composition');
+    const { ROLES } = await import('./roles');
+    const fromRoles = Object.entries(ROLES)
+      .filter(([, spec]) => spec.kind === 'color')
+      .map(([role, spec]) => ({ role, label: spec.label }));
+    expect(COLOR_ROLES).toEqual(fromRoles);
+  });
+});

@@ -45,3 +45,12 @@ export const ELEMENT_TYPE_LABELS: Record<ElementType, string> = {
   'end-card': 'End cards',
   disclaimer: 'Disclaimers',
 };
+
+/**
+ * M33: the colour roles a brand can set. The same list the ingest's role
+ * table knows as colours (tools/ingest/src/roles.ts); a test keeps them equal.
+ */
+export const COLOR_ROLES: readonly { role: string; label: string }[] = [
+  { role: 'accent', label: 'Accent colour' },
+  { role: 'surface', label: 'Surface colour' },
+];

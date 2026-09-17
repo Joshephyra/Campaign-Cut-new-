@@ -636,12 +636,17 @@ Colours only, by Josh's choice (fonts wait for client profiles, where the client
 
 ---
 
-## M33 · Client profiles · TODO
+## M33 · Client profiles · DONE
 
 **Build**
-- A client: name, logo, colours, fonts, disclaimer text, default music. Kept in the library; a spot belongs to one. Creating a spot from a template applies the client's brand (theme, logo, disclaimer). An agency keeps several clients. No users, roles or logins (still non-goals).
+- A client: name, logo, colours by role, disclaimer text. Kept in the library (add, edit, delete); a spot belongs to one; deleting a client leaves its spots without one. Fonts and default music wait: fonts need the client's font files (later), music is one press in the editor.
+- The library says which client new spots are for (a chip row; "no client" by default). A spot created for a client opens branded: its colours in every scene by role, its logo in every logo slot, its disclaimer in every disclaimer field; empty parts leave the designer's values. The editor names the client in the top bar and offers "Apply <client>'s brand" to put it back after edits.
+- No users, roles or logins (still non-goals): a client is a record anyone at the agency edits.
 
-**Done when:** a new spot for a client opens already branded.
+**Tests**
+- DB: save, list, read, update, delete; project.client_id survives old databases; duplicate keeps the client; delete leaves spots clientless. Routes: CRUD with a name and #rrggbb required; create-for-client brands the spot and names it; brand again; no client is 400. Panel: list, add, logo upload through the images route, edit in place, delete behind a confirming press. Library: chips, the chosen client rides on the create call, rows name their client. Editor: top bar names the client, Apply brand merges the values. Ingest: the brand's colour roles equal the role table's.
+
+**Done when:** a new spot for a client opens already branded. It does.
 
 ---
 

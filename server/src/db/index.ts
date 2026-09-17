@@ -48,7 +48,7 @@ export type LibraryElement = {
 
 export type ProjectValue = { elementId: number; key: string; value: unknown };
 
-export type ProjectInput = { templateId: number; name: string; values: ProjectValue[] };
+export type ProjectInput = { templateId: number; name: string; values: ProjectValue[]; clientId?: number | null };
 
 export type ProjectRow = {
   id: number;
@@ -56,9 +56,16 @@ export type ProjectRow = {
   templateSlug: string;
   templateName: string;
   name: string;
+  /** M33: the client this spot is for, or null. */
+  clientId: number | null;
+  clientName: string | null;
   createdAt: string;
   updatedAt: string;
 };
+
+/** M33: a client profile: the brand guide a spot is made for. A record, not an account. */
+export type ClientInput = { name: string; logoUrl: string; colors: Record<string, string>; disclaimer: string };
+export type ClientRow = ClientInput & { id: number; createdAt: string };
 
 export type ProjectDetail = ProjectRow & { values: ProjectValue[] };
 
@@ -140,6 +147,13 @@ export type Db = Database.Database & {
   insertTheme(t: ThemeInput): { id: number };
   listThemes(): ThemeRow[];
   deleteTheme(id: number): boolean;
+  /** M33 */
+  insertClient(c: ClientInput): { id: number };
+  listClients(): ClientRow[];
+  getClient(id: number): ClientRow | undefined;
+  updateClient(id: number, patch: Partial<ClientInput>): void;
+  /** Spots made for the client stay, with no client. */
+  deleteClient(id: number): boolean;
   upsertTemplate(t: TemplateInput): { id: number };
   listTemplates(): TemplateRow[];
   getTemplateBySlug(slug: string): TemplateRow | undefined;
@@ -257,6 +271,15 @@ CREATE TABLE IF NOT EXISTS project_audio (
   in_s        REAL    NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS client (
+  id           INTEGER PRIMARY KEY,
+  name         TEXT    NOT NULL,
+  logo_url     TEXT    NOT NULL DEFAULT '',
+  colors_json  TEXT    NOT NULL DEFAULT '{}',
+  disclaimer   TEXT    NOT NULL DEFAULT '',
+  created_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS theme (
   id           INTEGER PRIMARY KEY,
   name         TEXT    NOT NULL,
@@ -298,6 +321,9 @@ export function openDb(file: string): Db {
     db.exec(`ALTER TABLE template_element ADD COLUMN type TEXT NOT NULL DEFAULT 'overlay'`);
     backfillElementTypes(db);
   }
+  // M33: a project may belong to a client.
+  const projectColumns = (db.prepare(`PRAGMA table_info(project)`).all() as { name: string }[]).map((c) => c.name);
+  if (!projectColumns.includes('client_id')) db.exec(`ALTER TABLE project ADD COLUMN client_id INTEGER REFERENCES client(id)`);
   // M20: media assets gained a kind (video or audio).
   const mediaColumns = (db.prepare(`PRAGMA table_info(media_asset)`).all() as { name: string }[]).map((c) => c.name);
   if (!mediaColumns.includes('kind')) db.exec(`ALTER TABLE media_asset ADD COLUMN kind TEXT NOT NULL DEFAULT 'video'`);
@@ -340,7 +366,47 @@ export function openDb(file: string): Db {
     insertTheme: (t: ThemeInput) => insertTheme(db, t),
     listThemes: () => listThemes(db),
     deleteTheme: (id: number) => deleteTheme(db, id),
+    insertClient: (c: ClientInput) => insertClient(db, c),
+    listClients: () => listClients(db),
+    getClient: (id: number) => getClient(db, id),
+    updateClient: (id: number, patch: Partial<ClientInput>) => updateClient(db, id, patch),
+    deleteClient: (id: number) => deleteClient(db, id),
   });
+}
+
+// ---- clients (M33) -----------------------------------------------------
+
+const CLIENT_SELECT = `SELECT id, name, logo_url AS logoUrl, colors_json AS colorsJson, disclaimer, created_at AS createdAt FROM client`;
+type ClientRaw = { id: number; name: string; logoUrl: string; colorsJson: string; disclaimer: string; createdAt: string };
+const clientRow = ({ colorsJson, ...r }: ClientRaw): ClientRow => ({ ...r, colors: JSON.parse(colorsJson) as Record<string, string> });
+
+function insertClient(db: Database.Database, c: ClientInput): { id: number } {
+  const id = Number(db.prepare(`INSERT INTO client (name, logo_url, colors_json, disclaimer) VALUES (?, ?, ?, ?)`).run(c.name, c.logoUrl, JSON.stringify(c.colors), c.disclaimer).lastInsertRowid);
+  return { id };
+}
+
+function listClients(db: Database.Database): ClientRow[] {
+  return (db.prepare(`${CLIENT_SELECT} ORDER BY name COLLATE NOCASE, id`).all() as ClientRaw[]).map(clientRow);
+}
+
+function getClient(db: Database.Database, id: number): ClientRow | undefined {
+  const raw = db.prepare(`${CLIENT_SELECT} WHERE id = ?`).get(id) as ClientRaw | undefined;
+  return raw ? clientRow(raw) : undefined;
+}
+
+function updateClient(db: Database.Database, id: number, patch: Partial<ClientInput>): void {
+  const current = getClient(db, id);
+  if (!current) throw new Error(`No client ${id}`);
+  const next = { ...current, ...patch };
+  db.prepare(`UPDATE client SET name = ?, logo_url = ?, colors_json = ?, disclaimer = ? WHERE id = ?`).run(next.name, next.logoUrl, JSON.stringify(next.colors), next.disclaimer, id);
+}
+
+function deleteClient(db: Database.Database, id: number): boolean {
+  const run = db.transaction((): boolean => {
+    db.prepare(`UPDATE project SET client_id = NULL WHERE client_id = ?`).run(id);
+    return db.prepare(`DELETE FROM client WHERE id = ?`).run(id).changes > 0;
+  });
+  return run();
 }
 
 // ---- themes (M32) ------------------------------------------------------
@@ -666,12 +732,12 @@ function deleteTemplateElementsExcept(db: Database.Database, templateId: number,
 // ---- projects ----------------------------------------------------------
 
 function createProject(db: Database.Database, p: ProjectInput): { id: number } {
-  const insertProject = db.prepare(`INSERT INTO project (template_id, name) VALUES (?, ?)`);
+  const insertProject = db.prepare(`INSERT INTO project (template_id, name, client_id) VALUES (?, ?, ?)`);
   const insertValue = db.prepare(
     `INSERT INTO project_value (project_id, element_id, param_key, value_json) VALUES (?, ?, ?, ?)`,
   );
   const run = db.transaction((): { id: number } => {
-    const id = Number(insertProject.run(p.templateId, p.name).lastInsertRowid);
+    const id = Number(insertProject.run(p.templateId, p.name, p.clientId ?? null).lastInsertRowid);
     for (const v of p.values) insertValue.run(id, v.elementId, v.key, JSON.stringify(v.value ?? null));
     return { id };
   });
@@ -680,8 +746,8 @@ function createProject(db: Database.Database, p: ProjectInput): { id: number } {
 
 const PROJECT_SELECT = `
   SELECT p.id, p.template_id AS templateId, t.slug AS templateSlug, t.name AS templateName,
-         p.name, p.created_at AS createdAt, p.updated_at AS updatedAt
-  FROM project p JOIN template t ON t.id = p.template_id`;
+         p.name, p.client_id AS clientId, c.name AS clientName, p.created_at AS createdAt, p.updated_at AS updatedAt
+  FROM project p JOIN template t ON t.id = p.template_id LEFT JOIN client c ON c.id = p.client_id`;
 
 function getProject(db: Database.Database, id: number): ProjectDetail | undefined {
   const row = db.prepare(`${PROJECT_SELECT} WHERE p.id = ?`).get(id) as ProjectRow | undefined;
@@ -706,9 +772,9 @@ function renameProject(db: Database.Database, id: number, name: string): void {
 
 function duplicateProject(db: Database.Database, id: number, name: string): { id: number } {
   const run = db.transaction((): { id: number } => {
-    const source = db.prepare(`SELECT template_id AS templateId FROM project WHERE id = ?`).get(id) as { templateId: number } | undefined;
+    const source = db.prepare(`SELECT template_id AS templateId, client_id AS clientId FROM project WHERE id = ?`).get(id) as { templateId: number; clientId: number | null } | undefined;
     if (!source) throw new Error(`No project ${id}`);
-    const copy = Number(db.prepare(`INSERT INTO project (template_id, name) VALUES (?, ?)`).run(source.templateId, name).lastInsertRowid);
+    const copy = Number(db.prepare(`INSERT INTO project (template_id, name, client_id) VALUES (?, ?, ?)`).run(source.templateId, name, source.clientId).lastInsertRowid);
     db.prepare(`INSERT INTO project_value (project_id, element_id, param_key, value_json) SELECT ?, element_id, param_key, value_json FROM project_value WHERE project_id = ?`).run(copy, id);
     db.prepare(`INSERT INTO project_element (project_id, element_id, start_frame, end_frame, enabled) SELECT ?, element_id, start_frame, end_frame, enabled FROM project_element WHERE project_id = ?`).run(copy, id);
     db.prepare(`INSERT INTO project_transition (project_id, after_element_id, preset, duration_frames) SELECT ?, after_element_id, preset, duration_frames FROM project_transition WHERE project_id = ?`).run(copy, id);

@@ -51,6 +51,9 @@ type Props = {
   onApply: (colors: Record<string, string>) => void;
   onSaveTheme: (name: string, colors: Record<string, string>) => void;
   onDeleteTheme: (id: number) => void;
+  /** M33: the spot's client, when it has one, and the way to put its brand back. */
+  clientName?: string | null;
+  onApplyBrand?: () => void;
 };
 
 /** <input type="color"> insists on lower-case #rrggbb. */
@@ -60,7 +63,7 @@ const lower = (hex: string) => (hexToRgba(hex) ? hex.toLowerCase() : '#000000');
  * The spot's colours: one row per colour role across every scene, changing
  * all of them at once; saved themes to apply to any spot.
  */
-export function StylePanel({ elements, values, themes, onApply, onSaveTheme, onDeleteTheme }: Props) {
+export function StylePanel({ elements, values, themes, onApply, onSaveTheme, onDeleteTheme, clientName = null, onApplyBrand }: Props) {
   const roles = styleRoles(elements, values);
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState('');
@@ -80,6 +83,11 @@ export function StylePanel({ elements, values, themes, onApply, onSaveTheme, onD
         Colours across the spot
       </h2>
       <p className="text-[11px] text-fg-3 mb-3">A change here recolours every scene that uses the role.</p>
+      {clientName && onApplyBrand && (
+        <Button size="sm" className="mb-3 w-full" onClick={onApplyBrand}>
+          Apply {clientName}&apos;s brand
+        </Button>
+      )}
       {roles.length === 0 ? (
         <p className="text-xs text-fg-2">No colour roles in this spot.</p>
       ) : (

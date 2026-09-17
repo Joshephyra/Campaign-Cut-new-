@@ -23,5 +23,5 @@ export type { ChromaFilter, ChromaKey } from './chroma';
 export { applyTransform, DEFAULT_TRANSFORM, isTransformValue, LAYER_CLASS, layerClassFor, type TransformValue } from './transform';
 export { mediaTiming } from './media';
 export type { MainAudio } from './config';
-export { ELEMENT_TYPES, ELEMENT_TYPE_LABELS, inferElementType, isElementType } from './elementTypes';
+export { COLOR_ROLES, ELEMENT_TYPES, ELEMENT_TYPE_LABELS, inferElementType, isElementType } from './elementTypes';
 export type { ElementType } from './elementTypes';

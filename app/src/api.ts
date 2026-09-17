@@ -29,9 +29,16 @@ export type ProjectRow = {
   templateSlug: string;
   templateName: string;
   name: string;
+  /** M33: the client this spot is for, or null. */
+  clientId?: number | null;
+  clientName?: string | null;
   createdAt: string;
   updatedAt: string;
 };
+
+/** M33: a client profile: the brand guide a spot is made for. */
+export type Client = { id: number; name: string; logoUrl: string; colors: Record<string, string>; disclaimer: string; createdAt: string };
+export type ClientInput = Omit<Client, 'id' | 'createdAt'>;
 
 /** One element of a project: its own Lottie (at lottieUrl), its own schema, and this project's in/out and toggle. */
 export type ProjectElement = {
@@ -83,7 +90,7 @@ export type RenderJob = {
 export type ProjectTransition = { afterElementId: number; preset: TransitionPreset; durationInFrames: number };
 
 export type ProjectDetail = {
-  project: { id: number; name: string; templateId: number; templateSlug: string; templateName: string };
+  project: { id: number; name: string; templateId: number; templateSlug: string; templateName: string; clientId?: number | null; clientName?: string | null };
   template: TemplateSummary;
   meta?: { fonts?: string[]; fontFiles?: TemplateFontFile[]; background?: string } | null;
   elements: ProjectElement[];
@@ -119,12 +126,25 @@ async function json<T>(res: Response): Promise<T> {
 export const api = {
   library: () => fetch(`${API}/templates`).then((r) => json<LibraryGroup[]>(r)),
 
-  createProject: (templateSlug: string) =>
+  createProject: (templateSlug: string, clientId?: number) =>
     fetch(`${API}/projects`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ templateSlug }),
+      body: JSON.stringify(clientId === undefined ? { templateSlug } : { templateSlug, clientId }),
     }).then((r) => json<{ id: number }>(r)),
+
+  /** M33: clients, by name. */
+  clients: () => fetch(`${API}/clients`).then((r) => json<Client[]>(r)),
+  createClient: (input: ClientInput) =>
+    fetch(`${API}/clients`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(input) }).then((r) => json<Client>(r)),
+  updateClient: (id: number, input: Partial<ClientInput>) =>
+    fetch(`${API}/clients/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(input) }).then((r) => json<Client>(r)),
+  deleteClient: async (id: number) => {
+    const res = await fetch(`${API}/clients/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  },
+  /** M33: apply the spot's client brand again. Answers the values written. */
+  applyBrand: (projectId: number) => fetch(`${API}/projects/${projectId}/brand`, { method: 'POST' }).then((r) => json<{ values: ProjectValue[] }>(r)),
 
   project: (id: number) => fetch(`${API}/projects/${id}`).then((r) => json<ProjectDetail>(r)),
 

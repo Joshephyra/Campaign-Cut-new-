@@ -197,11 +197,15 @@ export function buildApp(options: AppOptions = {}) {
    * every schema default is copied into project_value so the editor opens
    * with the designer's authored values.
    */
-  app.post<{ Body: { templateSlug?: string; name?: string } }>('/projects', async (req, reply) => {
+  app.post<{ Body: { templateSlug?: string; name?: string; clientId?: number | null } }>('/projects', async (req, reply) => {
     const slug = req.body?.templateSlug;
     if (!slug) return reply.code(400).send({ error: 'templateSlug is required' });
     const t = db.getTemplateBySlug(slug);
     if (!t) return reply.code(404).send({ error: `No template with slug "${slug}"` });
+    // M33: a spot made for a client opens already branded.
+    const clientId = req.body?.clientId ?? null;
+    const client = clientId === null ? undefined : db.getClient(Number(clientId));
+    if (clientId !== null && !client) return reply.code(404).send({ error: `No client ${String(clientId)}` });
 
     let elements = db.listTemplateElements(t.id);
     if (elements.length === 0) {
@@ -211,11 +215,13 @@ export function buildApp(options: AppOptions = {}) {
 
     const { id } = db.createProject({
       templateId: t.id,
-      name: req.body?.name?.trim() || `${t.name} project`,
+      name: req.body?.name?.trim() || (client ? `${client.name}: ${t.name}` : `${t.name} project`),
+      clientId: client?.id ?? null,
       values: elements.flatMap((element) =>
         loadElementSchema(templatesDir, t.slug, element.slug).map((p: TemplateParam) => ({ elementId: element.id, key: p.key, value: p.default })),
       ),
     });
+    if (client) applyBrand(id, client);
     return reply.code(201).send({ id });
   });
 
@@ -254,25 +260,82 @@ export function buildApp(options: AppOptions = {}) {
   };
 
   /**
-   * One change recolours every scene: write a colour into every element of
-   * the project that carries a colour param with that role. The values are
+   * Write a brand into a project: colours into every colour param by role,
+   * the logo into every logo slot, the disclaimer into every disclaimer
+   * field. Empty parts leave the designer's values alone. The values are
    * ordinary project values afterwards; both runners are untouched.
    */
+  const applyBrand = (id: number, brand: { colors: Record<string, string>; logoUrl?: string; disclaimer?: string }) => {
+    const values: { elementId: number; key: string; value: string }[] = [];
+    for (const e of db.getProjectElements(id)) {
+      for (const p of loadElementSchema(templatesDir, e.templateSlug, e.slug)) {
+        if (p.kind === 'color' && brand.colors[p.role]) values.push({ elementId: e.id, key: p.key, value: brand.colors[p.role]! });
+        else if (p.kind === 'image' && p.role === 'logo' && brand.logoUrl) values.push({ elementId: e.id, key: p.key, value: brand.logoUrl });
+        else if (p.kind === 'text' && p.role === 'safe.disclaimer' && brand.disclaimer) values.push({ elementId: e.id, key: p.key, value: brand.disclaimer });
+      }
+    }
+    if (values.length > 0) db.setProjectValues(id, values);
+    return values;
+  };
+
+  /** One change recolours every scene (M32). */
   app.post<{ Params: { id: string }; Body: { colors?: Record<string, string> } }>('/projects/:id/style', async (req, reply) => {
     const id = Number(req.params.id);
     if (!db.getProject(id)) return reply.code(404).send({ error: `No project ${id}` });
     const read = readColors(req.body?.colors);
     if ('bad' in read) return reply.code(400).send({ error: `Colour for "${read.bad}" must be #rrggbb` });
-    const values: { elementId: number; key: string; value: string }[] = [];
-    for (const e of db.getProjectElements(id)) {
-      for (const p of loadElementSchema(templatesDir, e.templateSlug, e.slug)) {
-        if (p.kind !== 'color') continue;
-        const colour = read.colors[p.role];
-        if (colour) values.push({ elementId: e.id, key: p.key, value: colour });
-      }
-    }
-    if (values.length > 0) db.setProjectValues(id, values);
-    return { values };
+    return { values: applyBrand(id, { colors: read.colors }) };
+  });
+
+  // ---- clients (M33) ---------------------------------------------------
+
+  const readClient = (body: Partial<{ name: string; logoUrl: string; colors: Record<string, string>; disclaimer: string }> | undefined, current?: ReturnType<Db['getClient']>) => {
+    const name = (body?.name ?? current?.name ?? '').trim();
+    if (!name) return { error: 'A client needs a name' };
+    const read = body?.colors !== undefined ? readColors(body.colors) : { colors: current?.colors ?? {} };
+    if ('bad' in read) return { error: `Colour for "${read.bad}" must be #rrggbb` };
+    return {
+      client: {
+        name,
+        logoUrl: typeof body?.logoUrl === 'string' ? body.logoUrl.trim() : (current?.logoUrl ?? ''),
+        colors: read.colors,
+        disclaimer: typeof body?.disclaimer === 'string' ? body.disclaimer.trim() : (current?.disclaimer ?? ''),
+      },
+    };
+  };
+
+  app.get('/clients', async () => db.listClients());
+
+  app.post<{ Body: Partial<{ name: string; logoUrl: string; colors: Record<string, string>; disclaimer: string }> }>('/clients', async (req, reply) => {
+    const read = readClient(req.body);
+    if ('error' in read) return reply.code(400).send({ error: read.error });
+    const { id } = db.insertClient(read.client);
+    return reply.code(201).send(db.getClient(id));
+  });
+
+  app.patch<{ Params: { id: string }; Body: Partial<{ name: string; logoUrl: string; colors: Record<string, string>; disclaimer: string }> }>('/clients/:id', async (req, reply) => {
+    const id = Number(req.params.id);
+    const current = db.getClient(id);
+    if (!current) return reply.code(404).send({ error: `No client ${id}` });
+    const read = readClient(req.body, current);
+    if ('error' in read) return reply.code(400).send({ error: read.error });
+    db.updateClient(id, read.client);
+    return db.getClient(id);
+  });
+
+  app.delete<{ Params: { id: string } }>('/clients/:id', async (req, reply) => {
+    if (!db.deleteClient(Number(req.params.id))) return reply.code(404).send({ error: `No client ${req.params.id}` });
+    return { ok: true };
+  });
+
+  /** Apply the spot's client brand again (after edits, or after the client changed). */
+  app.post<{ Params: { id: string } }>('/projects/:id/brand', async (req, reply) => {
+    const id = Number(req.params.id);
+    const project = db.getProject(id);
+    if (!project) return reply.code(404).send({ error: `No project ${id}` });
+    const client = project.clientId === null ? undefined : db.getClient(project.clientId);
+    if (!client) return reply.code(400).send({ error: `Project ${id} has no client` });
+    return { values: applyBrand(id, client) };
   });
 
   app.get('/themes', async () => db.listThemes());

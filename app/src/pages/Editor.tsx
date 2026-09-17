@@ -499,6 +499,25 @@ export function Editor({ projectId, onBack }: Props) {
       setSaveState('error');
     }
   };
+  /** M33: put the client's brand back over the spot. Same merge as a style change. */
+  const applyBrand = async () => {
+    setStyleError(null);
+    setSaveState('saving');
+    try {
+      const { values: written } = await api.applyBrand(projectId);
+      changeKey.current = 'brand';
+      setValues((prev) => {
+        const next: ValuesByElement = { ...prev };
+        for (const v of written) next[v.elementId] = { ...next[v.elementId], [v.key]: v.value };
+        if (saveState === 'idle' || saveState === 'saved' || saveState === 'saving') lastSaved.current = next;
+        return next;
+      });
+      setSaveState('saved');
+    } catch (e) {
+      setStyleError((e as Error).message);
+      setSaveState('error');
+    }
+  };
   const saveTheme = async (name: string, colors: Record<string, string>) => {
     try {
       const theme = await api.saveTheme(name, colors);
@@ -544,7 +563,7 @@ export function Editor({ projectId, onBack }: Props) {
         </div>
         <ProjectName
           name={loaded?.detail.project.name ?? null}
-          templateName={loaded?.detail.template.name ?? null}
+          templateName={loaded ? [loaded.detail.template.name, loaded.detail.project.clientName ? `for ${loaded.detail.project.clientName}` : null].filter(Boolean).join(' · ') : null}
           onRename={async (name) => {
             const row = await api.renameProject(projectId, name);
             setLoaded((prev) => (prev ? { ...prev, detail: { ...prev.detail, project: { ...prev.detail.project, name: row.name } } } : prev));
@@ -573,7 +592,16 @@ export function Editor({ projectId, onBack }: Props) {
               <>
                 <MediaPanel onSelect={selectFootage} selectedId={selectedAssetId} onChange={setAssets} audio={audio} onAudioChange={onAudioChange} />
                 {styleError && <p className="px-4 pt-3 text-xs text-red">{styleError}</p>}
-                <StylePanel elements={elements} values={values} themes={themes} onApply={(c) => void applyStyle(c)} onSaveTheme={(n, c) => void saveTheme(n, c)} onDeleteTheme={(id) => void deleteTheme(id)} />
+                <StylePanel
+                  elements={elements}
+                  values={values}
+                  themes={themes}
+                  onApply={(c) => void applyStyle(c)}
+                  onSaveTheme={(n, c) => void saveTheme(n, c)}
+                  onDeleteTheme={(id) => void deleteTheme(id)}
+                  clientName={loaded.detail.project.clientName ?? null}
+                  onApplyBrand={loaded.detail.project.clientName ? () => void applyBrand() : undefined}
+                />
               </>
             )}
           </aside>

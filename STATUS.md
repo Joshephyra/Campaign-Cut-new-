@@ -4,6 +4,30 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M33 Client profiles · DONE
+
+**Why**
+
+The third phase-2 feature: an agency keeps several clients, and a spot made for one should open already branded. A client is a record in the library, not an account; users and logins stay non-goals.
+
+**What exists now**
+
+- Clients in the library: name, logo (uploaded through the same images route as a logo swap), colours by role (accent, surface; the same roles the tag vocabulary knows, kept equal by a test), disclaimer. Add, edit in place, delete behind a confirming press. Deleting a client leaves its spots with no client.
+- "New spots for" chips above the templates: pick a client (or no client) and every spot you start from a template is for them. The spot is named "<client>: <template>", and opens branded: colours written into every scene by role, the logo into every logo slot, the disclaimer into every disclaimer field, through the same server-side write as M32's style, so the values are ordinary project values and both runners are untouched. Empty parts of a brand leave the designer's values alone.
+- The editor names the client in the top bar ("Contrast :30 · for Rivera for Senate") and the Style panel offers "Apply <client>'s brand" to put it back after edits. Duplicating a spot keeps its client. Project rows in the library name their client.
+- Routes: `GET/POST/PATCH/DELETE /clients`, `POST /projects` takes `clientId`, `POST /projects/:id/brand`. Schema: `client` table, `project.client_id` (added to old databases).
+- Tests: 2 database, 3 route, 3 panel, 2 library, 1 editor, 1 ingest. 424 tests green.
+
+**Verified**
+
+- Through the running server: a client "Rivera for Senate" (blue accent, dark surface, a disclaimer) then a Contrast :30 spot created for it opened with the accent and surface written into every scene, the disclaimer in the end card, and the logo untouched (the client had none); the test spot was deleted, the client kept for Josh to see.
+
+**Next**
+
+M34: stock footage. Needs Josh's API key for the stock site.
+
+---
+
 ## 2026-09-17 · M32 Style: colours across the spot and saved themes · DONE
 
 **Why**

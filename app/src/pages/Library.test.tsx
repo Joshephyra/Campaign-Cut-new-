@@ -42,7 +42,7 @@ describe('Library', () => {
 
     await waitFor(() => expect(screen.getByText('Split Record')).toBeTruthy());
     const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
-    expect(headings).toEqual(['Contrast', 'GOTV']);
+    expect(headings).toEqual(['Contrast', 'GOTV', 'Clients']); // M33 adds the clients section
     // duration in timecode, dimensions in mono facts
     expect(screen.getByText('00:30:00')).toBeTruthy();
     expect(screen.getByText('00:05:00')).toBeTruthy();
