@@ -1639,7 +1639,7 @@ function Monitor({
             <IconButton label="Full screen" icon={Maximize2} onClick={() => playerRef.current?.requestFullscreen?.()} className="shrink-0" />
           </div>
           <p className="text-xs text-fg-2 mt-2 flex flex-wrap gap-x-4 gap-y-1">
-            <span>Drag a headline or logo to move it · double-click text to type · drop a clip on the footage</span>
+            <span>Drag a headline or logo to move it · double-click text to type · drop a clip on the footage · drag a chip to reorder</span>
             <span className="ml-auto flex gap-3 text-[11px] text-fg-3 tabular-nums">
               <span>
                 {frameSize.width}×{frameSize.height}
@@ -1676,6 +1676,7 @@ function Monitor({
               }}
               style={{ flexGrow: Math.max(1, seconds(e.endFrame - e.startFrame)) }}
               draggable={e.enabled}
+              title={isSceneType(e.type) ? 'Drag to reorder' : 'Drag onto a scene'}
               data-drop-edge={dropEdge?.id === e.id ? dropEdge.place : undefined}
               onDragStart={(ev) => {
                 // M43: a scene drags to reorder; M44: an overlay drags onto a scene.
@@ -1706,7 +1707,7 @@ function Monitor({
                 const box = ev.currentTarget.getBoundingClientRect();
                 onReorder(sceneId, e.id, ev.clientX < box.left + box.width / 2 ? 'before' : 'after');
               }}
-              className={`group relative basis-0 min-w-36 overflow-hidden flex items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors ${
+              className={`group relative basis-0 min-w-36 overflow-hidden flex items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors cursor-grab active:cursor-grabbing ${
                 onScreen ? 'bg-blue text-white' : 'bg-raised text-fg hover:bg-hover'
               } ${isSelected || dropEdge?.id === e.id && dropEdge.place === 'on' ? 'ring-2 ring-blue ring-offset-2 ring-offset-panel' : ''} ${e.enabled ? '' : 'opacity-60'} ${
                 dropEdge?.id === e.id && dropEdge.place !== 'on' ? (dropEdge.place === 'before' ? 'shadow-[inset_3px_0_0_0_var(--color-blue)]' : 'shadow-[inset_-3px_0_0_0_var(--color-blue)]') : ''
