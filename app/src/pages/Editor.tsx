@@ -2,10 +2,8 @@ import {
   applyLottieValues,
   ASPECTS,
   autoFitBox,
-  carriesDisclaimer,
   compositionConfig,
-  disclaimerCheck,
-  emptySlots,
+  readiness,
   fontFaceCss,
   fontLoadSpec,
   frameFor,
@@ -512,12 +510,12 @@ export function Editor({ projectId, onBack }: Props) {
   const boundaries = boundariesAfter(elements);
 
   // M35: the one compliance check, the same rule the export enforces.
-  // M48: scenes still showing the designer's stand-in footage, for the export panel's note.
-  const slotsWithoutClip = useMemo(() => emptySlots(elements.map((e) => ({ name: e.name, enabled: e.enabled, startFrame: e.startFrame, schema: e.schema, values: values[e.id] ?? {} }))), [elements, values]);
-  const disclaimer = useMemo(
-    () => disclaimerCheck(elements.map((e) => ({ startFrame: e.startFrame, endFrame: e.endFrame, enabled: e.enabled, hasDisclaimer: carriesDisclaimer(e.schema, values[e.id] ?? {}) })), compositionConfig.fps),
+  // M49: everything to check before an export, in one list (the disclaimer blocks; footage, logo and words are notes).
+  const ready = useMemo(
+    () => readiness(elements.map((e) => ({ name: e.name, enabled: e.enabled, startFrame: e.startFrame, endFrame: e.endFrame, schema: e.schema, values: values[e.id] ?? {} })), compositionConfig.fps),
     [elements, values],
   );
+
 
   // M31: the element library. The Add chip opens it; pressing an element
   // adds it at the playhead, selects it and shows it. Added elements can be
@@ -725,7 +723,7 @@ export function Editor({ projectId, onBack }: Props) {
             </span>
           )}
           <span className="text-xs w-20 text-right">{loaded && <SaveIndicator state={saveState} />}</span>
-          {loaded && <ExportPanel projectId={projectId} onFinished={() => setExportsTick((t) => t + 1)} check={disclaimer} emptySlots={slotsWithoutClip} />}
+          {loaded && <ExportPanel projectId={projectId} onFinished={() => setExportsTick((t) => t + 1)} readiness={ready} />}
         </div>
       </header>
 

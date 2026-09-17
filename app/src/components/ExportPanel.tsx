@@ -1,4 +1,5 @@
-import { Download, Film, Loader2, Share, ShieldAlert, ShieldCheck } from 'lucide-react';
+import type { Readiness } from '@campaigncut/composition';
+import { Circle, CircleCheck, Download, Loader2, Share, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { api, type RenderJob } from '../api';
 import { Button, ICON } from './ui';
@@ -8,18 +9,18 @@ type Props = {
   pollIntervalMs?: number;
   /** M25: fired when a render ends (done or failed) so the export history can reload. */
   onFinished?: () => void;
-  /** M35: the disclaimer check; red and blocking while not ok. */
-  check?: { ok: boolean; seconds: number; message: string };
-  /** M48: scenes whose footage slot has no clip; a note, never a block. */
-  emptySlots?: string[];
+  /** M49: everything to check before an export, in one list; the disclaimer blocks, the rest are notes. */
+  readiness?: Readiness;
 };
 
 /**
  * Export: queue a server-side render of THE composition with the original
  * footage, poll until it is done, then offer the MP4. AT-5 is watching it.
  */
-export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, check, emptySlots = [] }: Props) {
+export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, readiness }: Props) {
   const [job, setJob] = useState<RenderJob | null>(null);
+  const [listOpen, setListOpen] = useState(false);
+  const blocking = readiness?.items.find((i) => i.blocking && !i.ok);
   const [error, setError] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const finished = useRef(onFinished);
@@ -57,26 +58,37 @@ export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, chec
 
   return (
     <div className="flex items-center gap-3 text-xs">
-      {emptySlots.length > 0 && (
-        <span
-          data-testid="empty-slots"
-          title={`No clip yet in: ${emptySlots.join(', ')}. The designer's stand-in shows there, in the export too.`}
-          className="inline-flex items-center gap-1.5 max-w-72 truncate text-fg-2"
-        >
-          <Film size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" className="shrink-0" />
-          {emptySlots.length === 1 ? `No clip yet in ${emptySlots[0]}` : `No clip yet in ${emptySlots.length} scenes`}
-        </span>
-      )}
-      {check && (
-        <span
-          data-testid="disclaimer-check"
-          data-ok={check.ok ? 'true' : 'false'}
-          title={check.message}
-          className={`inline-flex items-center gap-1.5 max-w-72 truncate ${check.ok ? 'text-fg-3' : 'text-red'}`}
-        >
-          {check.ok ? <ShieldCheck size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" className="text-green shrink-0" /> : <ShieldAlert size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" className="shrink-0" />}
-          {check.ok ? `Disclaimer ${check.seconds.toFixed(1)} s` : check.message}
-        </span>
+      {readiness && (
+        <div className="relative">
+          <button
+            type="button"
+            data-testid="readiness"
+            data-ok={readiness.ok ? 'true' : 'false'}
+            data-blocked={readiness.blocked ? 'true' : 'false'}
+            aria-expanded={listOpen}
+            aria-controls="readiness-list"
+            onClick={() => setListOpen((o) => !o)}
+            title={readiness.ok ? 'Everything is in' : readiness.items.filter((i) => !i.ok).map((i) => i.message).join(' · ')}
+            className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-line bg-raised hover:bg-hover whitespace-nowrap ${readiness.blocked ? 'text-red' : readiness.ok ? 'text-fg-3' : 'text-fg-2'}`}
+          >
+            {readiness.blocked ? <ShieldAlert size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" /> : <ShieldCheck size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" className={readiness.ok ? 'text-green' : ''} />}
+            {readiness.ok ? 'Ready to export' : `${readiness.todo} to check`}
+          </button>
+          {listOpen && (
+            <div id="readiness-list" role="dialog" aria-label="Ready to export?" className="absolute right-0 top-9 z-20 w-80 rounded-lg bg-panel border border-line shadow-float p-3 cc-appear">
+              <h3 className="text-[13px] font-semibold mb-2">Ready to export?</h3>
+              <ul className="flex flex-col gap-1.5">
+                {readiness.items.map((i) => (
+                  <li key={i.key} data-testid={`check-${i.key}`} data-ok={i.ok ? 'true' : 'false'} className={`flex items-start gap-2 text-xs leading-snug ${i.ok ? 'text-fg-2' : i.blocking ? 'text-red' : 'text-fg'}`}>
+                    {i.ok ? <CircleCheck size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" className="text-green shrink-0 mt-0.5" /> : i.blocking ? <ShieldAlert size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" className="shrink-0 mt-0.5" /> : <Circle size={14} strokeWidth={ICON.strokeWidth} aria-hidden="true" className="text-fg-3 shrink-0 mt-0.5" />}
+                    <span>{i.message}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-[11px] text-fg-3">The disclaimer must be on for four seconds. The rest are up to you.</p>
+            </div>
+          )}
+        </div>
       )}
       {job?.status === 'queued' && <span className="text-fg-2">Queued</span>}
       {job?.status === 'rendering' && (
@@ -93,7 +105,7 @@ export function ExportPanel({ projectId, pollIntervalMs = 1000, onFinished, chec
       )}
       {job?.status === 'failed' && <span className="text-red max-w-64 truncate" title={job.error ?? ''}>Export failed: {job.error ?? 'unknown error'}</span>}
       {error && <span className="text-red">{error}</span>}
-      <Button variant="primary" icon={Share} onClick={() => void start()} disabled={busy || (check !== undefined && !check.ok)} title={check && !check.ok ? check.message : undefined} className={busy ? 'cursor-wait' : ''}>
+      <Button variant="primary" icon={Share} onClick={() => void start()} disabled={busy || blocking !== undefined} title={blocking?.message} className={busy ? 'cursor-wait' : ''}>
         Export MP4
       </Button>
     </div>

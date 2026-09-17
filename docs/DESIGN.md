@@ -308,6 +308,7 @@ Controls are CapCut's vocabulary played straight: tactile, filled, quiet until t
 - **Secondary:** raised fill, foreground text, hairline border; hover steps to hover fill and line-strong border. The default variant (Upload, Download).
 - **Ghost:** no fill, fg-2 text; hover to fg text on hover fill. Cancel, Keep, Back to library.
 - **Danger:** red text, no fill; hover on red tint. Only for confirming a delete.
+- **Readiness pill:** a 28 px raised pill beside Export, shield icon, "Ready to export" in `fg-3` with a green shield, "N to check" in `fg-2`, red only while the disclaimer blocks; it opens a 320 px panel-toned list under it, one row per check with a green check, a grey circle or a red shield.
 - **Icon button:** 32 px square (28 px inside grouped pairs like Undo/Redo, 36 px for Play), ghost treatment. Play is the one icon button filled blue.
 - **States:** 150 ms colour transition; disabled at 40% opacity (35% for icon buttons) with pointer events off; focus uses the global 2 px blue outline.
 

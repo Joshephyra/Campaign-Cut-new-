@@ -48,22 +48,37 @@ describe('ExportPanel', () => {
 });
 
 
-describe('empty footage slots (M48)', () => {
-  it('notes the scenes with no clip yet, as a note, without disabling Export', async () => {
+describe('ready to export (M49)', () => {
+  const ok = (key: 'disclaimer' | 'footage' | 'logo' | 'words', message: string, blocking = false) => ({ key, ok: true, blocking, message, scenes: [] });
+  const not = (key: 'disclaimer' | 'footage' | 'logo' | 'words', message: string, blocking = false) => ({ key, ok: false, blocking, message, scenes: [] });
+
+  it('shows one pill; notes do not block Export; the list opens on press with every item', () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response('[]', { status: 200 }));
-    render(<ExportPanel projectId={1} check={{ ok: true, seconds: 5, message: 'Disclaimer on screen for 5.0 s' }} emptySlots={['Headline', 'Vote end card']} />);
-    const note = screen.getByTestId('empty-slots');
-    expect(note.textContent).toBe('No clip yet in 2 scenes');
-    expect(note.getAttribute('title')).toContain('Headline, Vote end card');
+    render(<ExportPanel projectId={1} readiness={{ ok: false, blocked: false, todo: 2, items: [ok('disclaimer', 'Disclaimer on screen 5.0 s', true), not('footage', 'No clip yet in Headline'), not('words', "Still the designer's words in Open")] }} />);
+    const pill = screen.getByTestId('readiness');
+    expect(pill.textContent).toBe('2 to check');
+    expect(pill.getAttribute('data-blocked')).toBe('false');
     expect((screen.getByRole('button', { name: /Export MP4/ }) as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByRole('dialog', { name: 'Ready to export?' })).toBeNull();
+    fireEvent.click(pill);
+    const list = screen.getByRole('dialog', { name: 'Ready to export?' });
+    expect(list.querySelectorAll('li')).toHaveLength(3);
+    expect(screen.getByTestId('check-footage').getAttribute('data-ok')).toBe('false');
+    expect(screen.getByTestId('check-disclaimer').textContent).toContain('5.0 s');
+    fireEvent.click(pill);
+    expect(screen.queryByRole('dialog', { name: 'Ready to export?' })).toBeNull();
   });
 
-  it('says the one scene by name, and nothing when every slot has a clip', () => {
+  it('a blocking item reddens the pill and disables Export with its reason; all ok reads "Ready to export"', () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response('[]', { status: 200 }));
-    const { unmount } = render(<ExportPanel projectId={1} emptySlots={['Headline']} />);
-    expect(screen.getByTestId('empty-slots').textContent).toBe('No clip yet in Headline');
+    const { unmount } = render(<ExportPanel projectId={1} readiness={{ ok: false, blocked: true, todo: 1, items: [not('disclaimer', 'Disclaimer on screen for 2.0 s; it must be at least 4.0 s.', true)] }} />);
+    expect(screen.getByTestId('readiness').getAttribute('data-blocked')).toBe('true');
+    const button = screen.getByRole('button', { name: /Export MP4/ }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    expect(button.getAttribute('title')).toMatch(/4\.0 s/);
     unmount();
-    render(<ExportPanel projectId={1} emptySlots={[]} />);
-    expect(screen.queryByTestId('empty-slots')).toBeNull();
+    render(<ExportPanel projectId={1} readiness={{ ok: true, blocked: false, todo: 0, items: [ok('disclaimer', 'Disclaimer on screen 5.0 s', true)] }} />);
+    expect(screen.getByTestId('readiness').textContent).toBe('Ready to export');
+    expect(screen.getByTestId('readiness').getAttribute('data-ok')).toBe('true');
   });
 });

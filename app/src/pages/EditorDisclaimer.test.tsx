@@ -39,17 +39,20 @@ describe('Editor disclaimer check (M35)', () => {
   it('blocks Export under four seconds with the reason, and frees it once the end card is long enough', async () => {
     mockApi();
     render(<Editor projectId={7} onBack={() => {}} />);
-    await waitFor(() => expect(screen.getByTestId('disclaimer-check')).toBeTruthy());
-    const line = screen.getByTestId('disclaimer-check');
-    expect(line.getAttribute('data-ok')).toBe('false');
-    expect(line.textContent).toMatch(/2\.5 s/);
+    await waitFor(() => expect(screen.getByTestId('readiness')).toBeTruthy());
+    const pill = screen.getByTestId('readiness');
+    expect(pill.getAttribute('data-blocked')).toBe('true');
+    fireEvent.click(pill);
+    expect(screen.getByTestId('check-disclaimer').getAttribute('data-ok')).toBe('false');
+    expect(screen.getByTestId('check-disclaimer').textContent).toMatch(/2\.5 s/);
     expect((screen.getByRole('button', { name: /export mp4/i }) as HTMLButtonElement).disabled).toBe(true);
 
     fireEvent.click(screen.getByLabelText('Select End card'));
     await waitFor(() => expect(screen.getByLabelText('End card length')).toBeTruthy());
     fireEvent.change(screen.getByLabelText('End card length'), { target: { value: '5' } });
-    await waitFor(() => expect(screen.getByTestId('disclaimer-check').getAttribute('data-ok')).toBe('true'));
-    expect(screen.getByTestId('disclaimer-check').textContent).toMatch(/5\.0 s/);
+    await waitFor(() => expect(screen.getByTestId('check-disclaimer').getAttribute('data-ok')).toBe('true'));
+    expect(screen.getByTestId('check-disclaimer').textContent).toMatch(/5\.0 s/);
+    expect(screen.getByTestId('readiness').getAttribute('data-blocked')).toBe('false');
     expect((screen.getByRole('button', { name: /export mp4/i }) as HTMLButtonElement).disabled).toBe(false);
   });
 });

@@ -34,7 +34,7 @@ Add **Boxed caption** again: the picker says "in the spot ×2" and the second ca
 
 ## 7. Everything on a client's spot (M47, M48)
 
-Pick **Rivera for Senate** under "New spots for" before **Start from nothing**: every scene you add arrives in that client's colours with its disclaimer. The top bar tells you which scenes still show the designer's stand-in footage ("No clip yet in 2 scenes") before you export.
+Pick **Rivera for Senate** under "New spots for" before **Start from nothing**: every scene you add arrives in that client's colours with its disclaimer. Next to Export MP4 one pill says "Ready to export" or "2 to check"; press it for the list: the disclaimer (which blocks), footage slots with no clip, the designer's stand-in logo, and lines still in the designer's words.
 
 ## For you to do
 

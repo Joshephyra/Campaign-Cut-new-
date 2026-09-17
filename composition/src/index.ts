@@ -25,7 +25,7 @@ export { mediaTiming } from './media';
 export type { MainAudio } from './config';
 export { COLOR_ROLES, ELEMENT_TYPES, ELEMENT_TYPE_LABELS, inferElementType, isElementType, isSceneType, SCENE_TYPES } from './elementTypes';
 export type { ElementType } from './elementTypes';
-export { carriesDisclaimer, DISCLAIMER_MIN_SECONDS, disclaimerCheck, disclaimerSeconds, emptySlots } from './compliance';
+export { carriesDisclaimer, DISCLAIMER_MIN_SECONDS, disclaimerCheck, disclaimerSeconds, emptySlots, readiness, type Readiness, type ReadinessItem } from './compliance';
 export type { DisclaimerCheck, DisclaimerScene } from './compliance';
 export { ASPECTS, aspectKey, autoFitBox, frameFor, isAspect, isFullBleed } from './aspect';
 export type { Aspect, AutoFitBox, Frame } from './aspect';

@@ -4,6 +4,24 @@ Running log of where the build is. Newest entry first.
 
 ---
 
+## 2026-09-17 · M49 Ready to export, in one list · DONE
+
+**Why**
+
+The top bar had grown two separate notes (the disclaimer check, then the empty-slot note) and a first-time user would have had a third and a fourth. One place, one list.
+
+**What exists now**
+
+- `readiness(scenes, fps)` in `composition/src/compliance.ts`: disclaimer (blocks), footage, logo, words; scenes named, up to three then "and N more"; items that do not apply are left out.
+- `ExportPanel` shows one pill (`data-testid="readiness"`, `data-ok`, `data-blocked`) that opens "Ready to export?" as a small list under it (`check-<key>` rows). Export is disabled only while the disclaimer blocks.
+- Tests: 3 composition, 2 export panel; the M35 editor test now reads the list. 521 tests green.
+
+**Verified**
+
+- Real browser on spot 9: the pill reads "2 to check" (grey; Export enabled); pressed, the list shows Disclaimer on screen 5.0 s (ok), No clip yet in Headline, Your logo is in (ok), Still the designer's words in 2 scenes: Bar lower third, Vote end card. The spot 7 test with a 2.5 s end card reads the same list red with Export disabled. Capture in .impeccable/review/m49-topbar.png.
+
+---
+
 ## 2026-09-17 · First-time-user rehearsal of the from-nothing flow; M47 and M48 · DONE
 
 **Why**

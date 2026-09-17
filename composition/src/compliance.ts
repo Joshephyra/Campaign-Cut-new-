@@ -63,3 +63,53 @@ export function emptySlots(scenes: { name: string; enabled: boolean; startFrame:
     })
     .map((s) => s.name);
 }
+
+
+/**
+ * M49: everything a person checks before pressing Export, in one list.
+ * The disclaimer rule blocks; the rest are notes: footage slots with no
+ * clip, logo slots still showing the designer's stand-in, and text that is
+ * still the designer's words. An item that does not apply to the spot (no
+ * logo slot anywhere, say) is left out.
+ */
+export type ReadinessScene = {
+  name: string;
+  enabled: boolean;
+  startFrame: number;
+  endFrame: number;
+  schema: { kind: string; role: string; key: string; default: unknown }[];
+  values: Record<string, unknown>;
+};
+
+export type ReadinessItem = { key: 'disclaimer' | 'footage' | 'logo' | 'words'; ok: boolean; blocking: boolean; message: string; scenes: string[] };
+
+export type Readiness = { ok: boolean; blocked: boolean; todo: number; items: ReadinessItem[] };
+
+const names = (list: string[]) => (list.length <= 3 ? list.join(', ') : `${list.slice(0, 3).join(', ')} and ${list.length - 3} more`);
+
+export function readiness(scenes: ReadinessScene[], fps: number): Readiness {
+  const live = scenes.filter((s) => s.enabled).sort((a, b) => a.startFrame - b.startFrame);
+  const items: ReadinessItem[] = [];
+
+  const disclaimer = disclaimerCheck(scenes.map((s) => ({ startFrame: s.startFrame, endFrame: s.endFrame, enabled: s.enabled, hasDisclaimer: carriesDisclaimer(s.schema, s.values) })), fps);
+  items.push({ key: 'disclaimer', ok: disclaimer.ok, blocking: true, message: disclaimer.ok ? `Disclaimer on screen ${disclaimer.seconds.toFixed(1)} s` : disclaimer.message, scenes: [] });
+
+  if (live.some((s) => s.schema.some((p) => p.kind === 'media'))) {
+    const empty = emptySlots(live);
+    items.push({ key: 'footage', ok: empty.length === 0, blocking: false, message: empty.length === 0 ? 'Every footage slot has a clip' : empty.length === 1 ? `No clip yet in ${empty[0]}` : `No clip yet in ${empty.length} scenes: ${names(empty)}`, scenes: empty });
+  }
+
+  const standIn = live.filter((s) => s.schema.some((p) => p.kind === 'image' && p.role === 'logo' && (s.values[p.key] === undefined || s.values[p.key] === null || s.values[p.key] === p.default))).map((s) => s.name);
+  if (live.some((s) => s.schema.some((p) => p.kind === 'image' && p.role === 'logo'))) {
+    items.push({ key: 'logo', ok: standIn.length === 0, blocking: false, message: standIn.length === 0 ? 'Your logo is in' : standIn.length === 1 ? `The designer's stand-in logo in ${standIn[0]}` : `The designer's stand-in logo in ${standIn.length} scenes: ${names(standIn)}`, scenes: standIn });
+  }
+
+  const designers = live.filter((s) => s.schema.some((p) => p.kind === 'text' && p.role !== 'safe.disclaimer' && (s.values[p.key] === undefined || s.values[p.key] === p.default))).map((s) => s.name);
+  if (live.some((s) => s.schema.some((p) => p.kind === 'text' && p.role !== 'safe.disclaimer'))) {
+    items.push({ key: 'words', ok: designers.length === 0, blocking: false, message: designers.length === 0 ? 'Every line is yours' : designers.length === 1 ? `Still the designer's words in ${designers[0]}` : `Still the designer's words in ${designers.length} scenes: ${names(designers)}`, scenes: designers });
+  }
+
+  const blocked = items.some((i) => i.blocking && !i.ok);
+  const todo = items.filter((i) => !i.ok).length;
+  return { ok: todo === 0, blocked, todo, items };
+}

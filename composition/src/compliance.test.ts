@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DISCLAIMER_MIN_SECONDS, disclaimerCheck, disclaimerSeconds, emptySlots } from './compliance';
+import { DISCLAIMER_MIN_SECONDS, disclaimerCheck, disclaimerSeconds, emptySlots, readiness } from './compliance';
 
 /**
  * M35: the one compliance check. A disclaimer must be on screen for at
@@ -50,5 +50,42 @@ describe('emptySlots (M48)', () => {
     ];
     expect(emptySlots(scenes)).toEqual(['Headline', 'End card']);
     expect(emptySlots([])).toEqual([]);
+  });
+});
+
+
+describe('readiness (M49)', () => {
+  const text = (key: string, dflt: string) => ({ kind: 'text', role: key, key, default: dflt });
+  const media = { kind: 'media', role: 'mediaFill', key: 'footage', default: null };
+  const logo = { kind: 'image', role: 'logo', key: 'logo', default: 'images/logo.png' };
+  const disclaimer = { kind: 'text', role: 'safe.disclaimer', key: 'disclaimer', default: 'Paid for by Example' };
+
+  it('lists the disclaimer (blocking), footage, logo and words, each ok or not, naming the scenes', () => {
+    const r = readiness([
+      { name: 'Open', enabled: true, startFrame: 0, endFrame: 150, schema: [text('headline', 'THE DESIGNER'), media], values: { headline: 'THE DESIGNER', footage: { assetId: 2 } } },
+      { name: 'End card', enabled: true, startFrame: 150, endFrame: 300, schema: [text('headline', 'VOTE'), media, logo, disclaimer], values: { headline: 'VOTE TUESDAY', logo: 'images/logo.png', disclaimer: 'Paid for by Us' } },
+    ], 30);
+    expect(r.items.map((i) => [i.key, i.ok, i.blocking, i.message])).toEqual([
+      ['disclaimer', true, true, 'Disclaimer on screen 5.0 s'],
+      ['footage', false, false, 'No clip yet in End card'],
+      ['logo', false, false, "The designer's stand-in logo in End card"],
+      ['words', false, false, "Still the designer's words in Open"],
+    ]);
+    expect(r).toMatchObject({ ok: false, blocked: false, todo: 3 });
+  });
+
+  it('is ready when everything is in, blocked when the disclaimer is short, and leaves out what does not apply', () => {
+    const ready = readiness([{ name: 'Card', enabled: true, startFrame: 0, endFrame: 150, schema: [text('headline', 'X'), disclaimer], values: { headline: 'Ours', disclaimer: 'Paid for by Us' } }], 30);
+    expect(ready).toMatchObject({ ok: true, blocked: false, todo: 0 });
+    expect(ready.items.map((i) => i.key)).toEqual(['disclaimer', 'words']);
+    const short = readiness([{ name: 'Card', enabled: true, startFrame: 0, endFrame: 60, schema: [disclaimer], values: { disclaimer: 'Paid for by Us' } }], 30);
+    expect(short).toMatchObject({ ok: false, blocked: true, todo: 1 });
+    expect(short.items[0]!.message).toMatch(/2\.0 s; it must be at least 4\.0 s/);
+  });
+
+  it('names up to three scenes and counts the rest', () => {
+    const scene = (name: string, i: number) => ({ name, enabled: true, startFrame: i * 10, endFrame: i * 10 + 10, schema: [text('headline', 'X')], values: {} });
+    const r = readiness(['A', 'B', 'C', 'D', 'E'].map(scene), 30);
+    expect(r.items.find((i) => i.key === 'words')!.message).toBe("Still the designer's words in 5 scenes: A, B, C and 2 more");
   });
 });

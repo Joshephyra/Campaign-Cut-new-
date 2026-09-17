@@ -835,6 +835,13 @@ A spot from nothing needs two captions and two lower thirds. Until now a scene's
 
 ---
 
+## M49 · Ready to export, in one list · DONE
+
+- `readiness` in the composition: the disclaimer rule (blocking), footage slots with no clip, logo slots still showing the designer's stand-in, and text still the designer's words, each ok or not with the scenes named; items that do not apply to the spot are left out.
+- The top bar has one pill next to Export: "Ready to export" (green), "2 to check" (grey for notes, red when the disclaimer blocks). Pressing it opens the list. Export is disabled only while the disclaimer blocks, with the reason on the button. The two separate notes from M35 and M48 are gone.
+
+---
+
 ## Out of scope, do not build
 
 Everything in the non-goals list in `CLAUDE.md`. Plus:
